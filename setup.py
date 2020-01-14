@@ -2,7 +2,7 @@
 import os
 import re
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 _HERE = os.path.abspath(os.path.dirname(__file__))
@@ -36,9 +36,7 @@ setup(
 
     install_requires=[],
 
-    packages=[
-        'hyp3_autorift'
-        ],
+    packages=find_packages(),
 
     entry_points={'console_scripts': ['hyp3_autorift = hyp3_autorift.__main__:main']},
 
