@@ -38,7 +38,10 @@ setup(
 
     packages=find_packages(),
 
-    entry_points={'console_scripts': ['hyp3_autorift = hyp3_autorift.__main__:main']},
+    entry_points={'console_scripts': [
+        'hyp3_autorift = hyp3_autorift.__main__:main',
+        ]
+    },
 
     zip_safe=False,
 )
