@@ -1,6 +1,5 @@
 
 import os
-import re
 
 from setuptools import setup, find_packages
 
@@ -8,15 +7,10 @@ from setuptools import setup, find_packages
 _HERE = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(_HERE, 'README.md'), 'r') as f:
     long_desc = f.read()
-with open(os.path.join(_HERE, 'hyp3_autorift', '__init__.py')) as f:
-    init_file = f.read()
 
 setup(
     name='hyp3-autorift',
-    version=re.search(r'{}\s*=\s*[(]([^)]*)[)]'.format('__version_info__'),
-                      init_file
-                      ).group(1).replace(', ', '.'),
-
+    use_scm_version=True,
     description='HyP3 processing for autoRIFT ISCE',
     long_description=long_desc,
     long_description_content_type='text/markdown',
@@ -34,7 +28,9 @@ setup(
         'Programming Language :: Python :: 3.7',
         ],
 
-    install_requires=[],
+    install_requires=[
+        'importlib_metadata',
+    ],
 
     packages=find_packages(),
 
