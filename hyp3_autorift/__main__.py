@@ -6,6 +6,7 @@ AutoRIFT processing for HyP3
 import sys
 import argparse
 
+from hyp3_autorift import __version__
 from hyp3_autorift import process
 
 
@@ -21,6 +22,11 @@ def parse_args(args=None):
     parser.add_argument(
         '-v',  '--verbose', action='store_true',
         help='Print detailed information to stdout'
+    )
+
+    parser.add_argument(
+        '--version', action='version',
+        version=f'%(prog)s {__version__}'
     )
 
     return parser.parse_args(args)
