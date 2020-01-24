@@ -17,8 +17,8 @@ setup(
 
     url='https://scm.asf.alaska.edu/jhkennedy/hyp3-autorift',
 
-    author='Joseph H. Kennedy',
-    author_email='jhkennedy@alaska.edu',
+    author='ASF APD/Tools Team',
+    author_email='uaf-asf-apd@alaska.edu',
 
     license='BSD',
     include_package_data=True,
