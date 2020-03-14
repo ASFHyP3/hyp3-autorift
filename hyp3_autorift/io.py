@@ -1,11 +1,15 @@
 """Helper io uilities for autoRIFT"""
 
+import logging
 import os
 
-from hyp3lib.file_subroutines import mkdir_p
-
-# FIXME: Can't figure out how to get these with boto3, so, F-it, requests.
 import requests
+from hyp3lib.file_subroutines import mkdir_p
+from isce.applications.topsApp import TopsInSAR
+from scipy.io import savemat
+
+log = logging.getLogger(__name__)
+
 _FILE_LIST = [
     'ANT240m_dhdx.tif',
     'ANT240m_dhdy.tif',
@@ -22,6 +26,7 @@ _FILE_LIST = [
 
 def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws.com/',
                    bucket='its-live-data', prefix='isce_autoRIFT'):
+    # FIXME: Can't figure out how to get these tifs with boto3, so f-it, use requests
     # import boto3
     # from botocore import UNSIGNED
     # from botocore.client import Config
@@ -75,3 +80,17 @@ def format_tops_xml(master, slave, polarization, dem, orbits, aux, xml_file='top
 
     with open(xml_file, 'w') as f:
         f.write(xml_template)
+
+
+def save_topsinsar_mat():
+    insar = TopsInSAR(name="topsApp")
+    insar.configure()
+    master_filename = os.path.basename(insar.master.safe[0])
+    slave_filename = os.path.basename(insar.slave.safe[0])
+
+    log.info(f'master: {master_filename}')
+    log.info(f'slave: {slave_filename}')
+
+    savemat(
+        'topsinsar_filename.mat', {'master_filename': master_filename, 'slave_filename': slave_filename}
+    )

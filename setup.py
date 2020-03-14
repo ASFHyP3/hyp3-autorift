@@ -51,9 +51,10 @@ setup(
 
     packages=find_packages(),
 
-    # TODO: add netcdf_output.py and topsinsar_filename.py entrypoints
     entry_points={'console_scripts': [
         'hyp3_autorift = hyp3_autorift.__main__:main',
+        # FIXME: Only needed for testautoRIFT_ISCE.py
+        'topsinsar_filename.py = hyp3_autorift.io:save_topsinsar_mat',
         ]
     },
 
