@@ -35,13 +35,6 @@ tar -zxvf autoRIFT-1.0.4.tar.gz
 # Place geo_autoRIFT into ISCE as a contributed module and add it to the SCons build script
 cp -r autoRIFT-1.0.4/geo_autoRIFT isce2-2.3.2/contrib/
 echo -e "\nSConscript('geo_autoRIFT/SConscript')\n" >> isce2-2.3.2/contrib/SConscript
-# Get the Geogrid and autoRIFT test scripts, and place them in the geo_autoRIFT folder because we'll
-# apparently need them :rolling_eyes:, and make them executable
-cp autoRIFT-1.0.4/testautoRIFT_ISCE.py isce2-2.3.2/contrib/geo_autoRIFT/
-# NOTE: This is having two repos for the same project so you can two READMEs is DUMB.
-wget https://raw.githubusercontent.com/leiyangleon/Geogrid/87ff1e71ca756596868e869802f0c90ab58ff105/testGeogrid_ISCE.py -O isce2-2.3.2/contrib/geo_autoRIFT/testGeogrid_ISCE.py
-chmod ug+x isce2-2.3.2/contrib/geo_autoRIFT/testautoRIFT_ISCE.py
-chmod ug+x isce2-2.3.2/contrib/geo_autoRIFT/testGeogrid_ISCE.py
 
 # Setup the ISCE build
 pushd isce2-2.3.2
@@ -109,7 +102,7 @@ conda env config vars set ISCE_HOME=${PYTHON_SITE_PACKAGES}/isce
 conda env config vars set ISCE_STACK=${PYTHON_SITE_PACKAGES}/share/isce2
 conda env config vars set PATH=${PATH}:${PYTHON_SITE_PACKAGES}/isce/bin:${PYTHON_SITE_PACKAGES}/isce/applications
 
-# Finalize our conda env. by removing the ISCE build (only) dependancies 
+# Finalize our conda env. by removing the ISCE build (only) dependencies
 conda remove -y gcc_linux-64 gxx_linux-64 gfortran_linux-64 cython scons openmotif-dev
 
 # And reset, since we've messed with the environment a bit

@@ -3,7 +3,7 @@ import os
 from setuptools import find_packages, setup
 
 _HERE = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(_HERE, 'README.md'), 'r') as f:
+with open(os.path.join(_HERE, 'README.md')) as f:
     long_desc = f.read()
 
 setup(
@@ -53,6 +53,8 @@ setup(
 
     entry_points={'console_scripts': [
         'hyp3_autorift = hyp3_autorift.__main__:main',
+        'testautoRIFT_ISCE.py = hyp3_autorift.vend.testautoRIFT_ISCE:main()',
+        'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main()',
         # FIXME: Only needed for testautoRIFT_ISCE.py
         'topsinsar_filename.py = hyp3_autorift.io:save_topsinsar_mat',
         ]

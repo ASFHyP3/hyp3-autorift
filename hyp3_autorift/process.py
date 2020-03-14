@@ -9,12 +9,9 @@ import os
 
 from hyp3lib.execute import execute
 from hyp3lib.file_subroutines import mkdir_p
-from isce.components.contrib.geo_autoRIFT import testGeogrid_ISCE
-from isce.components.contrib.geo_autoRIFT import testautoRIFT_ISCE
-from osgeo import gdal
 
-from hyp3_autorift import io
 from hyp3_autorift import geometry
+from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +67,6 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     m_slc = os.path.join(os.getcwd(), 'merged', 'master.slc.full')
     s_slc = os.path.join(os.getcwd(), 'merged', 'slave.slc.full')
 
-    # FIXME: everything below is entirely silly.
     for slc in [m_slc, s_slc]:
         cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
         execute(cmd, logfile='createImages.txt', uselogging=True)
@@ -80,18 +76,13 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     vx = dem.replace('_h.tif', '_vx.tif')
     vy = dem.replace('_h.tif', '_vy.tif')
 
-    cmd = f'${{ISCE_HOME}}/components/contrib/geo_autoRIFT/testGeogrid_ISCE.py ' \
-          f'-m {m_slc} -s {s_slc} -d {dem} -sx {dhdx} -sy {dhdy} -vx {vx} -vy {vy}'
+    cmd = f'testGeogrid_ISCE.py -m {m_slc} -s {s_slc} -d {dem} -sx {dhdx} -sy {dhdy} -vx {vx} -vy {vy}'
     execute(cmd, logfile='testGeogrid.txt', uselogging=True)
 
-    cmd = f'${{ISCE_HOME}}/components/contrib/geo_autoRIFT/testautoRIFT_ISCE.py ' \
+    cmd = f'testautoRIFT_ISCE.py ' \
           f'-m {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif ' \
           f'-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif  -nc S'
     execute(cmd, logfile='testautoRIFT.txt', uselogging=True)
-
-
-
-
 
 
 def main():
