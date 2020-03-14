@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# This is a substantially modified copy of the testGeogrid_ISCE.py script
+# as described in the README.md in this directory. See the LICENSE file in this
+# directory for the original terms and conditions, and CHANGES.diff for a detailed
+# description of the changes. Notice, all changes are released under the terms
+# and conditions of hyp3-autorift's LICENSE.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,36 +30,46 @@
 # embargoed foreign country or citizen of those countries.
 #
 # Authors: Piyush Agram, Yang Lei
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import argparse
+import os
+
+import numpy as np
+from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid
+from isce.components.contrib.geo_autoRIFT.geogrid import GeogridOptical
+from isce.components.isceobj.Orbit.Orbit import Orbit
+from isce.components.iscesys.Component.ProductManager import ProductManager as PM
+from osgeo import gdal
 
 
 def cmdLineParse():
     '''
     Command line parser.
     '''
-    import argparse
-
     parser = argparse.ArgumentParser(description='Output geo grid')
     parser.add_argument('-m', '--input_m', dest='indir_m', type=str, required=True,
-            help='Input folder with ISCE swath files for master image or master image file name (in GeoTIFF format and Cartesian coordinates)')
+                        help='Input folder with ISCE swath files for master image or master image file name '
+                             '(in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input folder with ISCE swath files for slave image or slave image file name (in GeoTIFF format and Cartesian coordinates)')
-#    parser.add_argument('-o', '--output', dest='outfile', type=str, default='geogrid.csv',
-#            help='Output grid mapping')
+                        help='Input folder with ISCE swath files for slave image or slave image file name '
+                             '(in GeoTIFF format and Cartesian coordinates)')
+    #    parser.add_argument('-o', '--output', dest='outfile', type=str, default='geogrid.csv',
+    #            help='Output grid mapping')
     parser.add_argument('-d', '--dem', dest='demfile', type=str, required=True,
-            help='Input DEM')
+                        help='Input DEM')
     parser.add_argument('-sx', '--dhdx', dest='dhdxfile', type=str, default="",
-            help='Input slope in X')
+                        help='Input slope in X')
     parser.add_argument('-sy', '--dhdy', dest='dhdyfile', type=str, default="",
-            help='Input slope in Y')
+                        help='Input slope in Y')
     parser.add_argument('-vx', '--vx', dest='vxfile', type=str, default="",
-            help='Input velocity in X')
+                        help='Input velocity in X')
     parser.add_argument('-vy', '--vy', dest='vyfile', type=str, default="",
-            help='Input velocity in Y')
+                        help='Input velocity in Y')
     parser.add_argument('-fo', '--flag_optical', dest='optical_flag', type=bool, required=False, default=0,
-            help='flag for reading optical data (e.g. Landsat): use 1 for on and 0 (default) for off')
+                        help='flag for reading optical data (e.g. Landsat): use 1 for on and 0 (default) for off')
 
     return parser.parse_args()
+
 
 class Dummy(object):
     pass
@@ -64,8 +79,6 @@ def loadProduct(xmlname):
     '''
     Load the product using Product Manager.
     '''
-    import isce
-    from iscesys.Component.ProductManager import ProductManager as PM
 
     pm = PM()
     pm.configure()
@@ -76,24 +89,20 @@ def loadProduct(xmlname):
 
 
 def getMergedOrbit(product):
-    import isce
-    from isceobj.Orbit.Orbit import Orbit
-
     ###Create merged orbit
     orb = Orbit()
     orb.configure()
 
     burst = product[0].bursts[0]
-    #Add first burst orbit to begin with
+    # Add first burst orbit to begin with
     for sv in burst.orbit:
         orb.addStateVector(sv)
-
 
     for pp in product:
         ##Add all state vectors
         for bb in pp.bursts:
             for sv in bb.orbit:
-                if (sv.time< orb.minTime) or (sv.time > orb.maxTime):
+                if (sv.time < orb.minTime) or (sv.time > orb.maxTime):
                     orb.addStateVector(sv)
 
     return orb
@@ -103,11 +112,9 @@ def loadMetadata(indir):
     '''
     Input file.
     '''
-    import os
-    import numpy as np
 
     frames = []
-    for swath in range(1,4):
+    for swath in range(1, 4):
         inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
         if os.path.exists(inxml):
             ifg = loadProduct(inxml)
@@ -121,8 +128,8 @@ def loadMetadata(indir):
     info.prf = 1.0 / frames[0].bursts[0].azimuthTimeInterval
     info.rangePixelSize = frames[0].bursts[0].rangePixelSize
     info.lookSide = -1
-    info.numberOfLines = int( np.round( (info.sensingStop - info.sensingStart).total_seconds() * info.prf))
-    info.numberOfSamples = int( np.round( (info.farRange - info.startingRange)/info.rangePixelSize))
+    info.numberOfLines = int(np.round((info.sensingStop - info.sensingStart).total_seconds() * info.prf))
+    info.numberOfSamples = int(np.round((info.farRange - info.startingRange) / info.rangePixelSize))
     info.orbit = getMergedOrbit(frames)
 
     return info
@@ -130,45 +137,33 @@ def loadMetadata(indir):
 
 def loadMetadataOptical(indir):
     '''
-        Input file.
-        '''
-    import os
-    import numpy as np
-    
-    from osgeo import gdal, osr
-    import struct
-    
+    Input file.
+    '''
+
     DS = gdal.Open(indir, gdal.GA_ReadOnly)
     trans = DS.GetGeoTransform()
-    
+
     info = Dummy()
     info.startingX = trans[0]
     info.startingY = trans[3]
     info.XSize = trans[1]
     info.YSize = trans[5]
-    
+
     nameString = os.path.basename(DS.GetDescription())
     info.time = float(nameString.split('_')[3])
-    
+
     info.numberOfLines = DS.RasterYSize
     info.numberOfSamples = DS.RasterXSize
-    
+
     info.filename = indir
-    
-    
+
     return info
-
-
 
 
 def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy):
     '''
     Wire and run geogrid.
     '''
-
-    import isce
-    from components.contrib.geo_autoRIFT.geogrid import Geogrid
-#     from geogrid import Geogrid
 
     obj = Geogrid()
     obj.configure()
@@ -196,17 +191,13 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy):
     obj.geogrid()
 
 
-
 def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy):
     '''
-        Wire and run geogrid.
-        '''
+    Wire and run geogrid.
+    '''
 
-    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
-#    from geogrid import GeogridOptical
-    
     obj = GeogridOptical()
-    
+
     obj.startingX = info.startingX
     obj.startingY = info.startingY
     obj.XSize = info.XSize
@@ -215,7 +206,7 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy):
     obj.numberOfLines = info.numberOfLines
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
-    
+
     obj.dat1name = info.filename
     obj.demname = dem
     obj.dhdxname = dhdx
@@ -226,18 +217,17 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy):
     obj.winoffname = "window_offset.tif"
     obj.winro2vxname = "window_rdr_off2vel_x_vec.tif"
     obj.winro2vyname = "window_rdr_off2vel_y_vec.tif"
-    
+
     obj.runGeogrid()
 
 
-
-if __name__ == '__main__':
+def main():
     '''
     Main driver.
     '''
 
     inps = cmdLineParse()
-    
+
     if inps.optical_flag == 1:
         metadata_m = loadMetadataOptical(inps.indir_m)
         metadata_s = loadMetadataOptical(inps.indir_s)
@@ -246,6 +236,7 @@ if __name__ == '__main__':
         metadata_m = loadMetadata(inps.indir_m)
         metadata_s = loadMetadata(inps.indir_s)
         runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile)
-    
 
 
+if __name__ == '__main__':
+    main()
