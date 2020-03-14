@@ -4,8 +4,6 @@ AutoRIFT processing for HyP3
 
 # FIXME: Python 3.8+ this should be `from importlib.metadata...`
 from importlib_metadata import version, PackageNotFoundError
-from .process import process
-
 
 try:
     __version__ = version(__name__)
