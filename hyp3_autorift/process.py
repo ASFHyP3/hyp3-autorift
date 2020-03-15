@@ -24,6 +24,7 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         slave: Path to slave Sentinel-1 SAFE zip archive
         download: If True, try and download the granules from ASF to the
             current working directory (default: False)
+        polarization: Polarization of Sentinel-1 scene (default: 'hh')
         orbits: Path to the orbital files, otherwise, fetch them from ASF
             (default: None)
         aux: Path to the auxiliary orbital files, otherwise, fetch them from ASF
@@ -95,9 +96,23 @@ def main():
                         help='Master Sentinel-1 SAFE zip archive')
     parser.add_argument('slave', type=os.path.abspath,
                         help='Slave Sentinel-1 SAFE zip archive')
+    parser.add_argument('-d', '--download', action='store_true',
+                        help='Download the granules from ASF to the current'
+                             'working directory')
+    parser.add_argument('-p', '--polarization', default='hh',
+                        help='Polarization of the Sentinel-1 scenes')
+    parser.add_argument('--orbits', type=os.path.abspath,
+                        help='Path to the Sentinel-1 orbital files. If this argument'
+                             'is not give, process will try and download them from ASF')
+    parser.add_argument('--aux', type=os.path.abspath,
+                        help='Path to the Sentinel-1 auxiliary orbital files. If this argument'
+                             'is not give, process will try and download them from ASF')
+    parser.add_argument('--process-dir', type=os.path.abspath,
+                        help='If given, do processing inside this directory, otherwise, '
+                             'use the current working directory')
     args = parser.parse_args()
 
-    process(args.master, args.slave)
+    process(**args.__dict__)
 
 
 if __name__ == "__main__":
