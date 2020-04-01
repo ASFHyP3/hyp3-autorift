@@ -27,14 +27,17 @@ conda install -c conda-forge -y gcc_linux-64 gxx_linux-64 gfortran_linux-64 cyth
 ln -s $CONDA_PREFIX/bin/cython $CONDA_PREFIX/bin/cython3
 
 # Get ISCE and autoRIFT
-wget https://github.com/isce-framework/isce2/archive/v2.3.2.tar.gz -O isce2-2.3.2.tar.gz
-tar -zxvf isce2-2.3.2.tar.gz
+#wget https://github.com/isce-framework/isce2/archive/v2.3.2.tar.gz -O isce2-2.3.2.tar.gz
+#tar -zxvf isce2-2.3.2.tar.gz
+wget https://github.com/isce-framework/isce2/archive/f43daae0150cd93abd961eb2e57e6d45045bceb6.zip -O isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip
+unzip isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip
+mv isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6 isce2-2.3.2
 wget https://github.com/leiyangleon/autoRIFT/archive/v1.0.4.tar.gz -O autoRIFT-1.0.4.tar.gz
 tar -zxvf autoRIFT-1.0.4.tar.gz
 
 # Place geo_autoRIFT into ISCE as a contributed module and add it to the SCons build script
 cp -r autoRIFT-1.0.4/geo_autoRIFT isce2-2.3.2/contrib/
-echo -e "\nSConscript('geo_autoRIFT/SConscript')\n" >> isce2-2.3.2/contrib/SConscript
+#echo -e "\nSConscript('geo_autoRIFT/SConscript')\n" >> isce2-2.3.2/contrib/SConscript
 
 # Setup the ISCE build
 pushd isce2-2.3.2

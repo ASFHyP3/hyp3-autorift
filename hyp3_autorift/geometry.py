@@ -5,11 +5,12 @@ import logging
 import os
 
 import numpy as np
-from isce.components.contrib.demUtils import createDemStitcher
-from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid
-from isce.components import isceobj
-from isce.components.isceobj.Orbit.Orbit import Orbit
-from isce.components.isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
+import isce
+from contrib.demUtils import createDemStitcher
+from contrib.geo_autoRIFT.geogrid import Geogrid
+import isceobj
+from isceobj.Orbit.Orbit import Orbit
+from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import osr
 
@@ -39,6 +40,7 @@ def bounding_box(safe, priority='master', polarization='hh', orbits='Orbits', au
     frames = []
     for swath in range(1, 4):
         rdr = Sentinel1()
+        rdr.configure()
         rdr.safe = [os.path.abspath(safe)]
         rdr.output = priority
         rdr.orbitDir = os.path.abspath(orbits)
@@ -105,16 +107,15 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
 
     bounding_dem = None
     for dem in dems:
+        log.info(f'Checking DEM: {dem}')
         dem_ds = gdal.Open(dem, gdal.GA_ReadOnly)
-        dem_proj = dem_ds.GetGCPProjection()
+        dem_sr = dem_ds.GetSpatialRef()
+        log.debug(f'DEM projection: {dem_sr}')
 
         latlon = osr.SpatialReference()
         latlon.ImportFromEPSG(4326)
 
-        dem_coord = osr.SpatialReference()
-        dem_coord.ImportFromWkt(dem_proj)
-
-        trans = osr.CoordinateTransformation(latlon, dem_coord)
+        trans = osr.CoordinateTransformation(latlon, dem_sr)
 
         # NOTE: This is probably unnecessary and just the lower-left and upper-right could be used,
         #       but this does cover the case of skewed bounding boxes
@@ -134,9 +135,15 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
         x_limits = (min(x), max(x))
         y_limits = (min(y), max(y))
 
+        log.info(f'Image X limits: {x_limits}')
+        log.info(f'Image Y limits: {y_limits}')
+
         dem_geo_trans = dem_ds.GetGeoTransform()
         dem_x_limits = (dem_geo_trans[0], dem_geo_trans[0] + dem_ds.RasterXSize * dem_geo_trans[1])
-        dem_y_limits = (dem_geo_trans[3] + dem_ds.RasterXSize * dem_geo_trans[5], dem_geo_trans[3])
+        dem_y_limits = (dem_geo_trans[3] + dem_ds.RasterYSize * dem_geo_trans[5], dem_geo_trans[3])
+
+        log.info(f'DEM X limits: {dem_x_limits}')
+        log.info(f'DEM Y limits: {dem_y_limits}')
 
         if x_limits[0] > dem_x_limits[0] and x_limits[1] < dem_x_limits[1] \
            and y_limits[0] > dem_y_limits[0] and y_limits[1] < dem_y_limits[1]:
@@ -146,7 +153,7 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
     if bounding_dem is None:
         raise GeometryException('Existing DEMs do not (fully) cover the image data')
 
-    log.info(f'DEM is: {bounding_dem}')
+    log.info(f'Bounding DEM is: {bounding_dem}')
     return bounding_dem
 
 
@@ -163,7 +170,7 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None, correct=Fals
     in_ds = gdal.OpenShared(input_dem, gdal.GA_ReadOnly)
     warp_options = gdal.WarpOptions(
         format='ENVI', outputType=gdal.GDT_Int16, resampleAlg='cubic',
-        xRes=0.001, yRes=0.01, dstSRS='EPSG:4326', dstNodata=0,
+        xRes=0.001, yRes=0.001, dstSRS='EPSG:4326', dstNodata=0,
         outputBounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]]
     )
     gdal.Warp(isce_dem, in_ds, options=warp_options)
@@ -178,7 +185,7 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None, correct=Fals
         # cr_ds = gdal.OpenShared(correct_file, gdal.GA_ReadOnly)
         # warp_options = gdal.WarpOptions(
         #     format='ENVI', outputType=gdal.GDT_Int16, resampleAlg='cubic',
-        #     xRes=0.001, yRes=0.01, dstSRS='EPSG:4326', dstNodata=0,
+        #     xRes=0.001, yRes=0.001, dstSRS='EPSG:4326', dstNodata=0,
         #     outputBounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]]
         # )
         # gdal.Warp(isce_dem + '.crt', cr_ds, options=warp_options)

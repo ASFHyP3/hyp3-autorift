@@ -40,8 +40,6 @@ from datetime import date
 import cv2
 import numpy as np
 import scipy.io as sio
-from isce.components.contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
-from isce.components.isceobj.Util.ImageUtil import ImageLib as IML
 from osgeo import gdal
 
 from hyp3_autorift import netcdf_output as no
@@ -88,6 +86,9 @@ def loadProduct(filename):
     '''
     Load the product using Product Manager.
     '''
+    import isce
+    from imageMath import IML
+
     IMG = IML.mmapFromISCE(filename, logging)
     img = IMG.bands[0]
     return img
@@ -113,7 +114,10 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, noDataMask, optflag, nodata):
     '''
     Wire and run geogrid.
     '''
-    
+    import isce
+    from components.contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
+    import isceobj
+
     obj = autoRIFT_ISCE()
     obj.configure()
 

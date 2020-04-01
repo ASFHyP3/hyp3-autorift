@@ -35,10 +35,6 @@ import argparse
 import os
 
 import numpy as np
-from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid
-from isce.components.contrib.geo_autoRIFT.geogrid import GeogridOptical
-from isce.components.isceobj.Orbit.Orbit import Orbit
-from isce.components.iscesys.Component.ProductManager import ProductManager as PM
 from osgeo import gdal
 
 
@@ -79,6 +75,8 @@ def loadProduct(xmlname):
     '''
     Load the product using Product Manager.
     '''
+    import isce
+    from iscesys.Component.ProductManager import ProductManager as PM
 
     pm = PM()
     pm.configure()
@@ -90,6 +88,8 @@ def loadProduct(xmlname):
 
 def getMergedOrbit(product):
     ###Create merged orbit
+    import isce
+    from isceobj.Orbit.Orbit import Orbit
     orb = Orbit()
     orb.configure()
 
@@ -164,7 +164,8 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy):
     '''
     Wire and run geogrid.
     '''
-
+    import isce
+    from components.contrib.geo_autoRIFT.geogrid import Geogrid
     obj = Geogrid()
     obj.configure()
 
@@ -195,6 +196,8 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy):
     '''
     Wire and run geogrid.
     '''
+    import isce
+    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
 
     obj = GeogridOptical()
 

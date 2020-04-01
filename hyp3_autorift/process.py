@@ -52,7 +52,7 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     lat_limits, lon_limits = geometry.bounding_box(
         master, slave, orbits=orbits, aux=aux, polarization=polarization
     )
-    
+
     # FIXME: Should integrate this functionality into hyp3lib.get_dem
     dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
 
@@ -60,30 +60,36 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         mkdir_p(process_dir)
         os.chdir(process_dir)
 
-    io.format_tops_xml(master, slave, polarization, dem, orbits, aux)
+    dhdx = dem.replace('_h.tif', '_dhdx.tif')
+    dhdy = dem.replace('_h.tif', '_dhdy.tif')
+    vx = dem.replace('_h.tif', '_vx0.tif')
+    vy = dem.replace('_h.tif', '_vy0.tif')
 
-    cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
-    execute(cmd, logfile='topsApp.txt', uselogging=True)
+    isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
+
+    io.format_tops_xml(master, slave, polarization, isce_dem, orbits, aux)
+
+    with open('topsApp.txt', 'w') as f:
+        cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
+        execute(cmd, logfile=f, uselogging=True)
 
     m_slc = os.path.join(os.getcwd(), 'merged', 'master.slc.full')
     s_slc = os.path.join(os.getcwd(), 'merged', 'slave.slc.full')
 
-    for slc in [m_slc, s_slc]:
-        cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
-        execute(cmd, logfile='createImages.txt', uselogging=True)
+    with open('createImages.txt', 'w') as f:
+        for slc in [m_slc, s_slc]:
+            cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
+            execute(cmd, logfile=f, uselogging=True)
 
-    dhdx = dem.replace('_h.tif', '_dhdx.tif')
-    dhdy = dem.replace('_h.tif', '_dhdy.tif')
-    vx = dem.replace('_h.tif', '_vx.tif')
-    vy = dem.replace('_h.tif', '_vy.tif')
+    with open('testGeogrid.txt', 'w') as f:
+        cmd = f'testGeogrid_ISCE.py -m master -s slave -d {dem} -sx {dhdx} -sy {dhdy} -vx {vx} -vy {vy}'
+        execute(cmd, logfile=f, uselogging=True)
 
-    cmd = f'testGeogrid_ISCE.py -m {m_slc} -s {s_slc} -d {dem} -sx {dhdx} -sy {dhdy} -vx {vx} -vy {vy}'
-    execute(cmd, logfile='testGeogrid.txt', uselogging=True)
-
-    cmd = f'testautoRIFT_ISCE.py ' \
-          f'-m {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif ' \
-          f'-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif  -nc S'
-    execute(cmd, logfile='testautoRIFT.txt', uselogging=True)
+    with open('testautoRIFT.txt', 'w') as f:
+        cmd = f'testautoRIFT_ISCE.py ' \
+              f'-m {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif ' \
+              f'-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif  -nc S'
+        execute(cmd, logfile=f, uselogging=True)
 
 
 def main():

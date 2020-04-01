@@ -2,10 +2,12 @@
 
 import logging
 import os
+import textwrap
 
 import requests
 from hyp3lib.file_subroutines import mkdir_p
 from isce.applications.topsApp import TopsInSAR
+from multiprocessing.dummy import Pool
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
@@ -14,19 +16,30 @@ _FILE_LIST = [
     'ANT240m_dhdx.tif',
     'ANT240m_dhdy.tif',
     'ANT240m_h.tif',
-    'ANT240m_vx.tif',
-    'ANT240m_vy.tif',
+    'ANT240m_vx0.tif',
+    'ANT240m_vy0.tif',
     'GRE240m_dhdx.tif',
     'GRE240m_dhdy.tif',
     'GRE240m_h.tif',
-    'GRE240m_vx.tif',
-    'GRE240m_vy.tif',
+    'GRE240m_vx0.tif',
+    'GRE240m_vy0.tif',
 ]
+
+
+def _request_file(url_file_map):
+    url, path = url_file_map
+    if not os.path.exists(path):
+        response = requests.get(url)
+        if response.status_code == 200:
+            with open(path, 'wb') as f:
+                for chunck in response:
+                    f.write(chunck)
+    return path
 
 
 def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws.com/',
                    bucket='its-live-data', prefix='isce_autoRIFT'):
-    # FIXME: Can't figure out how to get these tifs with boto3, so f-it, use requests
+    # FIXME: Can't figure out how to get these tifs with boto3, so using requests
     # import boto3
     # from botocore import UNSIGNED
     # from botocore.client import Config
@@ -34,18 +47,22 @@ def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws
     # with open('ANT240m_landice.tif', 'wb') as f:
     #     s3.download_fileobj('its-live-data', 'isce_autoRIFT/ANT240m_landice.tif', f)
 
+    log.info("Downloading tifs from JPL's AWS bucket")
     mkdir_p(dem_dir)
-    for file in _FILE_LIST:
-        response = requests.get(
-            endpoint_url.replace('http://', f'http://{bucket}.') + f'{prefix}/{file}'
-        )
-        with open(os.path.join(dem_dir, file), 'wb') as f:
-            f.write(response.content)
+    url_file_map = [
+        (endpoint_url.replace('http://', f'http://{bucket}.') + f'{prefix}/{file}',
+         os.path.join(dem_dir, file)) for file in _FILE_LIST
+    ]
 
+    pool = Pool(5)
+    fetched = pool.imap_unordered(_request_file, url_file_map)
+    pool.close()
+    pool.join()
+
+    log.info(f'Downloaded: {fetched}')
 
 def format_tops_xml(master, slave, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
-    xml_template = f"""
-    <?xml version="1.0" encoding="UTF-8"?>
+    xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>
     <topsApp>
         <component name="topsinsar">
             <component name="master">
@@ -79,7 +96,7 @@ def format_tops_xml(master, slave, polarization, dem, orbits, aux, xml_file='top
     """
 
     with open(xml_file, 'w') as f:
-        f.write(xml_template)
+        f.write(textwrap.dedent(xml_template))
 
 
 def save_topsinsar_mat():
