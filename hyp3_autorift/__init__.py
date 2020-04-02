@@ -3,7 +3,7 @@ AutoRIFT processing for HyP3
 """
 
 # FIXME: Python 3.8+ this should be `from importlib.metadata...`
-from importlib_metadata import version, PackageNotFoundError
+from importlib_metadata import PackageNotFoundError, version
 
 try:
     __version__ = version(__name__)
@@ -14,4 +14,3 @@ except PackageNotFoundError:
     # Or, to just get the version number use:
     #    python setup.py --version
     pass
-

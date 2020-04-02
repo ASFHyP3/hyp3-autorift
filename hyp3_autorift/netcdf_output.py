@@ -1,8 +1,5 @@
-#!/usr/bin/env python3
-
-########
-#Yang Lei, Jet Propulsion Laboratory
-#November 2017
+# FIXME: Turn flake8 back on for this file. Will require sig. refactor
+# flake8: noqa
 
 import datetime
 

@@ -32,7 +32,7 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         process_dir: Path to a directory for processing inside
             (default: None; use current working directory)
     """
-    
+
     # Ensure we have absolute paths
     master = os.path.abspath(master)
     slave = os.path.abspath(slave)

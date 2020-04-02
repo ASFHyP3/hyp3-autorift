@@ -40,6 +40,7 @@ setup(
         'hyp3proclib',
         'importlib_metadata',
         'numpy',
+        'scipy',
     ],
 
     extras_require={

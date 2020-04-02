@@ -3,11 +3,11 @@
 import logging
 import os
 import textwrap
+from multiprocessing.dummy import Pool
 
 import requests
 from hyp3lib.file_subroutines import mkdir_p
 from isce.applications.topsApp import TopsInSAR
-from multiprocessing.dummy import Pool
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
@@ -60,6 +60,7 @@ def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws
     pool.join()
 
     log.info(f'Downloaded: {fetched}')
+
 
 def format_tops_xml(master, slave, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
     xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>

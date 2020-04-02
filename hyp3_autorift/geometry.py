@@ -4,11 +4,11 @@ import glob
 import logging
 import os
 
+import isce  # noqa: F401
+import isceobj
 import numpy as np
-import isce
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
-import isceobj
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal

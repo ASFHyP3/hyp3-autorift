@@ -133,7 +133,8 @@ flake8:
     - *before_defaults
     - python3 -m pip install flake8 flake8-import-order flake8-blind-except flake8-builtins
   script:
-    - flake8 --max-line-length=120 --import-order-style=pycharm --application-import-names hyp3_autorift --statistics --tee --output-file flake8_report.txt
+    - flake8 --exclude hyp3_autorift/vend --max-line-length=120 --import-order-style=pycharm  --application-import-names
+      hyp3_autorift --statistics --tee --output-file flake8_report.txt
   artifacts:
     when: on_failure
     paths:
