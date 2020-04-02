@@ -187,6 +187,7 @@ pytest 37:
   #        conda-forge soon and these tests will be possible.
   allow_failure: true
   artifacts:
+    when: always
     paths:
       - pip_freeze_*.txt
       - conda_export_*.txt
