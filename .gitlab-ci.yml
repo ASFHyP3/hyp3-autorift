@@ -202,6 +202,10 @@ safety 37:
   script:
     - safety check --full-report --stdin < pip_freeze_py37.txt
     - awk -F '=' '/^[^#]/ {print $1 "==" $2}' conda_export_py37.txt | safety check --full-report --stdin
+  # FIXME: Because there isn't an easy or clear way to build ISCE+autoRIFT via
+  #        tox, these tests will fail. ISCE+autoRIFT should be available on
+  #        conda-forge soon and these tests will be possible.
+  allow_failure: true
   needs:
     - job: "pytest 37"
       artifacts: true
