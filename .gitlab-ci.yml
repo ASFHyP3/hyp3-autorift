@@ -184,7 +184,8 @@ pytest 37:
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
   # FIXME: Because there isn't an easy or clear way to build ISCE+autoRIFT via
   #        tox, these tests will fail. ISCE+autoRIFT should be available on
-  #        conda-forge soon and these tests will be possible.
+  #        conda-forge soon and these tests will be possible. Also, remove the
+  #        artifacts' "when: always"
   allow_failure: true
   artifacts:
     when: always
