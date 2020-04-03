@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# NOTE: This is based on autoRIFT v1.0.4 and the self reported ISCE v2.3 
-#       but it's really ISCE v2.3.2 as released on GitHub (but not included 
-#       in the release history for "reasons") as that's what conda-forge is 
-#       building from
+# NOTE: This is based on autoRIFT v1.0.4 and ISCE v2.3.3 as released on GitHub
+#       as that's what conda-forge is building from
 # NOTE: ISCE runtime and build dependencies are taken from its conda-forge
 #       build recipe, here: https://github.com/conda-forge/isce2-feedstock/blob/master/recipe/meta.yaml
 # NOTE: autoRIFT runtime and build dependencies are taken from its conda-forge
@@ -27,20 +25,16 @@ conda install -c conda-forge -y gcc_linux-64 gxx_linux-64 gfortran_linux-64 cyth
 ln -s $CONDA_PREFIX/bin/cython $CONDA_PREFIX/bin/cython3
 
 # Get ISCE and autoRIFT
-#wget https://github.com/isce-framework/isce2/archive/v2.3.2.tar.gz -O isce2-2.3.2.tar.gz
-#tar -zxvf isce2-2.3.2.tar.gz
-wget https://github.com/isce-framework/isce2/archive/f43daae0150cd93abd961eb2e57e6d45045bceb6.zip -O isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip
-unzip isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip
-mv isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6 isce2-2.3.2
+wget https://github.com/isce-framework/isce2/archive/v2.3.3.tar.gz -O isce2-2.3.3.tar.gz
+tar -zxvf isce2-2.3.3.tar.gz
 wget https://github.com/leiyangleon/autoRIFT/archive/v1.0.4.tar.gz -O autoRIFT-1.0.4.tar.gz
 tar -zxvf autoRIFT-1.0.4.tar.gz
 
 # Place geo_autoRIFT into ISCE as a contributed module and add it to the SCons build script
-cp -r autoRIFT-1.0.4/geo_autoRIFT isce2-2.3.2/contrib/
-#echo -e "\nSConscript('geo_autoRIFT/SConscript')\n" >> isce2-2.3.2/contrib/SConscript
+cp -r autoRIFT-1.0.4/geo_autoRIFT isce2-2.3.3/contrib/
 
 # Setup the ISCE build
-pushd isce2-2.3.2
+pushd isce2-2.3.3
 export ISCE_SRC_ROOT=${PWD}
 mkdir -p ${ISCE_SRC_ROOT}/_scons ${ISCE_SRC_ROOT}/_build
 export SCONS_CONFIG_DIR=${ISCE_SRC_ROOT}/_scons
@@ -131,7 +125,7 @@ python -c "from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid; pri
 # At this point, our install is all happy, so we can do some cleanup.
 
 # Remove the source directories 
-rm -rf isce2-2.3.2.tar.gz isce2-2.3.2/
+rm -rf isce2-2.3.3.tar.gz isce2-2.3.3/
 rm -rf autoRIFT-1.0.4.tar.gz  autoRIFT-1.0.4/
 
 # Unset the variables we defined

@@ -29,9 +29,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properti
     python3-matplotlib python3-pip python3-scipy scons cython3 && \
     apt-get clean
 
-RUN cd /opt && wget https://github.com/opencv/opencv/archive/3.4.7.zip -O opencv-3.4.7.zip && \
-    wget https://github.com/opencv/opencv_contrib/archive/3.4.7.zip -O opencv_contrib-3.4.7.zip && \
-    unzip opencv-3.4.7.zip && unzip opencv_contrib-3.4.7.zip && \
+RUN cd /opt && wget https://github.com/opencv/opencv/archive/3.4.7.tar.gz -O opencv-3.4.7.tar.gz && \
+    wget https://github.com/opencv/opencv_contrib/archive/3.4.7.tar.gz -O opencv_contrib-3.4.7.tar.gz && \
+    tar -zxvf opencv-3.4.7.tar.gz && tar -zxvf opencv_contrib-3.4.7.tar.gz && \
     export OPENCV_CONTRIB_MODULES=/opt/opencv_contrib-3.4.7/modules && \
     mkdir opencv-3.4.7/_build opencv-3.4.7/_release && cd opencv-3.4.7/_build && \
     cmake -D CMAKE_BUILD_TYPE=RELEASE \
@@ -50,18 +50,16 @@ ARG CONDA_UID=1000
 ARG CONDA_GID=1000
 
 RUN cd /opt && \
-    wget https://github.com/isce-framework/isce2/archive/f43daae0150cd93abd961eb2e57e6d45045bceb6.zip \
-    -O isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip && \
-    unzip isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip && \
-    mv isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6 isce2-2.3.2 && \
+    wget https://github.com/isce-framework/isce2/archive/v2.3.3.tar.gz -O isce2-2.3.3.tar.gz && \
+    tar -zxvf isce2-2.3.3.tar.gz && \
     wget https://github.com/leiyangleon/autoRIFT/archive/v1.0.4.tar.gz -O autoRIFT-1.0.4.tar.gz && \
     tar -zxvf autoRIFT-1.0.4.tar.gz && \
-    cp -r autoRIFT-1.0.4/geo_autoRIFT isce2-2.3.2/contrib/ && \
-    mkdir /opt/isce2-2.3.2/_scons /opt/isce2-2.3.2/_build
+    cp -r autoRIFT-1.0.4/geo_autoRIFT isce2-2.3.3/contrib/ && \
+    mkdir /opt/isce2-2.3.3/_scons /opt/isce2-2.3.3/_build
 
-COPY hyp3_autorift/etc/SConfigISCE /opt/isce2-2.3.2/_scons/
+COPY hyp3_autorift/etc/SConfigISCE /opt/isce2-2.3.3/_scons/
 
-RUN export ISCE_SRC_ROOT=/opt/isce2-2.3.2 && cd ${ISCE_SRC_ROOT} && \
+RUN export ISCE_SRC_ROOT=/opt/isce2-2.3.3 && cd ${ISCE_SRC_ROOT} && \
     export SCONS_CONFIG_DIR=${ISCE_SRC_ROOT}/_scons && \
     export PYTHON_SITE_PACKAGES=$(python3 -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
     export PYTHON_INCLUDE_DIR=$(python3 -c "from sysconfig import get_paths; print(get_paths()['include'])") && \
@@ -72,8 +70,8 @@ RUN export ISCE_SRC_ROOT=/opt/isce2-2.3.2 && cd ${ISCE_SRC_ROOT} && \
     mkdir -p /usr/local/share/isce2 && \
     cp -r contrib/stack/* /usr/local/share/isce2 && \
     cp -r contrib/timeseries/* /usr/local/share/isce2 && \
-    cd /opt && rm -rf opencv-3.4.7.zip opencv-3.4.7/ opencv_contrib-3.4.7.zip opencv_contrib-3.4.7/ && \
-    rm -rf isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip isce2-2.3.2/ autoRIFT-1.0.4.tar.gz  autoRIFT-1.0.4/
+    cd /opt && rm -rf opencv-3.4.7.tar.gz opencv-3.4.7/ opencv_contrib-3.4.7.tar.gz opencv_contrib-3.4.7/ && \
+    rm -rf isce2-2.3.3.tar.gz isce2-2.3.3/ autoRIFT-1.0.4.tar.gz  autoRIFT-1.0.4/
 
 ARG S3_PYPI_HOST
 
