@@ -17,6 +17,7 @@ LABEL org.opencontainers.image.source="https://github.com/asfadmin/hyp3-autorift
 # LABEL org.opencontainers.image.revision=""
 
 ARG DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=true
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && apt-get update && \
@@ -74,6 +75,12 @@ RUN export ISCE_SRC_ROOT=/opt/isce2-2.3.2 && cd ${ISCE_SRC_ROOT} && \
     cd /opt && rm -rf opencv-3.4.7.zip opencv-3.4.7/ opencv_contrib-3.4.7.zip opencv_contrib-3.4.7/ && \
     rm -rf isce2-f43daae0150cd93abd961eb2e57e6d45045bceb6.zip isce2-2.3.2/ autoRIFT-1.0.4.tar.gz  autoRIFT-1.0.4/
 
+ARG S3_PYPI_HOST
+
+RUN python3 -m pip install --no-cache-dir hyp3_autorift \
+    --trusted-host "${S3_PYPI_HOST}" \
+    --extra-index-url "http://${S3_PYPI_HOST}"
+
 RUN groupadd -g "${CONDA_GID}" --system conda && \
     useradd -l -u "${CONDA_UID}" -g "${CONDA_GID}" --system -d /home/conda -m  -s /bin/bash conda && \
     chown -R conda:conda /opt && \
@@ -84,14 +91,7 @@ RUN groupadd -g "${CONDA_GID}" --system conda && \
 
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
-ENV PYTHONDONTWRITEBYTECODE=true
 WORKDIR /home/conda/
 
-ARG S3_PYPI_HOST
-
-RUN python3 -m pip install --no-cache-dir hyp3_autorift \
-    --trusted-host "${S3_PYPI_HOST}" \
-    --extra-index-url "http://${S3_PYPI_HOST}"
-
-ENTRYPOINT ["/bin/bash", "-l", "hyp3_autorift"]
+ENTRYPOINT ["/usr/local/bin/hyp3_autorift"]
 CMD ["-v"]
