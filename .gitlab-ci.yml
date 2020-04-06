@@ -119,12 +119,14 @@ gitleaks:
   before_script: []
   script:
     - export LAST_TAG_HASH=$(git show-ref --hash -- $(git describe --abbrev=0))
+    - echo -e '[whitelist]\ncommits = ["5fa9f7f66248b9396cbf281fbffaadcd708b9",]\n' > gitleaks.toml
     # NOTE: commit range goes back into history; commit-from == HEAD by default
-    - gitleaks -v --repo-path=./ --commit-to="${LAST_TAG_HASH}" --report=gitleaks_report.json
+    - gitleaks -v --repo-path=./ --config=gitleaks.toml --commit-to="${LAST_TAG_HASH}" --report=gitleaks_report.json
   artifacts:
     when: on_failure
     paths:
       - gitleaks_report.json
+      - gitleask.toml
   <<: *always_run
 
 flake8:
