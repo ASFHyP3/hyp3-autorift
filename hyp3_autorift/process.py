@@ -9,6 +9,7 @@ import os
 
 from hyp3lib.execute import execute
 from hyp3lib.file_subroutines import mkdir_p
+from hyp3lib.get_orb import downloadSentinelOrbitFile
 
 from hyp3_autorift import geometry
 from hyp3_autorift import io
@@ -47,7 +48,13 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         execute(f'get_asf.py {dl_file_list}')
         os.rmdir('download')  # Really, get_asf.py should do this...
 
-    # TODO: Fetch orbit and aux files
+    if orbits is None:
+        orbits = os.path.abspath('Orbits')
+        mkdir_p(orbits)
+        master_state_vec, master_provider = downloadSentinelOrbitFile(master, directory=orbits)
+        log.info(f'Downloaded orbit file {master_state_vec} from {master_provider}')
+        slave_state_vec, slave_provider = downloadSentinelOrbitFile(slave, directory=orbits)
+        log.info(f'Downloaded orbit file {slave_state_vec} from {slave_provider}')
 
     lat_limits, lon_limits = geometry.bounding_box(
         master, slave, orbits=orbits, aux=aux, polarization=polarization
