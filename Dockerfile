@@ -61,7 +61,7 @@ COPY hyp3_autorift/etc/SConfigISCE /opt/isce2-2.3.3/_scons/
 
 RUN export ISCE_SRC_ROOT=/opt/isce2-2.3.3 && cd ${ISCE_SRC_ROOT} && \
     export SCONS_CONFIG_DIR=${ISCE_SRC_ROOT}/_scons && \
-    export PYTHON_SITE_PACKAGES=$(python3 -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
+    export PYTHON_SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
     export PYTHON_INCLUDE_DIR=$(python3 -c "from sysconfig import get_paths; print(get_paths()['include'])") && \
     export NUMPY_INCLUDE_DIR=$(python3 -c "import numpy; print(numpy.get_include())") && \
     scons install && \
@@ -82,7 +82,7 @@ RUN python3 -m pip install --no-cache-dir hyp3_autorift \
 RUN groupadd -g "${CONDA_GID}" --system conda && \
     useradd -l -u "${CONDA_UID}" -g "${CONDA_GID}" --system -d /home/conda -m  -s /bin/bash conda && \
     chown -R conda:conda /opt && \
-    export PYTHON_SITE_PACKAGES=$(python3 -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
+    export PYTHON_SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
     echo "export ISCE_HOME=${PYTHON_SITE_PACKAGES}/isce" >> /home/conda/.bashrc && \
     echo "export ISCE_STACK=${PYTHON_SITE_PACKAGES}/share/isce2" >> /home/conda/.bashrc && \
     echo "export PATH=${PATH}:${PYTHON_SITE_PACKAGES}/isce/bin:${PYTHON_SITE_PACKAGES}/isce/applications" >> /home/conda/.bashrc

@@ -243,6 +243,7 @@ dockerize:
     # - aws ecr get-login-password | docker login --username AWS --password-stdin ${HYP3_REGISTRY}
     - $(aws ecr get-login --no-include-email)
     - docker push ${HYP3_REGISTRY}/hyp3-autorift:${SDIST_VERSION/+/_}
+  timeout: 2h
   <<: *only_mr_protected
 
 

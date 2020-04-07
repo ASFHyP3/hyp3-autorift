@@ -2,13 +2,16 @@
 AutoRIFT processing for HyP3
 """
 import os
+import shutil
 from datetime import datetime
 
 import hyp3proclib
+from hyp3proclib.db import get_db_connection
 from hyp3proclib.logger import log
 from hyp3proclib.proc_base import Processor
 
 import hyp3_autorift
+from hyp3_autorift.process import process as autorift_process
 
 
 def hyp3_process(cfg, n):
@@ -28,29 +31,57 @@ def hyp3_process(cfg, n):
             launch_dir = os.getcwd()
             os.chdir(cfg['workdir'])
 
-            # TODO: Process
+            autorift_process(g1, g2, download=True, process_dir=cfg['ftd'], product_dir=True)
 
             os.chdir(launch_dir)
         else:
             log.info('Processing skipped!')
-            # TODO: Log call 'command was'
+            log.info(f'Command would be: autorift_proc_pair {g1} {g2} --process-dir {cfg["ftd"]} --download '
+                     f'--product-dir')
             cfg['log'] += "(debug mode)"
 
         cfg['success'] = True
         hyp3proclib.update_completed_time(cfg)
 
+        # FIXME: But, why?
         cfg["granule_name"] = cfg["granule"]
         cfg["processes"] = [cfg["proc_id"], ]
         cfg["subscriptions"] = [cfg["sub_id"], ]
 
-        product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
-        if not os.path.isdir(product_dir):
-            log.info(f'PRODUCT directory not found: {product_dir}')
+        tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
+        if not os.path.isdir(tmp_product_dir):
+            log.info(f'PRODUCT directory not found: {tmp_product_dir}')
             log.error('Processing failed')
             raise Exception('Processing failed: PRODUCT directory not found')
         else:
-            # TODO: This.
-            pass
+            out_name = hyp3proclib.build_output_name_pair(g1, g2, cfg['workdir'], cfg['suffix'])
+            log.info(f'Output name: {out_name}')
+
+            product_dir = os.path.join(cfg['workdir'], out_name)
+            zip_file = f'{product_dir}.zip'
+            if os.path.isdir(product_dir):
+                shutil.rmtree(product_dir)
+            if os.path.isfile(zip_file):
+                os.unlink(zip_file)
+            cfg['out_path'] = product_dir
+
+            log.debug('Renaming ' + tmp_product_dir + ' to ' + product_dir)
+            os.rename(tmp_product_dir, product_dir)
+
+            # TODO:
+            #  * browse images
+            #  * citation
+            #  * phase_png (?)
+
+            hyp3proclib.zip_dir(product_dir, zip_file)
+
+            cfg['final_product_size'] = [os.stat(zip_file).st_size, ]
+            cfg['original_product_size'] = 0
+
+            with get_db_connection('hyp3-db') as conn:
+                hyp3proclib.record_metrics(cfg, conn)
+                hyp3proclib.upload_product(zip_file, cfg, conn)
+                hyp3proclib.success(conn, cfg)
 
     except Exception as e:
         log.exception('autoRIFT processing failed!')
