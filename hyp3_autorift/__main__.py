@@ -31,7 +31,7 @@ def hyp3_process(cfg, n):
             launch_dir = os.getcwd()
             os.chdir(cfg['workdir'])
 
-            autorift_process(g1, g2, download=True, process_dir=cfg['ftd'], product_dir=True)
+            autorift_process(g1, g2, download=True, process_dir=cfg['ftd'], product=True)
 
             os.chdir(launch_dir)
         else:

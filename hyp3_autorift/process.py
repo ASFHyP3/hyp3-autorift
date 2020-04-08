@@ -8,12 +8,10 @@ import glob
 import logging
 import os
 import shutil
-import zipfile
 
 from hyp3lib.execute import execute
 from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
-from lxml import etree
 
 from hyp3_autorift import geometry
 from hyp3_autorift import io
@@ -80,7 +78,6 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         master, slave, orbits=orbits, aux=aux, polarization=polarization
     )
 
-    # FIXME: Should integrate this functionality into hyp3lib.get_dem
     dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
 
     if process_dir:
