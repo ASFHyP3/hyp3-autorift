@@ -40,7 +40,7 @@ def hyp3_process(cfg, n):
 
         process(
             cfg, 'autorift_proc_pair',
-            [f'{g1}.zip', f'{g2}.zip', '--process-dir', f'{cfg["ftd"]}', '--download', '--product-dir']
+            [f'{g1}.zip', f'{g2}.zip', '--process-dir', f'{cfg["ftd"]}', '--download', '--product']
         )
         # if not cfg['skip_processing']:
         #     log.info(f'Process starting at {datetime.now()}')
@@ -53,7 +53,7 @@ def hyp3_process(cfg, n):
         # else:
         #     log.info('Processing skipped!')
         #     log.info(f'Command would be: autorift_proc_pair {g1}.zip {g2}.zip --process-dir {cfg["ftd"]} --download '
-        #              f'--product-dir')
+        #              f'--product')
         #     cfg['log'] += "(debug mode)"
         #
         # cfg['success'] = True
