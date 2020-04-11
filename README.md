@@ -1,3 +1,3 @@
-# hyp3-autorift
+# HyP3 autoRIFT
 
-AutoRIFT processing for HyP3
+A HyP3 plugin for feature tracking processing with AutoRIFT-ISCE
