@@ -62,7 +62,8 @@ Tag version:
   stage: tools-bot
   before_script:
     - chmod 600 ${GITLAB_TOOLS_BOT_SSH}
-    - git config core.sshCommand "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ${GITLAB_TOOLS_BOT_SSH} -F /dev/null"
+    - git config core.sshCommand "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      -i ${GITLAB_TOOLS_BOT_SSH} -F /dev/null"
     - git config --global user.email "UAF-asf-apd@alaska.edu"
     - git config --global user.name "Tools-bot"
     - git remote set-url origin git@scm.asf.alaska.edu:hyp3/hyp3-autorift.git
@@ -120,12 +121,12 @@ gitleaks:
   script:
     - export LAST_TAG_HASH=$(git show-ref --hash -- $(git describe --abbrev=0))
     # NOTE: commit range goes back into history; commit-from == HEAD by default
-    - gitleaks -v --repo-path=./ --config=./.gitlab/gitleaks.toml --commit-to="${LAST_TAG_HASH}" --report=gitleaks_report.json
+    - gitleaks -v --repo-path=./ --config=./.gitlab/gitleaks.toml --commit-to="${LAST_TAG_HASH}"
+      --report=gitleaks_report.json
   artifacts:
     when: on_failure
     paths:
       - gitleaks_report.json
-      - gitleask.toml
   <<: *always_run
 
 flake8:
@@ -134,7 +135,8 @@ flake8:
     - *before_defaults
     - python3 -m pip install flake8 flake8-import-order flake8-blind-except flake8-builtins
   script:
-    - flake8 --exclude hyp3_autorift/vend --max-line-length=120 --import-order-style=pycharm  --application-import-names
+    - flake8 --exclude hyp3_autorift/vend --max-line-length=120
+      --import-order-style=pycharm  --application-import-names
       hyp3_autorift --statistics --tee --output-file flake8_report.txt
   artifacts:
     when: on_failure
