@@ -59,7 +59,7 @@ setup(
         'testautoRIFT_ISCE.py = hyp3_autorift.vend.testautoRIFT_ISCE:main',
         'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main',
         # FIXME: Only needed for testautoRIFT_ISCE.py
-        'topsinsar_filename.py = hyp3_autorift.io:save_topsinsar_mat',
+        'topsinsar_filename.py = hyp3_autorift.io:topsinsar_mat',
         ]
     },
 
