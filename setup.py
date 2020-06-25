@@ -13,7 +13,7 @@ setup(
     long_description=long_desc,
     long_description_content_type='text/markdown',
 
-    url='https://scm.asf.alaska.edu/hyp3/hyp3-autorift',
+    url='https://github.com/asfadmin/hyp3-autorift',
 
     author='ASF APD/Tools Team',
     author_email='uaf-asf-apd@alaska.edu',
@@ -29,7 +29,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         ],
 
-    python_requires='~=3.5',
+    python_requires='~=3.7',
 
     install_requires=[
         # FIXME: use boto3 instead of requests for download in hyp3_autorift.io.fetch_jpl_tifs
@@ -48,8 +48,6 @@ setup(
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',
-            'tox',
-            'tox-conda',
         ]
     },
 

@@ -1,0 +1,2 @@
+.*gitleaks.toml$
+.gitlab-ci.yml

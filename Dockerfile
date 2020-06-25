@@ -21,13 +21,13 @@ ENV PYTHONDONTWRITEBYTECODE=true
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && apt-get update && \
-    apt-get install -y unzip vim wget curl build-essential cmake \
+    apt-get install -y --no-install-recommends unzip vim wget curl build-essential cmake \
     gfortran imagemagick libatlas-base-dev gdal-bin libgdal-dev \
     libavcodec-dev libavformat-dev libfftw3-dev libgl1-mesa-dev libgtk-3-dev \
     libhdf5-dev libjpeg-dev libmotif-dev libpng-dev libswscale-dev libtiff-dev \
     libv4l-dev libx264-dev libxvidcore-dev pkg-config python3-dev python3-h5py \
     python3-matplotlib python3-pip python3-scipy scons cython3 && \
-    apt-get clean
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN cd /opt && wget https://github.com/opencv/opencv/archive/3.4.7.tar.gz -O opencv-3.4.7.tar.gz && \
     wget https://github.com/opencv/opencv_contrib/archive/3.4.7.tar.gz -O opencv_contrib-3.4.7.tar.gz && \
@@ -74,8 +74,9 @@ RUN export ISCE_SRC_ROOT=/opt/isce2-2.3.3 && cd ${ISCE_SRC_ROOT} && \
     rm -rf isce2-2.3.3.tar.gz isce2-2.3.3/ autoRIFT-1.0.4.tar.gz  autoRIFT-1.0.4/
 
 ARG S3_PYPI_HOST
+ARG SDIST_SPEC
 
-RUN python3 -m pip install --no-cache-dir hyp3_autorift \
+RUN python3 -m pip install --no-cache-dir hyp3_autorift${SDIST_SPEC} \
     --trusted-host "${S3_PYPI_HOST}" \
     --extra-index-url "http://${S3_PYPI_HOST}"
 
@@ -89,7 +90,7 @@ RUN groupadd -g "${CONDA_GID}" --system conda && \
 
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
-WORKDIR /home/conda/
+WORKDIR /home/conda
 
 ENTRYPOINT ["/usr/local/bin/hyp3_autorift"]
-CMD ["-v"]
+CMD ["-h"]
