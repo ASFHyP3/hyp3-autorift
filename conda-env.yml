@@ -13,7 +13,8 @@ dependencies:
   - pytest-cov
   # For running
   - boto3
-  - gdal=2.*
+  - gdal
+  - isce2>=2.3.3
   - imageio
   - importlib_metadata
   - lxml
@@ -36,5 +37,5 @@ dependencies:
     # For running
     - --trusted-host hyp3-pypi.s3-website-us-east-1.amazonaws.com
       --extra-index-url http://hyp3-pypi.s3-website-us-east-1.amazonaws.com
-    - hyp3lib
-    - hyp3proclib
+    - hyp3lib~=1.0
+    - hyp3proclib~=1.0
