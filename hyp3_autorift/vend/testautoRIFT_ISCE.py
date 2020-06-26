@@ -30,7 +30,7 @@
 # embargoed foreign country or citizen of those countries.
 #
 # Author: Yang Lei
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import argparse
 import logging
 import subprocess
@@ -40,14 +40,19 @@ from datetime import date
 import cv2
 import numpy as np
 import scipy.io as sio
+from isce.components.contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
+from isce.components.isceobj.Util.ImageUtil import ImageLib as IML
 from osgeo import gdal
 
 from hyp3_autorift import netcdf_output as no
 
 
+
 def runCmd(cmd):
     out = subprocess.getoutput(cmd)
     return out
+
+
 
 
 def cmdLineParse():
@@ -57,15 +62,19 @@ def cmdLineParse():
 
     parser = argparse.ArgumentParser(description='Output geo grid')
     parser.add_argument('-m', '--input_m', dest='indir_m', type=str, required=True,
-            help='Input master image file name (in ISCE format and radar coordinates) '
-                 'or Input master image file name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input master image file name (in ISCE format and radar coordinates) or Input master image file name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input slave image file name (in ISCE format and radar coordinates) '
-                 'or Input slave image file name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input slave image file name (in ISCE format and radar coordinates) or Input slave image file name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-g', '--input_g', dest='grid_location', type=str, required=False,
             help='Input pixel indices file name')
     parser.add_argument('-o', '--input_o', dest='init_offset', type=str, required=False,
             help='Input search center offsets ("downstream" reach location) file name')
+    parser.add_argument('-sr', '--input_sr', dest='search_range', type=str, required=False,
+            help='Input search range file name')
+    parser.add_argument('-csmin', '--input_csmin', dest='chip_size_min', type=str, required=False,
+            help='Input chip size min file name')
+    parser.add_argument('-csmax', '--input_csmax', dest='chip_size_max', type=str, required=False,
+            help='Input chip size max file name')
     parser.add_argument('-vx', '--input_vx', dest='offset2vx', type=str, required=False,
             help='Input pixel offsets to vx conversion coefficients file name')
     parser.add_argument('-vy', '--input_vy', dest='offset2vy', type=str, required=False,
@@ -75,22 +84,22 @@ def cmdLineParse():
     parser.add_argument('-nc', '--sensor_flag_netCDF', dest='nc_sensor', type=str, required=False, default=None,
             help='flag for packaging output formatted for Sentinel ("S") and Landsat ("L") dataset; default is None')
 
-    return parser.parse_args()
 
+    return parser.parse_args()
 
 class Dummy(object):
     pass
+
 
 
 def loadProduct(filename):
     '''
     Load the product using Product Manager.
     '''
-    import isce
-    from imageMath import IML
 
     IMG = IML.mmapFromISCE(filename, logging)
     img = IMG.bands[0]
+#    pdb.set_trace()
     return img
 
 
@@ -99,6 +108,7 @@ def loadProductOptical(filename):
     Load the product using Product Manager.
     '''
     ds = gdal.Open(filename)
+#    pdb.set_trace()
     band = ds.GetRasterBand(1)
     
     img = band.ReadAsArray()
@@ -110,16 +120,21 @@ def loadProductOptical(filename):
     return img
 
 
-def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, noDataMask, optflag, nodata):
+
+
+def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, optflag, nodata):
     '''
     Wire and run geogrid.
     '''
-    import isce
-    from components.contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
-    import isceobj
+    
 
     obj = autoRIFT_ISCE()
     obj.configure()
+
+#    ##########     uncomment if starting from preprocessed images
+#    I1 = I1.astype(np.uint8)
+#    I2 = I2.astype(np.uint8)
+
 
     # take the amplitude only for the radar images
     if optflag == 0:
@@ -128,6 +143,21 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, noDataMask, optflag, nodata):
 
     obj.I1 = I1
     obj.I2 = I2
+
+#    # test with lena image (533 X 533)
+#    obj.ChipSizeMinX=16
+#    obj.ChipSizeMaxX=32
+#    obj.ChipSize0X=16
+#    obj.SkipSampleX=16
+#    obj.SkipSampleY=16
+
+#    # test with Venus image (407 X 407)
+#    obj.ChipSizeMinX=8
+#    obj.ChipSizeMaxX=16
+#    obj.ChipSize0X=8
+#    obj.SkipSampleX=8
+#    obj.SkipSampleY=8
+
 
     # create the grid if it does not exist
     if xGrid is None:
@@ -142,22 +172,52 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, noDataMask, optflag, nodata):
     else:
         obj.xGrid = xGrid
         obj.yGrid = yGrid
-        if optflag == 1:
-            obj.ChipSizeMaxX = 32
-            obj.ChipSizeMinX = 16
-            obj.ChipSize0X = 16
+
+
     
-    # generate the nodata mask where offset searching will be skipped based on
-    # 1) imported nodata mask and/or 2) zero values in the image
+    # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     for ii in range(obj.xGrid.shape[0]):
         for jj in range(obj.xGrid.shape[1]):
             if (obj.yGrid[ii,jj] != nodata)&(obj.xGrid[ii,jj] != nodata):
                 if (I1[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0)|(I2[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0):
                     noDataMask[ii,jj] = True
 
-    # mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
-    obj.SearchLimitX = obj.SearchLimitX * np.logical_not(noDataMask)
-    obj.SearchLimitY = obj.SearchLimitY * np.logical_not(noDataMask)
+
+
+
+    ######### mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
+
+    if SRx0 is None:
+#        ###########     uncomment to customize SearchLimit based on velocity distribution (i.e. Dx0 must not be None)
+#        obj.SearchLimitX = np.int32(4+(25-4)/(np.max(np.abs(Dx0[np.logical_not(noDataMask)]))-np.min(np.abs(Dx0[np.logical_not(noDataMask)])))*(np.abs(Dx0)-np.min(np.abs(Dx0[np.logical_not(noDataMask)]))))
+#        obj.SearchLimitY = 5
+#        ###########
+        obj.SearchLimitX = obj.SearchLimitX * np.logical_not(noDataMask)
+        obj.SearchLimitY = obj.SearchLimitY * np.logical_not(noDataMask)
+    else:
+        obj.SearchLimitX = SRx0
+        obj.SearchLimitY = SRy0
+#        ############ add buffer to search range
+#        obj.SearchLimitX[obj.SearchLimitX!=0] = obj.SearchLimitX[obj.SearchLimitX!=0] + 2
+#        obj.SearchLimitY[obj.SearchLimitY!=0] = obj.SearchLimitY[obj.SearchLimitY!=0] + 2
+
+    if CSMINx0 is not None:
+        obj.ChipSizeMaxX = CSMAXx0
+        obj.ChipSizeMinX = CSMINx0
+        chipsizex0 = float(str.split(subprocess.getoutput('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
+        try:
+            pixsizex = float(str.split(subprocess.getoutput('fgrep "Ground range pixel size:" testGeogrid.txt'))[-1])
+        except:
+            pixsizex = float(str.split(subprocess.getoutput('fgrep "X-direction pixel size:" testGeogrid.txt'))[-1])
+        obj.ChipSize0X = int(np.ceil(chipsizex0/pixsizex/4)*4)
+#        obj.ChipSize0X = np.min(CSMINx0[CSMINx0!=nodata])
+        RATIO_Y2X = CSMINy0/CSMINx0
+        obj.ScaleChipSizeY = np.mean(RATIO_Y2X[(CSMINx0!=nodata)&(CSMINy0!=nodata)])
+    else:
+        if ((optflag == 1)&(xGrid is not None)):
+            obj.ChipSizeMaxX = 32
+            obj.ChipSizeMinX = 16
+            obj.ChipSize0X = 16
 
     # create the downstream search offset if not provided as input
     if Dx0 is not None:
@@ -172,23 +232,103 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, noDataMask, optflag, nodata):
     obj.yGrid[noDataMask] = 0
     obj.Dx0[noDataMask] = 0
     obj.Dy0[noDataMask] = 0
+    if SRx0 is not None:
+        obj.SearchLimitX[noDataMask] = 0
+        obj.SearchLimitY[noDataMask] = 0
+    if CSMINx0 is not None:
+        obj.ChipSizeMaxX[noDataMask] = 0
+        obj.ChipSizeMinX[noDataMask] = 0
 
     # convert azimuth offset to vertical offset as used in autoRIFT convention
     if optflag == 0:
         obj.Dy0 = -1 * obj.Dy0
 
-    # preprocessing
+
+
+    ######## preprocessing
     t1 = time.time()
     print("Pre-process Start!!!")
+#    obj.zeroMask = 1
     obj.preprocess_filt_hps()
+#    obj.I1 = np.abs(I1)
+#    obj.I2 = np.abs(I2)
     print("Pre-process Done!!!")
     print(time.time()-t1)
 
     t1 = time.time()
+#    obj.DataType = 0
     obj.uniform_data_type()
     print("Uniform Data Type Done!!!")
     print(time.time()-t1)
 
+#    pdb.set_trace()
+
+#    obj.sparseSearchSampleRate = 16
+
+#    obj.OverSampleRatio = 32
+
+    #   OverSampleRatio can be assigned as a scalar (such as the above line) or as a Python dictionary below for intellgient use (ChipSize-dependent).
+    #   Here, four chip sizes are used: ChipSize0X*[1,2,4,8] and four OverSampleRatio are considered [16,32,64,128]. The intelligent selection of OverSampleRatio (as a function of chip size) was determined by analyzing various combinations of (OverSampleRatio and chip size) and comparing the resulting image quality and statistics with the reference scenario (where the largest OverSampleRatio of 128 and chip size of ChipSize0X*8 are considered).
+    #   The selection for the optical data flag is based on Landsat-8 data over an inland region (thus stable and not moving much) of Greenland, while that for the radar flag (optflag = 0) is based on Sentinel-1 data over the same region of Greenland.
+    if CSMINx0 is not None:
+        if (optflag == 1):
+            obj.OverSampleRatio = {obj.ChipSize0X:16,obj.ChipSize0X*2:32,obj.ChipSize0X*4:64,obj.ChipSize0X*8:64}
+        else:
+            obj.OverSampleRatio = {obj.ChipSize0X:32,obj.ChipSize0X*2:64,obj.ChipSize0X*4:128,obj.ChipSize0X*8:128}
+
+
+
+#    ########## export preprocessed images to files; can be commented out if not debugging
+#
+#    t1 = time.time()
+#
+#    I1 = obj.I1
+#    I2 = obj.I2
+#
+#    length,width = I1.shape
+#
+#    filename1 = 'I1_uint8_hpsnew.off'
+#
+#    slcFid = open(filename1, 'wb')
+#
+#    for yy in range(length):
+#        data = I1[yy,:]
+#        data.astype(np.float32).tofile(slcFid)
+#
+#    slcFid.close()
+#
+#    img = isceobj.createOffsetImage()
+#    img.setFilename(filename1)
+#    img.setBands(1)
+#    img.setWidth(width)
+#    img.setLength(length)
+#    img.setAccessMode('READ')
+#    img.renderHdr()
+#
+#
+#    filename2 = 'I2_uint8_hpsnew.off'
+#
+#    slcFid = open(filename2, 'wb')
+#
+#    for yy in range(length):
+#        data = I2[yy,:]
+#        data.astype(np.float32).tofile(slcFid)
+#
+#    slcFid.close()
+#
+#    img = isceobj.createOffsetImage()
+#    img.setFilename(filename2)
+#    img.setBands(1)
+#    img.setWidth(width)
+#    img.setLength(length)
+#    img.setAccessMode('READ')
+#    img.renderHdr()
+#
+#    print("output Done!!!")
+#    print(time.time()-t1)
+
+
+    ########## run Autorift
     t1 = time.time()
     print("AutoRIFT Start!!!")
     obj.runAutorift()
@@ -199,19 +339,29 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, noDataMask, optflag, nodata):
     noDataMask = cv2.dilate(noDataMask.astype(np.uint8),kernel,iterations = 1)
     noDataMask = noDataMask.astype(np.bool)
 
-    return obj.Dx, obj.Dy, obj.InterpMask, obj.ChipSizeX, obj.ScaleChipSizeY, \
-           obj.SearchLimitX, obj.SearchLimitY, obj.origSize, noDataMask
+
+    return obj.Dx, obj.Dy, obj.InterpMask, obj.ChipSizeX, obj.ScaleChipSizeY, obj.SearchLimitX, obj.SearchLimitY, obj.origSize, noDataMask
+
+
+
+
 
 
 def main():
     '''
     Main driver.
     '''
+
     inps = cmdLineParse()
     
     if inps.optical_flag == 1:
         data_m = loadProductOptical(inps.indir_m)
         data_s = loadProductOptical(inps.indir_s)
+#        # test with lena/Venus image
+#        import scipy.io as sio
+#        conts = sio.loadmat(inps.indir_m)
+#        data_m = conts['I']
+#        data_s = conts['I1']
     else:
         data_m = loadProduct(inps.indir_m)
         data_s = loadProduct(inps.indir_s)
@@ -222,6 +372,12 @@ def main():
     yGrid = None
     Dx0 = None
     Dy0 = None
+    SRx0 = None
+    SRy0 = None
+    CSMINx0 = None
+    CSMINy0 = None
+    CSMAXx0 = None
+    CSMAXy0 = None
     noDataMask = None
     nodata = None
     
@@ -248,9 +404,36 @@ def main():
         band=None
         ds=None
 
-    Dx, Dy, InterpMask, ChipSizeX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
-        data_m, data_s, xGrid, yGrid, Dx0, Dy0, noDataMask, inps.optical_flag, nodata
-    )
+    if inps.search_range is not None:
+        ds = gdal.Open(inps.search_range)
+        band = ds.GetRasterBand(1)
+        SRx0 = band.ReadAsArray()
+        band = ds.GetRasterBand(2)
+        SRy0 = band.ReadAsArray()
+        band=None
+        ds=None
+
+    if inps.chip_size_min is not None:
+        ds = gdal.Open(inps.chip_size_min)
+        band = ds.GetRasterBand(1)
+        CSMINx0 = band.ReadAsArray()
+        band = ds.GetRasterBand(2)
+        CSMINy0 = band.ReadAsArray()
+        band=None
+        ds=None
+
+    if inps.chip_size_max is not None:
+        ds = gdal.Open(inps.chip_size_max)
+        band = ds.GetRasterBand(1)
+        CSMAXx0 = band.ReadAsArray()
+        band = ds.GetRasterBand(2)
+        CSMAXy0 = band.ReadAsArray()
+        band=None
+        ds=None
+
+
+
+    Dx, Dy, InterpMask, ChipSizeX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(data_m, data_s, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, inps.optical_flag, nodata)
 
     if inps.optical_flag == 0:
         Dy = -Dy
@@ -278,10 +461,24 @@ def main():
 
     sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
 
+#    #####################  Uncomment for debug mode
+#    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY})
+#    conts = sio.loadmat('debug.mat')
+#    DX = conts['Dx']
+#    DY = conts['Dy']
+#    INTERPMASK = conts['InterpMask']
+#    CHIPSIZEX = conts['ChipSizeX']
+#    ScaleChipSizeY = conts['ScaleChipSizeY']
+#    SEARCHLIMITX = conts['SearchLimitX']
+#    SEARCHLIMITY = conts['SearchLimitY']
+#    #####################
+
     if inps.grid_location is not None:
+
 
         t1 = time.time()
         print("Write Outputs Start!!!")
+
 
         # Create the GeoTiff
         driver = gdal.GetDriverByName('GTiff')
@@ -301,6 +498,7 @@ def main():
         outband = outRaster.GetRasterBand(4)
         outband.WriteArray(CHIPSIZEX)
         outband.FlushCache()
+
 
         if inps.offset2vx is not None:
             ds = gdal.Open(inps.offset2vx)
@@ -334,33 +532,35 @@ def main():
             outband.WriteArray(VY)
             outband.FlushCache()
             
-            # netCDF packaging for Sentinel and Landsat dataset; can add other sensor format as well
+            ########################################################################################
+            ############   netCDF packaging for Sentinel and Landsat dataset; can add other sensor format as well
             if inps.nc_sensor == "S":
                 
-                rangePixelSize = float(str.split(runCmd('fgrep "Range:" testGeogrid.txt'))[2])
-                prf = float(str.split(runCmd('fgrep "Azimuth:" testGeogrid.txt'))[2])
+                rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
+                azimuthPixelSize = float(str.split(runCmd('fgrep "Azimuth pixel size:" testGeogrid.txt'))[3])
                 dt = float(str.split(runCmd('fgrep "Repeat Time:" testGeogrid.txt'))[2])
                 epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
-                satv = np.array([float(str.split(runCmd('fgrep "Center Satellite Velocity:" testGeogrid.txt'))[3]),
-                                 float(str.split(runCmd('fgrep "Center Satellite Velocity:" testGeogrid.txt'))[4]),
-                                 float(str.split(runCmd('fgrep "Center Satellite Velocity:" testGeogrid.txt'))[5])])
-                azimuthPixelSize = np.sqrt(np.sum(satv**2)) / prf
+#                print (str(rangePixelSize)+"      "+str(azimuthPixelSize))
 
                 runCmd('topsinsar_filename.py')
+#                import scipy.io as sio
                 conts = sio.loadmat('topsinsar_filename.mat')
                 master_filename = conts['master_filename'][0]
                 slave_filename = conts['slave_filename'][0]
                 master_split = str.split(master_filename,'_')
                 slave_split = str.split(slave_filename,'_')
 
-                version = '1.0.4'
+                version = '1.0.5'
                 pair_type = 'radar'
                 detection_method = 'feature'
                 coordinates = 'radar'
+#                out_nc_filename = 'Jakobshavn.nc'
                 out_nc_filename = master_filename[0:-4]+'_'+slave_filename[0:-4]+'.nc'
                 out_nc_filename = './' + out_nc_filename
                 roi_valid_percentage = np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*100.0
-                CHIPSIZEY = CHIPSIZEX * ScaleChipSizeY
+                CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+
 
                 d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
                 d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
@@ -399,8 +599,8 @@ def main():
 
             elif inps.nc_sensor == "L":
                 
-                XPixelSize = np.abs(float(str.split(runCmd('fgrep "X-direction coordinate:" testGeogrid.txt'))[3]))
-                YPixelSize = np.abs(float(str.split(runCmd('fgrep "Y-direction coordinate:" testGeogrid.txt'))[3]))
+                XPixelSize = float(str.split(runCmd('fgrep "X-direction pixel size:" testGeogrid.txt'))[3])
+                YPixelSize = float(str.split(runCmd('fgrep "Y-direction pixel size:" testGeogrid.txt'))[3])
                 epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
                 
                 master_filename = inps.indir_m
@@ -408,14 +608,15 @@ def main():
                 master_split = str.split(master_filename,'_')
                 slave_split = str.split(slave_filename,'_')
                 
-                version = '1.0.4'
+                version = '1.0.5'
                 pair_type = 'optical'
                 detection_method = 'feature'
                 coordinates = 'map'
+#                out_nc_filename = 'Jakobshavn_opt.nc'
                 out_nc_filename = master_filename[0:-4]+'_'+slave_filename[0:-4]+'.nc'
                 out_nc_filename = './' + out_nc_filename
                 roi_valid_percentage = np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*100.0
-                CHIPSIZEY = CHIPSIZEX * ScaleChipSizeY
+                CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
                 d0 = date(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
                 d1 = date(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
