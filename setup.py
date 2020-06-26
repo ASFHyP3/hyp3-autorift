@@ -13,7 +13,7 @@ setup(
     long_description=long_desc,
     long_description_content_type='text/markdown',
 
-    url='https://scm.asf.alaska.edu/hyp3/hyp3-autorift',
+    url='https://github.com/asfadmin/hyp3-autorift',
 
     author='ASF APD/Tools Team',
     author_email='uaf-asf-apd@alaska.edu',
@@ -26,10 +26,10 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.6',
         ],
 
-    python_requires='~=3.5',
+    python_requires='~=3.6',
 
     install_requires=[
         # FIXME: use boto3 instead of requests for download in hyp3_autorift.io.fetch_jpl_tifs
@@ -48,8 +48,6 @@ setup(
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',
-            'tox',
-            'tox-conda',
         ]
     },
 
@@ -61,7 +59,7 @@ setup(
         'testautoRIFT_ISCE.py = hyp3_autorift.vend.testautoRIFT_ISCE:main',
         'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main',
         # FIXME: Only needed for testautoRIFT_ISCE.py
-        'topsinsar_filename.py = hyp3_autorift.io:save_topsinsar_mat',
+        'topsinsar_filename.py = hyp3_autorift.io:topsinsar_mat',
         ]
     },
 

@@ -1,5 +1,6 @@
-"""Helper io uilities for autoRIFT"""
+"""Helper io utilities for autoRIFT"""
 
+import argparse
 import logging
 import os
 import textwrap
@@ -112,3 +113,15 @@ def save_topsinsar_mat():
     savemat(
         'topsinsar_filename.mat', {'master_filename': master_filename, 'slave_filename': slave_filename}
     )
+
+
+def topsinsar_mat():
+    parser = argparse.ArgumentParser(
+        prog=os.path.basename(__file__),
+        description='Save the TopsApp InSAR configuration dictionary into a MATLAB file',
+    )
+
+    # just get a help option
+    _ = parser.parse_args()
+
+    save_topsinsar_mat()
