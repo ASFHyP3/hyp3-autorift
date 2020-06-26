@@ -41,8 +41,8 @@ COPY conda-env.yml /home/conda/conda-env.yml
 
 RUN conda env create -f conda-env.yml && \
     conda clean -afy && \
-    conda activate hyp3-insar-isce && \
-    sed -i 's/conda activate base/conda activate hyp3-insar-isce/g' /home/conda/.profile
+    conda activate hyp3-autorift && \
+    sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile
 
 ARG S3_PYPI_HOST
 ARG SDIST_SPEC
