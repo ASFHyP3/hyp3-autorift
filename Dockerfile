@@ -43,8 +43,8 @@ RUN cd /opt && wget https://github.com/opencv/opencv/archive/3.4.7.tar.gz -O ope
       .. && \
       make -j4 install && cd /opt && ldconfig
 
-RUN pip3 install --upgrade pip && \
-    python3 -m pip install --upgrade numpy scipy statsmodels scikit-image
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
+    python3 -m pip install --no-cache-dir --upgrade numpy scipy statsmodels scikit-image
 
 ARG CONDA_UID=1000
 ARG CONDA_GID=1000
