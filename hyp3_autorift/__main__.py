@@ -1,6 +1,7 @@
 """
 AutoRIFT processing for HyP3
 """
+import glob
 import os
 import shutil
 from datetime import datetime
@@ -8,6 +9,7 @@ from datetime import datetime
 from hyp3proclib import (
     build_output_name_pair,
     earlier_granule_first,
+    extra_arg_is,
     failure,
     process,
     record_metrics,
@@ -38,48 +40,43 @@ def hyp3_process(cfg, n):
         cfg['ftd'] = '_'.join([g1[17:17+15], g2[17:17+15]])
         log.debug(f'FTD dir is: {cfg["ftd"]}')
 
-        process(
-            cfg, 'autorift_proc_pair',
-            [f'{g1}.zip', f'{g2}.zip', '--process-dir', f'{cfg["ftd"]}', '--download', '--product']
-        )
-        # if not cfg['skip_processing']:
-        #     log.info(f'Process starting at {datetime.now()}')
-        #     launch_dir = os.getcwd()
-        #     os.chdir(cfg['workdir'])
-        #
-        #     autorift_process(f'{g1}.zip', f'{g2}.zip', download=True, process_dir=cfg['ftd'], product=True)
-        #
-        #     os.chdir(launch_dir)
-        # else:
-        #     log.info('Processing skipped!')
-        #     log.info(f'Command would be: autorift_proc_pair {g1}.zip {g2}.zip --process-dir {cfg["ftd"]} --download '
-        #              f'--product')
-        #     cfg['log'] += "(debug mode)"
-        #
-        # cfg['success'] = True
-        # update_completed_time(cfg)
-        #
-        # # FIXME: But, why?
-        # cfg["granule_name"] = cfg["granule"]
-        # cfg["processes"] = [cfg["proc_id"], ]
-        # cfg["subscriptions"] = [cfg["sub_id"], ]
+        autorift_args = [f'{g1}.zip', f'{g2}.zip', '--process-dir', f'{cfg["ftd"]}', '--download']
+        if extra_arg_is(cfg, 'intermediate_files', 'yes'):
+            autorift_args.append('--product')
 
-        tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
-        if not os.path.isdir(tmp_product_dir):
-            log.info(f'PRODUCT directory not found: {tmp_product_dir}')
-            log.error('Processing failed')
-            raise Exception('Processing failed: PRODUCT directory not found')
+        process(cfg, 'autorift_proc_pair', autorift_args)
+
+        out_name = build_output_name_pair(g1, g2, cfg['workdir'], cfg['suffix'])
+        log.info(f'Output name: {out_name}')
+
+        if extra_arg_is(cfg, 'intermediate_files', 'no'):
+            product_glob = os.path.join(cfg['workdir'], cfg['ftd'], '*.nc')
+            netcdf_files = glob.glob(product_glob)
+
+            if not netcdf_files:
+                log.info(f'No product netCDF files found with: {product_glob}')
+                raise Exception('Processing failed! Output netCDF file not found')
+            if len(netcdf_files) > 1:
+                log.info(f'Too many netCDF files found with: {product_glob}\n'
+                         f'    {netcdf_files}')
+                raise Exception('Processing failed! Too many netCDF files found')
+
+            product_file = f'{out_name}.nc'
+            os.rename(netcdf_files[0], out_name)
+
         else:
-            out_name = build_output_name_pair(g1, g2, cfg['workdir'], cfg['suffix'])
-            log.info(f'Output name: {out_name}')
+            tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
+            if not os.path.isdir(tmp_product_dir):
+                log.info(f'PRODUCT directory not found: {tmp_product_dir}')
+                log.error('Processing failed')
+                raise Exception('Processing failed: PRODUCT directory not found')
 
             product_dir = os.path.join(cfg['workdir'], out_name)
-            zip_file = f'{product_dir}.zip'
+            product_file = f'{product_dir}.zip'
             if os.path.isdir(product_dir):
                 shutil.rmtree(product_dir)
-            if os.path.isfile(zip_file):
-                os.unlink(zip_file)
-            cfg['out_path'] = product_dir
+            if os.path.isfile(product_file):
+                os.unlink(product_file)
 
             log.debug('Renaming ' + tmp_product_dir + ' to ' + product_dir)
             os.rename(tmp_product_dir, product_dir)
@@ -89,15 +86,15 @@ def hyp3_process(cfg, n):
             #  * citation
             #  * phase_png (?)
 
-            zip_dir(product_dir, zip_file)
+            zip_dir(product_dir, product_file)
 
-            cfg['final_product_size'] = [os.stat(zip_file).st_size, ]
-            cfg['original_product_size'] = 0
+        cfg['final_product_size'] = [os.stat(product_file).st_size, ]
+        cfg['original_product_size'] = 0
 
-            with get_db_connection('hyp3-db') as conn:
-                record_metrics(cfg, conn)
-                upload_product(zip_file, cfg, conn)
-                success(conn, cfg)
+        with get_db_connection('hyp3-db') as conn:
+            record_metrics(cfg, conn)
+            upload_product(product_file, cfg, conn)
+            success(conn, cfg)
 
     except Exception as e:
         log.exception('autoRIFT processing failed!')
