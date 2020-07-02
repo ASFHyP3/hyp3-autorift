@@ -21,11 +21,14 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
+  - opencv=3.4
+  - libopencv=3.4
   - pillow
   - proj
   - psycopg2
   - pyshp
   - requests
+  - scikit-image
   - scipy
   - six
   - statsmodels
