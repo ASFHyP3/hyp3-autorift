@@ -40,8 +40,9 @@ from datetime import date
 import cv2
 import numpy as np
 import scipy.io as sio
-from isce.components.contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
-from isce.components.isceobj.Util.ImageUtil import ImageLib as IML
+import isce
+from contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
+from isceobj.Util.ImageUtil import ImageLib as IML
 from osgeo import gdal
 
 from hyp3_autorift import netcdf_output as no

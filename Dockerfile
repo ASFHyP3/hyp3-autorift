@@ -19,7 +19,7 @@ LABEL org.opencontainers.image.source="https://github.com/asfadmin/hyp3-autorift
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=true
 
-RUN apt-get update && apt-get install -y --no-install-recommends unzip vim && \
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1-mesa-glx unzip vim && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CONDA_UID=1000

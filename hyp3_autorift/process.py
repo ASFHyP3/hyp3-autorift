@@ -80,14 +80,12 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
 
+    if download:
+        io.fetch_jpl_tifs(match=os.path.basename(dem)[:3])
+
     if process_dir:
         mkdir_p(process_dir)
         os.chdir(process_dir)
-
-    dhdx = dem.replace('_h.tif', '_dhdx.tif')
-    dhdy = dem.replace('_h.tif', '_dhdy.tif')
-    vx = dem.replace('_h.tif', '_vx0.tif')
-    vy = dem.replace('_h.tif', '_vy0.tif')
 
     isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
 
@@ -105,14 +103,23 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
             cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
             execute(cmd, logfile=f, uselogging=True)
 
+    in_file_base = dem.replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
-        cmd = f'testGeogrid_ISCE.py -m master -s slave -d {dem} -sx {dhdx} -sy {dhdy} -vx {vx} -vy {vy}'
+        cmd = f'testGeogrid_ISCE.py -m master -s slave' \
+              f' -d {dem} -ssm {in_file_base}_StableSurface.tif' \
+              f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
+              f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
+              f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
+              f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
+              f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
         execute(cmd, logfile=f, uselogging=True)
 
     with open('testautoRIFT.txt', 'w') as f:
-        cmd = f'testautoRIFT_ISCE.py ' \
-              f'-m {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif ' \
-              f'-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif  -nc S'
+        cmd = f'testautoRIFT_ISCE.py' \
+              f' -m {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
+              f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
+              f' -sr window_search_range.tif -csmin window_chip_size_min.tif' \
+              f' -csmax window_chip_size_max.tif -nc S'
         execute(cmd, logfile=f, uselogging=True)
 
     if product:
@@ -122,39 +129,6 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
 
         for f in glob.iglob('*.nc'):
             shutil.copyfile(f, os.path.join(product_dir, f))
-
-        # NOTE: Not sure we need to get all this info...
-        # with zipfile.ZipFile(master) as master_safe:
-        #     annotation = [f for f in master_safe.namelist() if f.endswith('001.xml') and 'calibration' not in f][0]
-        #     with master_safe.open(annotation) as xml:
-        #         heading = float(etree.parse(xml).findtext('.//platformHeading'))
-        #
-        # with open('isce.log') as isce_log:
-        #     for line in isce_log.readlines():
-        #         FIXME: not in isce.log for autoRIFT
-        #         if "subset.Overlap" in line and "start time" in line:
-        #             # FIXME: Too many steps here and re module is overkill
-        #             t = re.split('=', line)
-        #             t = t[1].strip()
-        #             print("Found utctime %s" % t)
-        #             t = re.split(' ', t)
-        #             s = re.split(":", t[1])
-        #             utctime = ((int(s[0]) * 60 + int(s[1])) * 60) + float(s[2])
-        #         FIXME: all three subswaths are found for autoRIFT, so need to handle that
-        #         if "Bperp at midrange for first common burst" in line:
-        #             t = re.split('=', line)
-        #             baseline = t[1].strip()
-        #             print("Found baseline %s" % baseline)
-        #         FIXME: not in isce.log for autoRIFT
-        #         if "geocode.Azimuth looks" in line:
-        #             t = re.split('=', line)
-        #             az_looks = t[1].strip()
-        #             print("Found azimuth looks %s" % az_looks)
-        #         FIXME: not in isce.log for autoRIFT
-        #         if "geocode.Range looks" in line:
-        #             t = re.split('=', line)
-        #             rg_looks = t[1].strip()
-        #             print("Found range looks %s" % rg_looks)
 
 
 def main():

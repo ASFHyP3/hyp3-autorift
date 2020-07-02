@@ -35,10 +35,11 @@ import argparse
 import os
 
 import numpy as np
-from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid
-from isce.components.contrib.geo_autoRIFT.geogrid import GeogridOptical
-from isce.components.isceobj.Orbit.Orbit import Orbit
-from isce.components.iscesys.Component.ProductManager import ProductManager as PM
+import isce
+from contrib.geo_autoRIFT.geogrid import Geogrid
+from contrib.geo_autoRIFT.geogrid import GeogridOptical
+from isceobj.Orbit.Orbit import Orbit
+from iscesys.Component.ProductManager import ProductManager as PM
 from osgeo import gdal
 
 def cmdLineParse():
