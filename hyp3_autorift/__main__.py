@@ -41,7 +41,7 @@ def hyp3_process(cfg, n):
         log.debug(f'FTD dir is: {cfg["ftd"]}')
 
         autorift_args = [f'{g1}.zip', f'{g2}.zip', '--process-dir', f'{cfg["ftd"]}', '--download']
-        if extra_arg_is(cfg, 'intermediate_files', 'yes'):
+        if not extra_arg_is(cfg, 'intermediate_files', 'no'):  # handle processes b4 option added
             autorift_args.append('--product')
 
         process(cfg, 'autorift_proc_pair', autorift_args)
