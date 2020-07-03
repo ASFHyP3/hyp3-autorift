@@ -49,6 +49,10 @@ def hyp3_process(cfg, n):
         out_name = build_output_name_pair(g1, g2, cfg['workdir'], cfg['suffix'])
         log.info(f'Output name: {out_name}')
 
+        # TODO:
+        #  * browse images
+        #  * citation
+        #  * phase_png (?)
         if extra_arg_is(cfg, 'intermediate_files', 'no'):
             product_glob = os.path.join(cfg['workdir'], cfg['ftd'], '*.nc')
             netcdf_files = glob.glob(product_glob)
@@ -62,7 +66,7 @@ def hyp3_process(cfg, n):
                 raise Exception('Processing failed! Too many netCDF files found')
 
             product_file = f'{out_name}.nc'
-            os.rename(netcdf_files[0], out_name)
+            os.rename(netcdf_files[0], product_file)
 
         else:
             tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
@@ -80,11 +84,6 @@ def hyp3_process(cfg, n):
 
             log.debug('Renaming ' + tmp_product_dir + ' to ' + product_dir)
             os.rename(tmp_product_dir, product_dir)
-
-            # TODO:
-            #  * browse images
-            #  * citation
-            #  * phase_png (?)
 
             zip_dir(product_dir, product_file)
 
