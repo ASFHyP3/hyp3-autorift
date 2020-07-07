@@ -101,7 +101,7 @@ def bounding_box(safe, priority='master', polarization='hh', orbits='Orbits', au
 def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', download=False):
 
     if download:
-        fetch_jpl_tifs(dem_dir=dem_dir)
+        fetch_jpl_tifs(dem_dir=dem_dir, match='_h.tif')
 
     dems = glob.glob(os.path.join(dem_dir, '*_h.tif'))
 

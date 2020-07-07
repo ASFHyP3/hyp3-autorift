@@ -17,13 +17,28 @@ _FILE_LIST = [
     'ANT240m_dhdx.tif',
     'ANT240m_dhdy.tif',
     'ANT240m_h.tif',
+    'ANT240m_StableSurface.tif',
     'ANT240m_vx0.tif',
+    'ANT240m_vxSearchRange.tif',
     'ANT240m_vy0.tif',
+    'ANT240m_vySearchRange.tif',
+    'ANT240m_xMaxChipSize.tif',
+    'ANT240m_xMinChipSize.tif',
+    'ANT240m_yMaxChipSize.tif',
+    'ANT240m_yMinChipSize.tif',
     'GRE240m_dhdx.tif',
     'GRE240m_dhdy.tif',
     'GRE240m_h.tif',
+    'GRE240m_StableSurface.tif',
     'GRE240m_vx0.tif',
+    'GRE240m_vxSearchRange.tif',
     'GRE240m_vy0.tif',
+    'GRE240m_vySearchRange.tif',
+    'GRE240m_xMaxChipSize.tif',
+    'GRE240m_xMinChipSize.tif',
+    'GRE240m_yMaxChipSize.tif',
+    'GRE240m_yMinChipSize.tif',
+
 ]
 
 
@@ -39,7 +54,7 @@ def _request_file(url_file_map):
 
 
 def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws.com/',
-                   bucket='its-live-data', prefix='isce_autoRIFT'):
+                   bucket='its-live-data', prefix='isce_autoRIFT', match=None):
     # FIXME: Can't figure out how to get these tifs with boto3, so using requests
     # import boto3
     # from botocore import UNSIGNED
@@ -50,9 +65,15 @@ def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws
 
     log.info("Downloading tifs from JPL's AWS bucket")
     mkdir_p(dem_dir)
+
+    if match:
+        file_list = [file for file in _FILE_LIST if match in file]
+    else:
+        file_list = _FILE_LIST
+
     url_file_map = [
         (endpoint_url.replace('http://', f'http://{bucket}.') + f'{prefix}/{file}',
-         os.path.join(dem_dir, file)) for file in _FILE_LIST
+         os.path.join(dem_dir, file)) for file in file_list
     ]
 
     pool = Pool(5)
