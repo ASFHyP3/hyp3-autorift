@@ -29,12 +29,11 @@ jobs:
           python-version: 3.7
           activate-environment: hyp3-autorift
           environment-file: conda-env.yml
-          channels: conda-forge, nodefaults
 
       - name: Pytest in conda environment
         shell: bash -l {0}
         run: |
-          python -m pip install .
+          python -m pip install .[develop]
           pytest --cov=hyp3_autorift
 
       - name: Safety analysis of conda environment
@@ -64,7 +63,7 @@ jobs:
         with:
           query: .github/queries/asssociated-pr.query.yml
           outputFile: pr.json
-          owner: asfadmin
+          owner: ASFHyP3
           name: hyp3-autorift
           sha: ${{ github.sha }}
 
@@ -76,7 +75,7 @@ jobs:
         with:
           query: .github/queries/pr-labels.query.yml
           outputFile: labels.json
-          owner: asfadmin
+          owner: ASFHyP3
           name: hyp3-autorift
 
       - name: Upload a Build Artifact
