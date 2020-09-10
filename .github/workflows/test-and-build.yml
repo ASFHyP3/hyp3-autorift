@@ -29,12 +29,11 @@ jobs:
           python-version: 3.7
           activate-environment: hyp3-autorift
           environment-file: conda-env.yml
-          channels: conda-forge, nodefaults
 
       - name: Pytest in conda environment
         shell: bash -l {0}
         run: |
-          python -m pip install .
+          python -m pip install .[develop]
           pytest --cov=hyp3_autorift
 
       - name: Safety analysis of conda environment
