@@ -11,7 +11,6 @@ from datetime import datetime
 from mimetypes import guess_type
 
 import boto3
-from hyp3lib.fetch import download_file
 from hyp3proclib import (
     build_output_name_pair,
     earlier_granule_first,
@@ -102,20 +101,17 @@ def main_v2():
 
     write_netrc_file(args.username, args.password)
 
-    g1, g2 = earlier_granule_first(args.granules['1'], args.granules['2'])
-    g1_zip = download_file(g1, chunk_size=5242880)
-    g2_zip = download_file(g2, chunk_size=5242880)
+    g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 
-    hyp3_autorift.process.process(g1_zip, g2_zip)
+    hyp3_autorift.process.process(g1, g2, download=True)
 
     outname = build_output_name_pair(g1, g2, '-autorift')
     product_name = f'{outname}.nc'
-    product = glob.glob('PRODUCT/.nc')[0]
-    os.rename(product, product_name)
+    netcdf_file = glob.glob('PRODUCT/*nc')[0]
+    os.rename(netcdf_file, product_name)
 
     if args.bucket:
         upload_file_to_s3(product_name, 'product', args.bucket, args.bucket_prefix)
-
 
 
 def hyp3_process(cfg, n):
