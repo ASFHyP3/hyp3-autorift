@@ -14,7 +14,7 @@ dependencies:
   # For running
   - boto3
   - gdal
-  - isce2>=2.3.3
+  - isce2=2.3.3
   - imageio
   - importlib_metadata
   - lxml
