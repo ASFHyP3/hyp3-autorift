@@ -12,3 +12,8 @@ except PackageNotFoundError:
           '   python -m pip install -e .\n'
           'Or, to just get the version number use:\n'
           '   python setup.py --version')
+
+__all__ = [
+    '__version__',
+    'process'
+]
