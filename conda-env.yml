@@ -6,39 +6,25 @@ dependencies:
   - python=3.7
   - pip
   # For packaging, and testing
-  - setuptools
-  - wheel
   - pytest
   - pytest-console-scripts
   - pytest-cov
+  - setuptools
+  - setuptools_scm
+  - wheel
   # For running
-  - boto3
-  - gdal
+  - hyp3lib=1.5
   - isce2>=2.3.3
-  - imageio
   - importlib_metadata
-  - lxml
-  - matplotlib
-  - netCDF4
   - numpy
-  - opencv=3.4
-  - libopencv=3.4
-  - pillow
-  - proj
   - psycopg2
-  - pyshp
   - requests
-  - scikit-image
   - scipy
-  - six
-  - statsmodels
   - pip:
     # for packaging and testing
     - s3pypi
-    - setuptools-scm[toml]
     - safety
     # For running
     - --trusted-host hyp3-pypi.s3-website-us-east-1.amazonaws.com
       --extra-index-url http://hyp3-pypi.s3-website-us-east-1.amazonaws.com
-    - hyp3lib~=1.0
-    - hyp3proclib~=1.0
+    - hyp3proclib>=1.0.1,<2
