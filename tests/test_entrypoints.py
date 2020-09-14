@@ -12,8 +12,7 @@ def test_autorift_passthought(script_runner):
 
 
 def test_autorift_passthough_v2(script_runner):
-    ret = script_runner.run(
-        'autorift', '++entrypoint', 'hyp3_autorift_v2', '--help')
+    ret = script_runner.run('autorift', '++entrypoint', 'hyp3_autorift_v2', '--help')
     assert ret.success
     assert 'autorift_v2' in ret.stdout
     assert '--bucket-prefix' in ret.stdout
