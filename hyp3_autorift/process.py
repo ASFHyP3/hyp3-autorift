@@ -66,9 +66,9 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     if orbits is None:
         orbits = os.path.abspath('Orbits')
         mkdir_p(orbits)
-        master_state_vec, master_provider = downloadSentinelOrbitFile(master, directory=orbits)
+        master_state_vec, master_provider = downloadSentinelOrbitFile(os.path.basename(master), directory=orbits)
         log.info(f'Downloaded orbit file {master_state_vec} from {master_provider}')
-        slave_state_vec, slave_provider = downloadSentinelOrbitFile(slave, directory=orbits)
+        slave_state_vec, slave_provider = downloadSentinelOrbitFile(os.path.basename(slave), directory=orbits)
         log.info(f'Downloaded orbit file {slave_state_vec} from {slave_provider}')
 
     if aux is None:
