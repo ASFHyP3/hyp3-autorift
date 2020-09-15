@@ -107,7 +107,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     in_file_base = dem.replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
-        cmd = f'testGeogrid_ISCE.py -m reference -s secondary' \
+        cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
               f' -d {dem} -ssm {in_file_base}_StableSurface.tif' \
               f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
               f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
@@ -118,7 +118,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     with open('testautoRIFT.txt', 'w') as f:
         cmd = f'testautoRIFT_ISCE.py' \
-              f' -m {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
+              f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
               f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
               f' -sr window_search_range.tif -csmin window_chip_size_min.tif' \
               f' -csmax window_chip_size_max.tif -nc S'

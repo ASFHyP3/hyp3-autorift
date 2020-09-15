@@ -62,10 +62,12 @@ def cmdLineParse():
     '''
 
     parser = argparse.ArgumentParser(description='Output geo grid')
-    parser.add_argument('-m', '--input_m', dest='indir_m', type=str, required=True,
-            help='Input master image file name (in ISCE format and radar coordinates) or Input master image file name (in GeoTIFF format and Cartesian coordinates)')
+    parser.add_argument('-r', '--input_r', dest='indir_r', type=str, required=True,
+            help='Input reference image file name (in ISCE format and radar coordinates) or Input reference image file '
+                 'name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input slave image file name (in ISCE format and radar coordinates) or Input slave image file name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input secondary image file name (in ISCE format and radar coordinates) or Input secondary image file '
+                 'name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-g', '--input_g', dest='grid_location', type=str, required=False,
             help='Input pixel indices file name')
     parser.add_argument('-o', '--input_o', dest='init_offset', type=str, required=False,
@@ -111,13 +113,13 @@ def loadProductOptical(filename):
     ds = gdal.Open(filename)
 #    pdb.set_trace()
     band = ds.GetRasterBand(1)
-    
+
     img = band.ReadAsArray()
     img = img.astype(np.float32)
-    
+
     band=None
     ds=None
-    
+
     return img
 
 
@@ -127,7 +129,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     '''
     Wire and run geogrid.
     '''
-    
+
 
     obj = autoRIFT_ISCE()
     obj.configure()
@@ -175,7 +177,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         obj.yGrid = yGrid
 
 
-    
+
     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     for ii in range(obj.xGrid.shape[0]):
         for jj in range(obj.xGrid.shape[1]):
@@ -354,17 +356,17 @@ def main():
     '''
 
     inps = cmdLineParse()
-    
+
     if inps.optical_flag == 1:
-        data_m = loadProductOptical(inps.indir_m)
+        data_m = loadProductOptical(inps.indir_r)
         data_s = loadProductOptical(inps.indir_s)
 #        # test with lena/Venus image
 #        import scipy.io as sio
-#        conts = sio.loadmat(inps.indir_m)
+#        conts = sio.loadmat(inps.indir_r)
 #        data_m = conts['I']
 #        data_s = conts['I1']
     else:
-        data_m = loadProduct(inps.indir_m)
+        data_m = loadProduct(inps.indir_r)
         data_s = loadProduct(inps.indir_s)
 
 
@@ -381,7 +383,7 @@ def main():
     CSMAXy0 = None
     noDataMask = None
     nodata = None
-    
+
     if inps.grid_location is not None:
         ds = gdal.Open(inps.grid_location)
         tran = ds.GetGeoTransform()
@@ -395,7 +397,7 @@ def main():
         yGrid = band.ReadAsArray()
         band=None
         ds=None
-    
+
     if inps.init_offset is not None:
         ds = gdal.Open(inps.init_offset)
         band = ds.GetRasterBand(1)
@@ -445,7 +447,7 @@ def main():
     CHIPSIZEX = np.zeros(origSize,dtype=np.float32)
     SEARCHLIMITX = np.zeros(origSize,dtype=np.float32)
     SEARCHLIMITY = np.zeros(origSize,dtype=np.float32)
-    
+
     DX[0:Dx.shape[0],0:Dx.shape[1]] = Dx
     DY[0:Dy.shape[0],0:Dy.shape[1]] = Dy
     INTERPMASK[0:InterpMask.shape[0],0:InterpMask.shape[1]] = InterpMask
@@ -532,11 +534,11 @@ def main():
             outband = outRaster.GetRasterBand(2)
             outband.WriteArray(VY)
             outband.FlushCache()
-            
+
             ########################################################################################
             ############   netCDF packaging for Sentinel and Landsat dataset; can add other sensor format as well
             if inps.nc_sensor == "S":
-                
+
                 rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
                 azimuthPixelSize = float(str.split(runCmd('fgrep "Azimuth pixel size:" testGeogrid.txt'))[3])
                 dt = float(str.split(runCmd('fgrep "Repeat Time:" testGeogrid.txt'))[2])
@@ -546,25 +548,25 @@ def main():
                 runCmd('topsinsar_filename.py')
 #                import scipy.io as sio
                 conts = sio.loadmat('topsinsar_filename.mat')
-                master_filename = conts['master_filename'][0]
-                slave_filename = conts['slave_filename'][0]
-                master_split = str.split(master_filename,'_')
-                slave_split = str.split(slave_filename,'_')
+                reference_filename = conts['reference_filename'][0]
+                secondary_filename = conts['secondary_filename'][0]
+                reference_split = str.split(reference_filename,'_')
+                secondary_split = str.split(secondary_filename,'_')
 
                 version = '1.0.5'
                 pair_type = 'radar'
                 detection_method = 'feature'
                 coordinates = 'radar'
 #                out_nc_filename = 'Jakobshavn.nc'
-                out_nc_filename = master_filename[0:-4]+'_'+slave_filename[0:-4]+'.nc'
+                out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
                 out_nc_filename = './' + out_nc_filename
                 roi_valid_percentage = np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*100.0
                 CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
 
 
-                d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
-                d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+                d0 = date(np.int(reference_split[5][0:4]),np.int(reference_split[5][4:6]),np.int(reference_split[5][6:8]))
+                d1 = date(np.int(secondary_split[5][0:4]),np.int(secondary_split[5][4:6]),np.int(secondary_split[5][6:8]))
                 date_dt_base = d1 - d0
                 date_dt = np.float64(np.abs(date_dt_base.days))
                 if date_dt_base.days < 0:
@@ -573,21 +575,21 @@ def main():
                 else:
                     date_ct = d0 + (d1 - d0)/2
                     date_center = date_ct.strftime("%Y%m%d")
-            
-                IMG_INFO_DICT = {'mission_img1':master_split[0][0],
+
+                IMG_INFO_DICT = {'mission_img1':reference_split[0][0],
                                  'sensor_img1':'C',
-                                 'satellite_img1':master_split[0][1:3],
-                                 'acquisition_img1':master_split[5][0:8],
-                                 'absolute_orbit_number_img1':master_split[7],
-                                 'mission_data_take_ID_img1':master_split[8],
-                                 'product_unique_ID_img1':master_split[9][0:4],
-                                 'mission_img2':slave_split[0][0],
+                                 'satellite_img1':reference_split[0][1:3],
+                                 'acquisition_img1':reference_split[5][0:8],
+                                 'absolute_orbit_number_img1':reference_split[7],
+                                 'mission_data_take_ID_img1':reference_split[8],
+                                 'product_unique_ID_img1':reference_split[9][0:4],
+                                 'mission_img2':secondary_split[0][0],
                                  'sensor_img2':'C',
-                                 'satellite_img2':slave_split[0][1:3],
-                                 'acquisition_img2':slave_split[5][0:8],
-                                 'absolute_orbit_number_img2':slave_split[7],
-                                 'mission_data_take_ID_img2':slave_split[8],
-                                 'product_unique_ID_img2':slave_split[9][0:4],
+                                 'satellite_img2':secondary_split[0][1:3],
+                                 'acquisition_img2':secondary_split[5][0:8],
+                                 'absolute_orbit_number_img2':secondary_split[7],
+                                 'mission_data_take_ID_img2':secondary_split[8],
+                                 'product_unique_ID_img2':secondary_split[9][0:4],
                                  'date_dt':date_dt,
                                  'date_center':date_center,
                                  'roi_valid_percentage':roi_valid_percentage,
@@ -599,28 +601,28 @@ def main():
                 )
 
             elif inps.nc_sensor == "L":
-                
+
                 XPixelSize = float(str.split(runCmd('fgrep "X-direction pixel size:" testGeogrid.txt'))[3])
                 YPixelSize = float(str.split(runCmd('fgrep "Y-direction pixel size:" testGeogrid.txt'))[3])
                 epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
-                
-                master_filename = inps.indir_m
-                slave_filename = inps.indir_s
-                master_split = str.split(master_filename,'_')
-                slave_split = str.split(slave_filename,'_')
-                
+
+                reference_filename = inps.indir_r
+                secondary_filename = inps.indir_s
+                reference_split = str.split(reference_filename,'_')
+                secondary_split = str.split(secondary_filename,'_')
+
                 version = '1.0.5'
                 pair_type = 'optical'
                 detection_method = 'feature'
                 coordinates = 'map'
 #                out_nc_filename = 'Jakobshavn_opt.nc'
-                out_nc_filename = master_filename[0:-4]+'_'+slave_filename[0:-4]+'.nc'
+                out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
                 out_nc_filename = './' + out_nc_filename
                 roi_valid_percentage = np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*100.0
                 CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                d0 = date(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
-                d1 = date(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
+                d0 = date(np.int(reference_split[3][0:4]),np.int(reference_split[3][4:6]),np.int(reference_split[3][6:8]))
+                d1 = date(np.int(secondary_split[3][0:4]),np.int(secondary_split[3][4:6]),np.int(secondary_split[3][6:8]))
                 date_dt_base = d1 - d0
                 date_dt = np.float64(np.abs(date_dt_base.days))
                 if date_dt_base.days < 0:
@@ -630,31 +632,31 @@ def main():
                     date_ct = d0 + (d1 - d0)/2
                     date_center = date_ct.strftime("%Y%m%d")
 
-                IMG_INFO_DICT = {'mission_img1':master_split[0][0],
-                                 'sensor_img1':master_split[0][1],
-                                 'satellite_img1':np.float64(master_split[0][2:4]),
-                                 'correction_level_img1':master_split[1],
-                                 'path_img1':np.float64(master_split[2][0:3]),
-                                 'row_img1':np.float64(master_split[2][3:6]),
-                                 'acquisition_date_img1':master_split[3][0:8],
-                                 'processing_date_img1':master_split[4][0:8],
-                                 'collection_number_img1':np.float64(master_split[5]),
-                                 'collection_category_img1':master_split[6],
-                                 'mission_img2':slave_split[0][0],
-                                 'sensor_img2':slave_split[0][1],
-                                 'satellite_img2':np.float64(slave_split[0][2:4]),
-                                 'correction_level_img2':slave_split[1],
-                                 'path_img2':np.float64(slave_split[2][0:3]),
-                                 'row_img2':np.float64(slave_split[2][3:6]),
-                                 'acquisition_date_img2':slave_split[3][0:8],
-                                 'processing_date_img2':slave_split[4][0:8],
-                                 'collection_number_img2':np.float64(slave_split[5]),
-                                 'collection_category_img2':slave_split[6],
+                IMG_INFO_DICT = {'mission_img1':reference_split[0][0],
+                                 'sensor_img1':reference_split[0][1],
+                                 'satellite_img1':np.float64(reference_split[0][2:4]),
+                                 'correction_level_img1':reference_split[1],
+                                 'path_img1':np.float64(reference_split[2][0:3]),
+                                 'row_img1':np.float64(reference_split[2][3:6]),
+                                 'acquisition_date_img1':reference_split[3][0:8],
+                                 'processing_date_img1':reference_split[4][0:8],
+                                 'collection_number_img1':np.float64(reference_split[5]),
+                                 'collection_category_img1':reference_split[6],
+                                 'mission_img2':secondary_split[0][0],
+                                 'sensor_img2':secondary_split[0][1],
+                                 'satellite_img2':np.float64(secondary_split[0][2:4]),
+                                 'correction_level_img2':secondary_split[1],
+                                 'path_img2':np.float64(secondary_split[2][0:3]),
+                                 'row_img2':np.float64(secondary_split[2][3:6]),
+                                 'acquisition_date_img2':secondary_split[3][0:8],
+                                 'processing_date_img2':secondary_split[4][0:8],
+                                 'collection_number_img2':np.float64(secondary_split[5]),
+                                 'collection_category_img2':secondary_split[6],
                                  'date_dt':date_dt,
                                  'date_center':date_center,
                                  'roi_valid_percentage':roi_valid_percentage,
                                  'autoRIFT_software_version':version}
-                
+
                 no.netCDF_packaging(
                     VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, XPixelSize, YPixelSize,
                     None, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT
