@@ -8,9 +8,9 @@ import glob
 import logging
 import os
 import shutil
+from pathlib import Path
 
 from hyp3lib.execute import execute
-from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 
 from hyp3_autorift import geometry
@@ -48,34 +48,34 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     """
 
     # Ensure we have absolute paths
-    master = os.path.abspath(master)
-    slave = os.path.abspath(slave)
+    master = Path(master).resolve()
+    slave = Path(slave).resolve()
 
     product_dir = os.path.join(os.getcwd(), 'PRODUCT')
 
-    if not os.path.isfile(master) or not os.path.isfile(slave) and download:
+    if not master.is_file() or not slave.is_file() and download:
         log.info('Downloading Sentinel-1 image pair')
         dl_file_list = 'download_list.csv'
         with open('download_list.csv', 'w') as f:
-            f.write(f'{os.path.basename(master)}\n'
-                    f'{os.path.basename(slave)}\n')
+            f.write(f'{master.name}\n'
+                    f'{slave.name}\n')
 
         execute(f'get_asf.py {dl_file_list}')
         os.rmdir('download')  # Really, get_asf.py should do this...
 
     if orbits is None:
-        orbits = os.path.abspath('Orbits')
-        mkdir_p(orbits)
-        master_state_vec, master_provider = downloadSentinelOrbitFile(master, directory=orbits)
+        orbits = Path('Orbits').resolve()
+        orbits.mkdir(parents=True)
+        master_state_vec, master_provider = downloadSentinelOrbitFile(master.stem, directory=orbits)
         log.info(f'Downloaded orbit file {master_state_vec} from {master_provider}')
-        slave_state_vec, slave_provider = downloadSentinelOrbitFile(slave, directory=orbits)
+        slave_state_vec, slave_provider = downloadSentinelOrbitFile(slave.stem, directory=orbits)
         log.info(f'Downloaded orbit file {slave_state_vec} from {slave_provider}')
 
     if aux is None:
         aux = orbits
 
     lat_limits, lon_limits = geometry.bounding_box(
-        master, slave, orbits=orbits, aux=aux, polarization=polarization
+        str(master), orbits=orbits, aux=aux, polarization=polarization
     )
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
@@ -84,7 +84,7 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         io.fetch_jpl_tifs(match=os.path.basename(dem)[:3])
 
     if process_dir:
-        mkdir_p(process_dir)
+        Path(process_dir).mkdir(parents=True)
         os.chdir(process_dir)
 
     isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
@@ -123,7 +123,7 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
         execute(cmd, logfile=f, uselogging=True)
 
     if product:
-        mkdir_p(product_dir)
+        Path(product_dir).mkdir(parents=True)
         for f in _PRODUCT_LIST:
             shutil.copyfile(f, os.path.join(product_dir, f))
 
