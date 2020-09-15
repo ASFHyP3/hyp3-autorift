@@ -275,11 +275,11 @@ def main():
     inps = cmdLineParse()
 
     if inps.optical_flag == 1:
-        metadata_m = loadMetadataOptical(inps.inder_r)
+        metadata_m = loadMetadataOptical(inps.indir_r)
         metadata_s = loadMetadataOptical(inps.indir_s)
         runGeogridOptical(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
     else:
-        metadata_m = loadMetadata(inps.inder_r)
+        metadata_m = loadMetadata(inps.indir_r)
         metadata_s = loadMetadata(inps.indir_s)
         runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
 
