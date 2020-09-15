@@ -15,7 +15,7 @@ dependencies:
   - wheel
   # For running
   - hyp3lib=1.5
-  - isce2=2.4.0
+  - isce2>=2.4.1
   - importlib_metadata
   - numpy
   - pillow
