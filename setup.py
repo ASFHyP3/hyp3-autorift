@@ -38,7 +38,7 @@ setup(
         'requests',
         # 'boto3',
         # 'botocore',
-        'hyp3lib',
+        'hyp3lib==1.5',
         'hyp3proclib',
         'importlib_metadata',
         'numpy',
