@@ -47,10 +47,12 @@ def cmdLineParse():
     Command line parser.
     '''
     parser = argparse.ArgumentParser(description='Output geo grid')
-    parser.add_argument('-m', '--input_m', dest='indir_m', type=str, required=True,
-            help='Input folder with ISCE swath files for master image or master image file name (in GeoTIFF format and Cartesian coordinates)')
+    parser.add_argument('-r', '--input_r', dest='indir_r', type=str, required=True,
+            help='Input folder with ISCE swath files for reference image or reference image file name (in GeoTIFF '
+                 'format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input folder with ISCE swath files for slave image or slave image file name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input folder with ISCE swath files for secondary image or secondary image file name (in GeoTIFF '
+                 'format and Cartesian coordinates)')
 #    parser.add_argument('-o', '--output', dest='outfile', type=str, default='geogrid.csv',
 #            help='Output grid mapping')
     parser.add_argument('-d', '--dem', dest='demfile', type=str, required=True,
@@ -214,7 +216,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.winssmname = "window_stable_surface_mask.tif"
     obj.winro2vxname = "window_rdr_off2vel_x_vec.tif"
     obj.winro2vyname = "window_rdr_off2vel_y_vec.tif"
-    
+
     obj.getIncidenceAngle()
     obj.geogrid()
 
@@ -226,9 +228,9 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
         '''
 
 #    from geogrid import GeogridOptical
-    
+
     obj = GeogridOptical()
-    
+
     obj.startingX = info.startingX
     obj.startingY = info.startingY
     obj.XSize = info.XSize
@@ -238,7 +240,7 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
     obj.chipSizeX0 = 240
-    
+
     obj.dat1name = info.filename
     obj.demname = dem
     obj.dhdxname = dhdx
@@ -273,14 +275,14 @@ def main():
     inps = cmdLineParse()
 
     if inps.optical_flag == 1:
-        metadata_m = loadMetadataOptical(inps.indir_m)
+        metadata_m = loadMetadataOptical(inps.indir_r)
         metadata_s = loadMetadataOptical(inps.indir_s)
         runGeogridOptical(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
     else:
-        metadata_m = loadMetadata(inps.indir_m)
+        metadata_m = loadMetadata(inps.indir_r)
         metadata_s = loadMetadata(inps.indir_s)
         runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
-    
+
 
 if __name__ == '__main__':
     main()
