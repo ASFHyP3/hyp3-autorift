@@ -14,7 +14,7 @@ dependencies:
   - wheel
   # For running
   - hyp3lib=1.5
-  - isce2>=2.3.3
+  - isce2>=2.4
   - importlib_metadata
   - numpy
   - psycopg2  # missing hyp3proclib dep
