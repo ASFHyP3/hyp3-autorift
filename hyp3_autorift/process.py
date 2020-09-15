@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 from hyp3lib.execute import execute
+from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 
 from hyp3_autorift import geometry
@@ -66,7 +67,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     if orbits is None:
         orbits = Path('Orbits').resolve()
-        orbits.mkdir(parents=True)
+        mkdir_p(orbits)
         reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
         log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
@@ -85,7 +86,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         io.fetch_jpl_tifs(match=os.path.basename(dem)[:3])
 
     if process_dir:
-        Path(process_dir).mkdir(parents=True)
+        mkdir_p(process_dir)
         os.chdir(process_dir)
 
     isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
@@ -124,7 +125,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         execute(cmd, logfile=f, uselogging=True)
 
     if product:
-        Path(product_dir).mkdir(parents=True)
+        mkdir_p(product_dir)
         for f in _PRODUCT_LIST:
             shutil.copyfile(f, os.path.join(product_dir, f))
 
