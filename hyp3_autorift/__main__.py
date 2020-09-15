@@ -99,11 +99,12 @@ def main_v2():
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
 
-    write_netrc_file(args.username, args.password)
+    with open('get_asf.cfg', 'w') as f:
+        f.write(f'[general]\nusername={args.username}\npassword={args.password}')
 
     g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 
-    hyp3_autorift.process.process(g1, g2, download=True)
+    hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
 
     outname = build_output_name_pair(g1, g2, '-autorift')
     product_name = f'{outname}.nc'
