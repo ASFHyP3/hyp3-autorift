@@ -51,5 +51,5 @@ RUN python3 -m pip install --no-cache-dir hyp3_autorift${SDIST_SPEC} \
     --trusted-host "${S3_PYPI_HOST}" \
     --extra-index-url "http://${S3_PYPI_HOST}"
 
-ENTRYPOINT ["conda", "run", "-n", "hyp3-autorift", "hyp3_autorift"]
+ENTRYPOINT ["conda", "run", "-n", "hyp3-autorift", "autorift"]
 CMD ["-h"]
