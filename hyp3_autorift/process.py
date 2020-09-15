@@ -28,12 +28,13 @@ _PRODUCT_LIST = [
 ]
 
 
-def process(master, slave, download=False, polarization='hh', orbits=None, aux=None, process_dir=None, product=False):
+def process(reference, secondary, download=False, polarization='hh', orbits=None, aux=None, process_dir=None,
+            product=False):
     """Process a Sentinel-1 image pair
 
     Args:
-        master: Path to master Sentinel-1 SAFE zip archive
-        slave: Path to slave Sentinel-1 SAFE zip archive
+        reference: Path to reference Sentinel-1 SAFE zip archive
+        secondary: Path to secondary Sentinel-1 SAFE zip archive
         download: If True, try and download the granules from ASF to the
             current working directory (default: False)
         polarization: Polarization of Sentinel-1 scene (default: 'hh')
@@ -48,17 +49,17 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     """
 
     # Ensure we have absolute paths
-    master = Path(master).resolve()
-    slave = Path(slave).resolve()
+    reference = Path(reference).resolve()
+    secondary = Path(secondary).resolve()
 
     product_dir = os.path.join(os.getcwd(), 'PRODUCT')
 
-    if not master.is_file() or not slave.is_file() and download:
+    if not reference.is_file() or not secondary.is_file() and download:
         log.info('Downloading Sentinel-1 image pair')
         dl_file_list = 'download_list.csv'
         with open('download_list.csv', 'w') as f:
-            f.write(f'{master.name}\n'
-                    f'{slave.name}\n')
+            f.write(f'{reference.name}\n'
+                    f'{secondary.name}\n')
 
         execute(f'get_asf.py {dl_file_list}')
         os.rmdir('download')  # Really, get_asf.py should do this...
@@ -66,16 +67,16 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
     if orbits is None:
         orbits = Path('Orbits').resolve()
         orbits.mkdir(parents=True)
-        master_state_vec, master_provider = downloadSentinelOrbitFile(master.stem, directory=orbits)
-        log.info(f'Downloaded orbit file {master_state_vec} from {master_provider}')
-        slave_state_vec, slave_provider = downloadSentinelOrbitFile(slave.stem, directory=orbits)
-        log.info(f'Downloaded orbit file {slave_state_vec} from {slave_provider}')
+        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
+        log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
+        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
+        log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
     if aux is None:
         aux = orbits
 
     lat_limits, lon_limits = geometry.bounding_box(
-        str(master), orbits=orbits, aux=aux, polarization=polarization
+        str(reference), orbits=orbits, aux=aux, polarization=polarization
     )
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
@@ -89,14 +90,14 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
 
     isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
 
-    io.format_tops_xml(master, slave, polarization, isce_dem, orbits, aux)
+    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits, aux)
 
     with open('topsApp.txt', 'w') as f:
         cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
         execute(cmd, logfile=f, uselogging=True)
 
-    m_slc = os.path.join(os.getcwd(), 'merged', 'master.slc.full')
-    s_slc = os.path.join(os.getcwd(), 'merged', 'slave.slc.full')
+    m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
+    s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
     with open('createImages.txt', 'w') as f:
         for slc in [m_slc, s_slc]:
@@ -105,7 +106,7 @@ def process(master, slave, download=False, polarization='hh', orbits=None, aux=N
 
     in_file_base = dem.replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
-        cmd = f'testGeogrid_ISCE.py -m master -s slave' \
+        cmd = f'testGeogrid_ISCE.py -m reference -s secondary' \
               f' -d {dem} -ssm {in_file_base}_StableSurface.tif' \
               f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
               f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
@@ -137,10 +138,10 @@ def main():
         prog=os.path.basename(__file__),
         description=__doc__,
     )
-    parser.add_argument('master', type=os.path.abspath,
-                        help='Master Sentinel-1 SAFE zip archive')
-    parser.add_argument('slave', type=os.path.abspath,
-                        help='Slave Sentinel-1 SAFE zip archive')
+    parser.add_argument('reference', type=os.path.abspath,
+                        help='Reference Sentinel-1 SAFE zip archive')
+    parser.add_argument('secondary', type=os.path.abspath,
+                        help='Secondary Sentinel-1 SAFE zip archive')
     parser.add_argument('-d', '--download', action='store_true',
                         help='Download the granules from ASF to the current'
                              'working directory')

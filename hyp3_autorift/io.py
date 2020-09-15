@@ -84,22 +84,22 @@ def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws
     log.info(f'Downloaded: {fetched}')
 
 
-def format_tops_xml(master, slave, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
+def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
     xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>
     <topsApp>
         <component name="topsinsar">
-            <component name="master">
+            <component name="reference">
                 <property name="orbit directory">{orbits}</property>
                 <property name="auxiliary data directory">{aux}</property>
-                <property name="output directory">master</property>
-                <property name="safe">['{master}']</property>
+                <property name="output directory">reference</property>
+                <property name="safe">['{reference}']</property>
                 <property name="polarization">{polarization}</property>
             </component>
-            <component name="slave">
+            <component name="secondary">
                 <property name="orbit directory">{orbits}</property>
                 <property name="auxiliary data directory">{aux}</property>
-                <property name="output directory">slave</property>
-                <property name="safe">['{slave}']</property>
+                <property name="output directory">secondary</property>
+                <property name="safe">['{secondary}']</property>
                 <property name="polarization">hh</property>
             </component>
             <property name="demfilename">{dem}</property>
@@ -125,14 +125,14 @@ def format_tops_xml(master, slave, polarization, dem, orbits, aux, xml_file='top
 def save_topsinsar_mat():
     insar = TopsInSAR(name="topsApp")
     insar.configure()
-    master_filename = os.path.basename(insar.master.safe[0])
-    slave_filename = os.path.basename(insar.slave.safe[0])
+    reference_filename = os.path.basename(insar.reference.safe[0])
+    secondary_filename = os.path.basename(insar.secondary.safe[0])
 
-    log.info(f'master: {master_filename}')
-    log.info(f'slave: {slave_filename}')
+    log.info(f'reference: {reference_filename}')
+    log.info(f'secondary: {secondary_filename}')
 
     savemat(
-        'topsinsar_filename.mat', {'master_filename': master_filename, 'slave_filename': slave_filename}
+        'topsinsar_filename.mat', {'reference_filename': reference_filename, 'secondary_filename': secondary_filename}
     )
 
 

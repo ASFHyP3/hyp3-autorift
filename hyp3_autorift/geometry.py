@@ -23,11 +23,11 @@ class GeometryException(Exception):
     pass
 
 
-def bounding_box(safe, priority='master', polarization='hh', orbits='Orbits', aux='Orbits', epsg=4326):
+def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', aux='Orbits', epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
-    :param priority: Image priority, either 'master' (default) or 'slave'
+    :param priority: Image priority, either 'reference' (default) or 'secondary'
     :param polarization: Image polarization (default: 'hh')
     :param orbits: Path to the orbital files (default: './Orbits')
     :param aux: Path to the auxiliary orbital files (default: './Orbits')
