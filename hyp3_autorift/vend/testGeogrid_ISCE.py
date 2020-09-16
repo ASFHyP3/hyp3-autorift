@@ -5,7 +5,7 @@
 # directory for the original terms and conditions, and CHANGES.diff for a detailed
 # description of the changes. Notice, all changes are released under the terms
 # and conditions of hyp3-autorift's LICENSE.
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import argparse
 import os
+from datetime import date
 
 import numpy as np
 import isce
@@ -164,7 +165,7 @@ def loadMetadataOptical(indir):
     info.YSize = trans[5]
 
     nameString = os.path.basename(DS.GetDescription())
-    info.time = float(nameString.split('_')[3])
+    info.time = nameString.split('_')[3]
 
     info.numberOfLines = DS.RasterYSize
     info.numberOfSamples = DS.RasterXSize
@@ -224,8 +225,8 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
 
 def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
     '''
-        Wire and run geogrid.
-        '''
+    Wire and run geogrid.
+    '''
 
 #    from geogrid import GeogridOptical
 
@@ -235,7 +236,11 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.startingY = info.startingY
     obj.XSize = info.XSize
     obj.YSize = info.YSize
-    obj.repeatTime = (info1.time - info.time) * 24.0 * 3600.0
+    d0 = date(np.int(info.time[0:4]),np.int(info.time[4:6]),np.int(info.time[6:8]))
+    d1 = date(np.int(info1.time[0:4]),np.int(info1.time[4:6]),np.int(info1.time[6:8]))
+    date_dt_base = d1 - d0
+    obj.repeatTime = np.abs(date_dt_base.total_seconds())
+#    obj.repeatTime = (info1.time - info.time) * 24.0 * 3600.0
     obj.numberOfLines = info.numberOfLines
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
