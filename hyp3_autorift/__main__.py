@@ -106,7 +106,7 @@ def main_v2():
 
     hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
 
-    outname = build_output_name_pair(g1, g2, '-autorift')
+    outname = build_output_name_pair(g1, g2, os.getcwd(), '-autorift')
     product_name = f'{outname}.nc'
     netcdf_file = glob.glob('PRODUCT/*nc')[0]
     os.rename(netcdf_file, product_name)
