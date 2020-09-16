@@ -129,9 +129,9 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
     with open('testautoRIFT.txt', 'w') as f:
         cmd = f'testautoRIFT_ISCE.py' \
               f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
+              f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
               f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-              f' -sr window_search_range.tif -csmin window_chip_size_min.tif' \
-              f' -csmax window_chip_size_max.tif -nc S'
+              f'-ssm {BROKEN} -nc S'
         execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
