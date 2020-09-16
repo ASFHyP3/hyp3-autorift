@@ -4,7 +4,7 @@ channels:
   - nodefaults
 dependencies:
   - boto3
-  - python=3.7
+  - python=3.8
   - pip
   # For packaging, and testing
   - pytest
@@ -17,6 +17,7 @@ dependencies:
   - hyp3lib=1.5
   - isce2>=2.4.1
   - importlib_metadata
+  - netCDF4
   - numpy
   - pillow
   - psycopg2  # missing hyp3proclib dep

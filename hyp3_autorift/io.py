@@ -38,7 +38,6 @@ _FILE_LIST = [
     'GRE240m_xMinChipSize.tif',
     'GRE240m_yMaxChipSize.tif',
     'GRE240m_yMinChipSize.tif',
-
 ]
 
 
@@ -48,21 +47,13 @@ def _request_file(url_file_map):
         response = requests.get(url)
         if response.status_code == 200:
             with open(path, 'wb') as f:
-                for chunck in response:
-                    f.write(chunck)
+                for chunk in response:
+                    f.write(chunk)
     return path
 
 
 def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws.com/',
                    bucket='its-live-data', prefix='isce_autoRIFT', match=None):
-    # FIXME: Can't figure out how to get these tifs with boto3, so using requests
-    # import boto3
-    # from botocore import UNSIGNED
-    # from botocore.client import Config
-    # s3 = boto3.client('s3', endpoint_url=endpoint_url, config=Config(signature_version=UNSIGNED))
-    # with open('ANT240m_landice.tif', 'wb') as f:
-    #     s3.download_fileobj('its-live-data', 'isce_autoRIFT/ANT240m_landice.tif', f)
-
     log.info("Downloading tifs from JPL's AWS bucket")
     mkdir_p(dem_dir)
 
