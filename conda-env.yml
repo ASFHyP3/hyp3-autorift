@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - boto3
   - python=3.7
   - pip
   # For packaging, and testing

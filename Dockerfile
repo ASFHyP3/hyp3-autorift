@@ -51,5 +51,7 @@ RUN python3 -m pip install --no-cache-dir hyp3_autorift${SDIST_SPEC} \
     --trusted-host "${S3_PYPI_HOST}" \
     --extra-index-url "http://${S3_PYPI_HOST}"
 
-ENTRYPOINT ["conda", "run", "-n", "hyp3-autorift", "autorift"]
+COPY hyp3_autorift/etc/entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["-h"]
