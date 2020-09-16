@@ -108,7 +108,7 @@ def main_v2():
 
     outname = build_output_name_pair(g1, g2, os.getcwd(), '-autorift')
     product_name = f'{outname}.nc'
-    netcdf_file = glob.glob('PRODUCT/*nc')[0]
+    netcdf_file = glob.glob('*nc')[0]
     os.rename(netcdf_file, product_name)
 
     if args.bucket:
