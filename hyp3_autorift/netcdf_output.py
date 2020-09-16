@@ -1,4 +1,4 @@
-# FIXME: Turn flake8 back on for this file. Will require sig. refactor
+# Turned off flake8 because we haven't refactored 3rd party provided functions
 # flake8: noqa
 
 import datetime
@@ -45,11 +45,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixe
         VA = np.round(np.clip(VA, -32768, 32767)).astype(np.int16)
 
     tran = [tran[0],tran[1],tran[3],tran[5]]
-    
+
     clobber = True     # overwrite existing output nc file
 
     nc_outfile = netCDF4.Dataset(out_nc_filename,'w',clobber=clobber,format='NETCDF4')
-    
+
     # First set global attributes that GDAL uses when it reads netCFDF files
     nc_outfile.setncattr('GDAL_AREA_OR_POINT','Area')
     nc_outfile.setncattr('Conventions','CF-1.6')
@@ -65,7 +65,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixe
     datatype=np.dtype('S1')
     dimensions=()
     FillValue=None
-    
+
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
 
     for key in IMG_INFO_DICT:
@@ -92,7 +92,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixe
     var.setncattr('motion_detection_method',detection_method)
     var.setncattr('motion_coordinates',coordinates)
     var[:] = x
-    
+
     varname='y'
     datatype=np.dtype('float64')
     dimensions=('y')
@@ -195,7 +195,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixe
     var.setncattr('missing_value',np.int16(NoDataValue))
 
     if pair_type is 'radar':
-        
+
         varname='vr'
         datatype=np.dtype('int16')
         dimensions=('y','x')
@@ -209,7 +209,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixe
         var.setncattr('units','m/y')
         var[:] = np.round(np.clip(VR, -32768, 32767)).astype(np.int16)
         var.setncattr('missing_value',np.int16(NoDataValue))
-    
+
         varname='va'
         datatype=np.dtype('int16')
         dimensions=('y','x')
@@ -243,7 +243,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixe
     var.setncattr('units','m')
     var[:] = np.round(np.clip(CHIPSIZEX, 0, 65535)).astype('uint16')
     var.setncattr('missing_value',np.uint16(0))
-    
+
     varname='chip_size_height'
     datatype=np.dtype('uint16')
     dimensions=('y','x')

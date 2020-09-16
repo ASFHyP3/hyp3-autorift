@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Package for processing with autoRIFT ICSE
 """
