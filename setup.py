@@ -36,8 +36,7 @@ setup(
     install_requires=[
         # FIXME: use boto3 instead of requests for download in hyp3_autorift.io.fetch_jpl_tifs
         'requests',
-        # 'boto3',
-        # 'botocore',
+        'boto3',
         'hyp3lib==1.5',
         'hyp3proclib',
         'importlib_metadata',
