@@ -7,8 +7,11 @@ import netCDF4
 import numpy as np
 
 
-def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, rangePixelSize, azimuthPixelSize,
-                     dt, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT):
+def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, SY,
+                     offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                     rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                     detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_shift_applied,
+                     dx_mean_shift, dy_mean_shift, error_vector):
 
     V = np.sqrt(VX**2+VY**2)
 

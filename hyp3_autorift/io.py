@@ -123,7 +123,10 @@ def save_topsinsar_mat():
     log.info(f'secondary: {secondary_filename}')
 
     savemat(
-        'topsinsar_filename.mat', {'reference_filename': reference_filename, 'secondary_filename': secondary_filename}
+        'topsinsar_filename.mat', {
+            'reference_filename': reference_filename, 'secondary_filename': secondary_filename,
+            'reference_dt':, 'secondary_dt':,
+        }
     )
 
 
