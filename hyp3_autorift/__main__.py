@@ -11,6 +11,7 @@ from datetime import datetime
 from mimetypes import guess_type
 
 import boto3
+from PIL import Image
 from hyp3proclib import (
     build_output_name_pair,
     earlier_granule_first,
@@ -26,7 +27,6 @@ from hyp3proclib.db import get_db_connection
 from hyp3proclib.file_system import cleanup_workdir
 from hyp3proclib.logger import log
 from hyp3proclib.proc_base import Processor
-from PIL import Image
 from pkg_resources import load_entry_point
 
 import hyp3_autorift
