@@ -40,6 +40,7 @@ setup(
         'hyp3lib==1.5',
         'hyp3proclib',
         'importlib_metadata',
+        'pillow',
         'numpy',
         'scipy',
     ],
