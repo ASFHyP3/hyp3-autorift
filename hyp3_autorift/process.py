@@ -143,7 +143,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
     browse_file = Path('velocity_browse.tif')
     driver = gdal.GetDriverByName('GTiff')
     browse_tif = driver.Create(
-        str(browse_file), velocity.shape[1], velocity.shape[0], 1, gdal.GDT_Float32, ['COMPRESS=LZW']
+        str(browse_file), velocity.shape[1], velocity.shape[0], 1, gdal.GDT_Byte, ['COMPRESS=LZW']
     )
     browse_tif.SetProjection(velocity_tif.GetProjection())
     browse_tif.SetGeoTransform(velocity_tif.GetGeoTransform())
