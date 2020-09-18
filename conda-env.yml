@@ -18,6 +18,7 @@ dependencies:
   - isce2>=2.4
   - importlib_metadata
   - numpy
+  - pillow
   - psycopg2  # missing hyp3proclib dep
   - requests
   - scikit-image  # missing autoRIFT dep

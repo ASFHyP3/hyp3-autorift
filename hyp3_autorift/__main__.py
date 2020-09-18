@@ -26,6 +26,7 @@ from hyp3proclib.db import get_db_connection
 from hyp3proclib.file_system import cleanup_workdir
 from hyp3proclib.logger import log
 from hyp3proclib.proc_base import Processor
+from PIL import Image
 from pkg_resources import load_entry_point
 
 import hyp3_autorift
@@ -49,6 +50,16 @@ def entry():
 
 
 # v2 functions
+def create_thumbnail(input_image, size=(100, 100)):
+    filename, ext = os.path.splitext(input_image)
+    thumbnail_name = f'{filename}_thumb{ext}'
+
+    output_image = Image.open(input_image)
+    output_image.thumbnail(size)
+    output_image.save(thumbnail_name)
+    return thumbnail_name
+
+
 def write_netrc_file(username, password):
     netrc_file = os.path.join(os.environ['HOME'], '.netrc')
     if os.path.isfile(netrc_file):
@@ -110,9 +121,16 @@ def main_v2():
     product_name = f'{outname}.nc'
     netcdf_file = glob.glob('*nc')[0]
     os.rename(netcdf_file, product_name)
+    browse_name = f'{outname}.png'
+    browse_file = glob.glob('*.png')[0]
+    os.rename(browse_file, browse_name)
 
     if args.bucket:
         upload_file_to_s3(product_name, 'product', args.bucket, args.bucket_prefix)
+        upload_file_to_s3(browse_name, 'product', args.bucket, args.bucket_prefix)
+        thumbnail_name = create_thumbnail(browse_name)
+        upload_file_to_s3(thumbnail_name, 'product', args.bucket, args.bucket_prefix)
+# End v2 functions
 
 
 def hyp3_process(cfg, n):
@@ -139,10 +157,6 @@ def hyp3_process(cfg, n):
         out_name = build_output_name_pair(g1, g2, cfg['workdir'], cfg['suffix'])
         log.info(f'Output name: {out_name}')
 
-        # TODO:
-        #  * browse images
-        #  * citation
-        #  * phase_png (?)
         if extra_arg_is(cfg, 'intermediate_files', 'no'):
             product_glob = os.path.join(cfg['workdir'], cfg['ftd'], '*.nc')
             netcdf_files = glob.glob(product_glob)
