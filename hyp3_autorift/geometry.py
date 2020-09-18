@@ -74,7 +74,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     obj.configure()
 
     obj.startingRange = starting_range
-    obj.rangePixelSize = frames[0].bursts[0].rangePixelSize
+    obj.rangePixelSize = range_pixel_size
     obj.sensingStart = sensing_start
     obj.prf = prf
     obj.lookSide = -1
@@ -157,13 +157,12 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
     return bounding_dem
 
 
-def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None, correct=False):
+def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
 
     if isce_dem is None:
         seamstress = createDemStitcher()
         isce_dem = seamstress.defaultName([*lat_limits, *lon_limits])
 
-    # FIXME: Do we really want to *always* append this?
     isce_dem = os.path.abspath(isce_dem + '.wgs84')
     log.info(f'ISCE dem is: {isce_dem}')
 
@@ -175,36 +174,7 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None, correct=Fals
     )
     gdal.Warp(isce_dem, in_ds, options=warp_options)
 
-    # Because gdal is weird
-    in_ds = None
     del in_ds
-
-    if correct:
-        raise NotImplementedError('Correction is not yet implemented.')
-        # FIXME: what file to use for correction??
-        # cr_ds = gdal.OpenShared(correct_file, gdal.GA_ReadOnly)
-        # warp_options = gdal.WarpOptions(
-        #     format='ENVI', outputType=gdal.GDT_Int16, resampleAlg='cubic',
-        #     xRes=0.001, yRes=0.001, dstSRS='EPSG:4326', dstNodata=0,
-        #     outputBounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]]
-        # )
-        # gdal.Warp(isce_dem + '.crt', cr_ds, options=warp_options)
-        #
-        # in_ds = gdal.OpenShared(isce_dem, gdal.GA_Update)
-        # arr = in_ds.GetRasterBand(1).ReadAsArray()
-        #
-        # adj = gdal.Open(isce_dem + '.crt', gdal.GA_ReadOnly)
-        # off = adj.GetRasterBand(1).ReadAsArray()
-        #
-        # arr += off
-        # in_ds.GetRasterBand(1).WriteArray(arr)
-        #
-        # # Because gdal is weird
-        # adj = None
-        # arr = None
-        # in_ds = None
-        # cr_ds = None
-        # del adj, arr, in_ds, cr_ds
 
     isce_ds = gdal.Open(isce_dem, gdal.GA_ReadOnly)
     isce_trans = isce_ds.GetGeoTransform()

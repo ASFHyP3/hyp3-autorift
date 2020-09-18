@@ -15,8 +15,12 @@ log = logging.getLogger(__name__)
 
 _FILE_LIST = [
     'ANT240m_dhdx.tif',
+    'ANT240m_dhdxs.tif',
     'ANT240m_dhdy.tif',
+    'ANT240m_dhdys.tif',
     'ANT240m_h.tif',
+    'ANT240m_hs.tif',
+    'ANT240m_masks.tif',
     'ANT240m_StableSurface.tif',
     'ANT240m_vx0.tif',
     'ANT240m_vxSearchRange.tif',
@@ -27,8 +31,12 @@ _FILE_LIST = [
     'ANT240m_yMaxChipSize.tif',
     'ANT240m_yMinChipSize.tif',
     'GRE240m_dhdx.tif',
+    'GRE240m_dhdxs.tif',
     'GRE240m_dhdy.tif',
+    'GRE240m_dhdys.tif',
     'GRE240m_h.tif',
+    'GRE240m_hs.tif',
+    'GRE240m_masks.tif',
     'GRE240m_StableSurface.tif',
     'GRE240m_vx0.tif',
     'GRE240m_vxSearchRange.tif',
@@ -45,6 +53,7 @@ def _request_file(url_file_map):
     url, path = url_file_map
     if not os.path.exists(path):
         response = requests.get(url)
+        response.raise_for_status()
         if response.status_code == 200:
             with open(path, 'wb') as f:
                 for chunk in response:
@@ -91,7 +100,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_fi
                 <property name="auxiliary data directory">{aux}</property>
                 <property name="output directory">secondary</property>
                 <property name="safe">['{secondary}']</property>
-                <property name="polarization">hh</property>
+                <property name="polarization">{polarization}</property>
             </component>
             <property name="demfilename">{dem}</property>
             <property name="do interferogram">False</property>
@@ -119,13 +128,33 @@ def save_topsinsar_mat():
     reference_filename = os.path.basename(insar.reference.safe[0])
     secondary_filename = os.path.basename(insar.secondary.safe[0])
 
-    log.info(f'reference: {reference_filename}')
-    log.info(f'secondary: {secondary_filename}')
+    reference_sensing_times = []
+    secondary_sensing_times = []
+    for swath in range(1, 4):
+        insar.reference.swathNumber = swath
+        insar.reference.parse()
+        reference_sensing_times.append(
+            (insar.reference.product.sensingStart, insar.reference.product.sensingStop)
+        )
+
+        insar.secondary.swathNumber = swath
+        secondary_sensing_times.append(
+            (insar.secondary.product.sensingStart, insar.secondary.product.sensingStop)
+        )
+
+    reference_start = min([sensing_time[0] for sensing_time in reference_sensing_times])
+    reference_stop = min([sensing_time[1] for sensing_time in reference_sensing_times])
+
+    secondary_start = min([sensing_time[0] for sensing_time in secondary_sensing_times])
+    secondary_stop = min([sensing_time[1] for sensing_time in secondary_sensing_times])
+
+    reference_dt = (reference_stop - reference_start) / 2 + reference_start
+    secondary_dt = (secondary_stop - secondary_start) / 2 + secondary_start
 
     savemat(
         'topsinsar_filename.mat', {
             'reference_filename': reference_filename, 'secondary_filename': secondary_filename,
-            'reference_dt':, 'secondary_dt':,
+            'reference_dt': reference_dt, 'secondary_dt': secondary_dt,
         }
     )
 
