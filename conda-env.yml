@@ -1,0 +1,32 @@
+name: hyp3-autorift
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - boto3
+  - python=3.7
+  - pip
+  # For packaging, and testing
+  - pytest
+  - pytest-console-scripts
+  - pytest-cov
+  - setuptools
+  - setuptools_scm
+  - wheel
+  # For running
+  - hyp3lib=1.5
+  - isce2>=2.4
+  - importlib_metadata
+  - numpy
+  - psycopg2  # missing hyp3proclib dep
+  - requests
+  - scikit-image  # missing autoRIFT dep
+  - scipy
+  - pip:
+    # for packaging and testing
+    - s3pypi
+    - safety
+    # For running
+    - --trusted-host hyp3-pypi.s3-website-us-east-1.amazonaws.com
+      --extra-index-url http://hyp3-pypi.s3-website-us-east-1.amazonaws.com
+    - hyp3proclib>=1.0.1,<2
