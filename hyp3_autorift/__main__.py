@@ -127,9 +127,9 @@ def main_v2():
 
     if args.bucket:
         upload_file_to_s3(product_name, 'product', args.bucket, args.bucket_prefix)
-        upload_file_to_s3(browse_name, 'product', args.bucket, args.bucket_prefix)
+        upload_file_to_s3(browse_name, 'browse', args.bucket, args.bucket_prefix)
         thumbnail_name = create_thumbnail(browse_name)
-        upload_file_to_s3(thumbnail_name, 'product', args.bucket, args.bucket_prefix)
+        upload_file_to_s3(thumbnail_name, 'thumbnail', args.bucket, args.bucket_prefix)
 # End v2 functions
 
 
