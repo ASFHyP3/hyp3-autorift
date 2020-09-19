@@ -1,6 +1,5 @@
 """Geometry routines for working Geogrid"""
 
-import glob
 import logging
 import os
 
@@ -9,18 +8,15 @@ import isceobj
 import numpy as np
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
+from hyp3lib import DemError
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import osr
 
-from hyp3_autorift.io import fetch_jpl_tifs
+from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
 
 log = logging.getLogger(__name__)
-
-
-class GeometryException(Exception):
-    pass
 
 
 def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', aux='Orbits', epsg=4326):
@@ -98,15 +94,11 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', download=False):
+def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
 
-    if download:
-        fetch_jpl_tifs(dem_dir=dem_dir, match='_h.tif')
-
-    dems = glob.glob(os.path.join(dem_dir, '*_h.tif'))
-
+    dems = ['GRE240m_h.tif', 'ANT240m_h.tif']
     bounding_dem = None
-    for dem in dems:
+    for dem in [f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}' for dem in dems]:
         log.info(f'Checking DEM: {dem}')
         dem_ds = gdal.Open(dem, gdal.GA_ReadOnly)
         dem_sr = dem_ds.GetSpatialRef()
@@ -151,7 +143,7 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
             break
 
     if bounding_dem is None:
-        raise GeometryException('Existing DEMs do not (fully) cover the image data')
+        raise DemError('Existing DEMs do not (fully) cover the image data')
 
     log.info(f'Bounding DEM is: {bounding_dem}')
     return bounding_dem

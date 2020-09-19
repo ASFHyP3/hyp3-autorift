@@ -14,6 +14,9 @@ from scipy.io import savemat
 log = logging.getLogger(__name__)
 s3_client = boto3.client('s3')
 
+ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
+AUTORIFT_PREFIX = 'isce_autoRIFT'
+
 
 def _list_s3_files(bucket, prefix):
     response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
@@ -29,7 +32,7 @@ def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
         s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
 
 
-def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket='its-live-data.jpl.nasa.gov', prefix='isce_autoRIFT'):
+def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
     log.info(f"Downloading {ice_sheet} tifs from JPL's AWS bucket")
     mkdir_p(target_dir)
 
