@@ -37,8 +37,8 @@ def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket='its-live-data.jpl.
         logging.getLogger(logger).setLevel(logging.WARNING)
 
     full_prefix = f'{prefix}/{ice_sheet}'
-    keys = _list_s3_files(client, bucket, full_prefix)
-    _download_s3_files(client, target_dir, bucket, keys)
+    keys = _list_s3_files(bucket, full_prefix)
+    _download_s3_files(target_dir, bucket, keys)
 
 
 def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
