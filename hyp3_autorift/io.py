@@ -4,75 +4,41 @@ import argparse
 import logging
 import os
 import textwrap
-from multiprocessing.dummy import Pool
 
-import requests
+import boto3
+from boto3.s3.transfer import TransferConfig
 from hyp3lib.file_subroutines import mkdir_p
 from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
 
-_FILE_LIST = [
-    'ANT240m_dhdx.tif',
-    'ANT240m_dhdy.tif',
-    'ANT240m_h.tif',
-    'ANT240m_StableSurface.tif',
-    'ANT240m_vx0.tif',
-    'ANT240m_vxSearchRange.tif',
-    'ANT240m_vy0.tif',
-    'ANT240m_vySearchRange.tif',
-    'ANT240m_xMaxChipSize.tif',
-    'ANT240m_xMinChipSize.tif',
-    'ANT240m_yMaxChipSize.tif',
-    'ANT240m_yMinChipSize.tif',
-    'GRE240m_dhdx.tif',
-    'GRE240m_dhdy.tif',
-    'GRE240m_h.tif',
-    'GRE240m_StableSurface.tif',
-    'GRE240m_vx0.tif',
-    'GRE240m_vxSearchRange.tif',
-    'GRE240m_vy0.tif',
-    'GRE240m_vySearchRange.tif',
-    'GRE240m_xMaxChipSize.tif',
-    'GRE240m_xMinChipSize.tif',
-    'GRE240m_yMaxChipSize.tif',
-    'GRE240m_yMinChipSize.tif',
-]
+
+def _list_s3_files(client, bucket, prefix):
+    response = client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+    keys = [item['Key'] for item in response['Contents']]
+    return keys
 
 
-def _request_file(url_file_map):
-    url, path = url_file_map
-    if not os.path.exists(path):
-        response = requests.get(url)
-        if response.status_code == 200:
-            with open(path, 'wb') as f:
-                for chunk in response:
-                    f.write(chunk)
-    return path
+def _download_s3_files(client, target_dir, bucket, keys, chunk_size=50*1024*1024):
+    transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
+    for key in keys:
+        filename = os.path.join(target_dir, os.path.basename(key))
+        log.info(f'Downloading s3://{bucket}/{key} to {filename}')
+        client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
 
 
-def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws.com/',
-                   bucket='its-live-data', prefix='isce_autoRIFT', match=None):
-    log.info("Downloading tifs from JPL's AWS bucket")
-    mkdir_p(dem_dir)
+def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket='its-live-data.jpl.nasa.gov', prefix='isce_autoRIFT'):
+    log.info(f"Downloading {ice_sheet} tifs from JPL's AWS bucket")
+    mkdir_p(target_dir)
 
-    if match:
-        file_list = [file for file in _FILE_LIST if match in file]
-    else:
-        file_list = _FILE_LIST
+    for logger in ('botocore', 's3transfer'):
+        logging.getLogger(logger).setLevel(logging.WARNING)
+    client = boto3.client('s3')
 
-    url_file_map = [
-        (endpoint_url.replace('http://', f'http://{bucket}.') + f'{prefix}/{file}',
-         os.path.join(dem_dir, file)) for file in file_list
-    ]
-
-    pool = Pool(5)
-    fetched = pool.imap_unordered(_request_file, url_file_map)
-    pool.close()
-    pool.join()
-
-    log.info(f'Downloaded: {fetched}')
+    full_prefix = f'{prefix}/{ice_sheet}'
+    keys = _list_s3_files(client, bucket, full_prefix)
+    _download_s3_files(client, target_dir, bucket, keys)
 
 
 def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
