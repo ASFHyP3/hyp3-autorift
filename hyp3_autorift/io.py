@@ -13,7 +13,6 @@ from scipy.io import savemat
 
 log = logging.getLogger(__name__)
 
-
 def _list_s3_files(client, bucket, prefix):
     response = client.list_objects_v2(Bucket=bucket, Prefix=prefix)
     keys = [item['Key'] for item in response['Contents']]
@@ -57,7 +56,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_fi
                 <property name="auxiliary data directory">{aux}</property>
                 <property name="output directory">secondary</property>
                 <property name="safe">['{secondary}']</property>
-                <property name="polarization">hh</property>
+                <property name="polarization">{polarization}</property>
             </component>
             <property name="demfilename">{dem}</property>
             <property name="do interferogram">False</property>
@@ -85,13 +84,33 @@ def save_topsinsar_mat():
     reference_filename = os.path.basename(insar.reference.safe[0])
     secondary_filename = os.path.basename(insar.secondary.safe[0])
 
-    log.info(f'reference: {reference_filename}')
-    log.info(f'secondary: {secondary_filename}')
+    reference_sensing_times = []
+    secondary_sensing_times = []
+    for swath in range(1, 4):
+        insar.reference.swathNumber = swath
+        insar.reference.parse()
+        reference_sensing_times.append(
+            (insar.reference.product.sensingStart, insar.reference.product.sensingStop)
+        )
+
+        insar.secondary.swathNumber = swath
+        secondary_sensing_times.append(
+            (insar.secondary.product.sensingStart, insar.secondary.product.sensingStop)
+        )
+
+    reference_start = min([sensing_time[0] for sensing_time in reference_sensing_times])
+    reference_stop = min([sensing_time[1] for sensing_time in reference_sensing_times])
+
+    secondary_start = min([sensing_time[0] for sensing_time in secondary_sensing_times])
+    secondary_stop = min([sensing_time[1] for sensing_time in secondary_sensing_times])
+
+    reference_dt = (reference_stop - reference_start) / 2 + reference_start
+    secondary_dt = (secondary_stop - secondary_start) / 2 + secondary_start
 
     savemat(
         'topsinsar_filename.mat', {
             'reference_filename': reference_filename, 'secondary_filename': secondary_filename,
-            'reference_dt':, 'secondary_dt':,
+            'reference_dt': reference_dt, 'secondary_dt': secondary_dt,
         }
     )
 
