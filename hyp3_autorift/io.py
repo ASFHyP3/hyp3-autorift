@@ -88,13 +88,16 @@ def save_topsinsar_mat():
     reference_sensing_times = []
     secondary_sensing_times = []
     for swath in range(1, 4):
+        insar.reference.configure()
         insar.reference.swathNumber = swath
         insar.reference.parse()
         reference_sensing_times.append(
             (insar.reference.product.sensingStart, insar.reference.product.sensingStop)
         )
 
+        insar.secondary.configure()
         insar.secondary.swathNumber = swath
+        insar.secondary.parse()
         secondary_sensing_times.append(
             (insar.secondary.product.sensingStart, insar.secondary.product.sensingStop)
         )
@@ -111,7 +114,7 @@ def save_topsinsar_mat():
     savemat(
         'topsinsar_filename.mat', {
             'reference_filename': reference_filename, 'secondary_filename': secondary_filename,
-            'reference_dt': reference_dt, 'secondary_dt': secondary_dt,
+            'reference_dt': reference_dt.strftime("%Y%m%dT%H:%M:%S"), 'secondary_dt': secondary_dt.strftime("%Y%m%dT%H:%M:%S"),
         }
     )
 

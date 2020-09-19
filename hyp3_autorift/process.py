@@ -131,7 +131,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
               f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
               f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
               f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-              f'-ssm window_stable_surface_mask.tif -nc S'
+              f' -ssm window_stable_surface_mask.tif -nc S'
         execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
