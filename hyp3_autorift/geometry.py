@@ -131,7 +131,7 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
 
         if x_limits[0] > dem_x_limits[0] and x_limits[1] < dem_x_limits[1] \
            and y_limits[0] > dem_y_limits[0] and y_limits[1] < dem_y_limits[1]:
-            bounding_dem = os.path.abspath(dem)
+            bounding_dem = os.path.basename(dem)
             break
 
     if bounding_dem is None:

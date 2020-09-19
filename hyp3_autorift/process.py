@@ -90,16 +90,18 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         str(reference), orbits=orbits, aux=aux, polarization=polarization
     )
 
-    dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
+    dem = geometry.find_jpl_dem(lat_limits, lon_limits)
 
+    dem_dir = os.path.join(os.getcwd(), 'DEM')
+    mkdir_p(dem_dir)
     if download:
-        io.fetch_jpl_tifs(ice_sheet=os.path.basename(dem)[:3])
+        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
 
     if process_dir:
         mkdir_p(process_dir)
         os.chdir(process_dir)
 
-    isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
+    isce_dem = geometry.prep_isce_dem(os.path.join(dem_dir, dem), lat_limits, lon_limits)
 
     io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits, aux)
 
@@ -115,10 +117,10 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
             cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
             execute(cmd, logfile=f, uselogging=True)
 
-    in_file_base = dem.replace('_h.tif', '')
+    in_file_base = os.path.join(dem_dir, dem).replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
         cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-              f' -d {dem} -ssm {in_file_base}_StableSurface.tif' \
+              f' -d {os.path.join(dem_dir, dem)} -ssm {in_file_base}_StableSurface.tif' \
               f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
               f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
               f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
