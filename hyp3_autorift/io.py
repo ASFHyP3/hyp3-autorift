@@ -113,8 +113,10 @@ def save_topsinsar_mat():
 
     savemat(
         'topsinsar_filename.mat', {
-            'reference_filename': reference_filename, 'secondary_filename': secondary_filename,
-            'reference_dt': reference_dt.strftime("%Y%m%dT%H:%M:%S"), 'secondary_dt': secondary_dt.strftime("%Y%m%dT%H:%M:%S"),
+            'reference_filename': reference_filename,
+            'secondary_filename': secondary_filename,
+            'reference_dt': reference_dt.strftime("%Y%m%dT%H:%M:%S"),
+            'secondary_dt': secondary_dt.strftime("%Y%m%dT%H:%M:%S"),
         }
     )
 
