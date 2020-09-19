@@ -93,7 +93,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
     dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
 
     if download:
-        io.fetch_jpl_tifs(match=os.path.basename(dem)[:3])
+        io.fetch_jpl_tifs(ice_sheet=os.path.basename(dem)[:3])
 
     if process_dir:
         mkdir_p(process_dir)

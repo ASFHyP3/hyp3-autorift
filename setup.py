@@ -32,7 +32,6 @@ setup(
     python_requires='~=3.8',
 
     install_requires=[
-        'requests',
         'boto3',
         'hyp3lib==1.5',
         'hyp3proclib',
