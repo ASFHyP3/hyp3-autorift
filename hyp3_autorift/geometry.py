@@ -81,12 +81,8 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
 
     obj.determineBbox()
 
-    if gdal.__version__[0] == '2':
-        lat_limits = obj._ylim
-        lon_limits = obj._xlim
-    else:
-        lat_limits = obj._xlim
-        lon_limits = obj._ylim
+    lat_limits = obj._xlim
+    lon_limits = obj._ylim
 
     log.info(f'Latitude limits [min, max]: {lat_limits}')
     log.info(f'Longitude limits [min, max]: {lon_limits}')
@@ -115,11 +111,7 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
         for lat in lat_limits:
             for lon in lon_limits:
                 for zed in z_limits:
-                    if gdal.__version__[0] == '2':
-                        xyz = trans.TransformPoint(lon, lat, zed)
-                    else:
-                        xyz = trans.TransformPoint(lat, lon, zed)
-
+                    xyz = trans.TransformPoint(lat, lon, zed)
                     all_xyz.append(xyz)
 
         x, y, _ = zip(*all_xyz)
