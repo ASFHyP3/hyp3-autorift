@@ -13,6 +13,7 @@ from scipy.io import savemat
 
 log = logging.getLogger(__name__)
 
+
 def _list_s3_files(client, bucket, prefix):
     response = client.list_objects_v2(Bucket=bucket, Prefix=prefix)
     keys = [item['Key'] for item in response['Contents']]
