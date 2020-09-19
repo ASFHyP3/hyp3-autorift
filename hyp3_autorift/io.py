@@ -12,20 +12,21 @@ from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
+s3_client = boto3.client('s3')
 
 
-def _list_s3_files(client, bucket, prefix):
-    response = client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+def _list_s3_files(bucket, prefix):
+    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
     keys = [item['Key'] for item in response['Contents']]
     return keys
 
 
-def _download_s3_files(client, target_dir, bucket, keys, chunk_size=50*1024*1024):
+def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
     transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
     for key in keys:
         filename = os.path.join(target_dir, os.path.basename(key))
         log.info(f'Downloading s3://{bucket}/{key} to {filename}')
-        client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
+        s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
 
 
 def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket='its-live-data.jpl.nasa.gov', prefix='isce_autoRIFT'):
@@ -34,7 +35,6 @@ def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket='its-live-data.jpl.
 
     for logger in ('botocore', 's3transfer'):
         logging.getLogger(logger).setLevel(logging.WARNING)
-    client = boto3.client('s3')
 
     full_prefix = f'{prefix}/{ice_sheet}'
     keys = _list_s3_files(client, bucket, full_prefix)
