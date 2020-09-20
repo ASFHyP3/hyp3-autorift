@@ -153,7 +153,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     del velocity_band, browse_tif, velocity_tif
 
-    makeAsfBrowse(browse_file, browse_file.stem)
+    makeAsfBrowse(str(browse_file), browse_file.stem)
 
     if product:
         mkdir_p(product_dir)
