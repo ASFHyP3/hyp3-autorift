@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Package for processing with autoRIFT ICSE
 """
@@ -91,16 +90,19 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         str(reference), orbits=orbits, aux=aux, polarization=polarization
     )
 
-    dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
+    dem = geometry.find_jpl_dem(lat_limits, lon_limits)
 
+    dem_dir = os.path.join(os.getcwd(), 'DEM')
+    mkdir_p(dem_dir)
     if download:
-        io.fetch_jpl_tifs(match=os.path.basename(dem)[:3])
+        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
 
     if process_dir:
         mkdir_p(process_dir)
         os.chdir(process_dir)
 
-    isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
+    dem_file = os.path.join(dem_dir, dem)
+    isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
 
     io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits, aux)
 
@@ -116,10 +118,10 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
             cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
             execute(cmd, logfile=f, uselogging=True)
 
-    in_file_base = dem.replace('_h.tif', '')
+    in_file_base = dem_file.replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
         cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-              f' -d {dem} -ssm {in_file_base}_StableSurface.tif' \
+              f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
               f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
               f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
               f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
@@ -130,9 +132,9 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
     with open('testautoRIFT.txt', 'w') as f:
         cmd = f'testautoRIFT_ISCE.py' \
               f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
+              f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
               f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-              f' -sr window_search_range.tif -csmin window_chip_size_min.tif' \
-              f' -csmax window_chip_size_max.tif -nc S'
+              f' -ssm window_stable_surface_mask.tif -nc S'
         execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
@@ -152,7 +154,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     del velocity_band, browse_tif, velocity_tif
 
-    makeAsfBrowse(browse_file, browse_file.stem)
+    makeAsfBrowse(str(browse_file), browse_file.stem)
 
     if product:
         mkdir_p(product_dir)
