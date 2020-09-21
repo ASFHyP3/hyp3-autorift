@@ -94,9 +94,10 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
 
     dems = ['GRE240m_h.tif', 'ANT240m_h.tif']
     bounding_dem = None
-    for dem in [f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}' for dem in dems]:
-        log.info(f'Checking DEM: {dem}')
-        dem_ds = gdal.Open(dem, gdal.GA_ReadOnly)
+    for dem in dems:
+        dem_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}'
+        log.info(f'Checking DEM: {dem_file}')
+        dem_ds = gdal.Open(dem_file, gdal.GA_ReadOnly)
         dem_sr = dem_ds.GetSpatialRef()
         log.debug(f'DEM projection: {dem_sr}')
 
@@ -131,7 +132,7 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
 
         if x_limits[0] > dem_x_limits[0] and x_limits[1] < dem_x_limits[1] \
            and y_limits[0] > dem_y_limits[0] and y_limits[1] < dem_y_limits[1]:
-            bounding_dem = os.path.basename(dem)
+            bounding_dem = dem
             break
 
     if bounding_dem is None:

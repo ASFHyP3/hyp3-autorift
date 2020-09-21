@@ -10,7 +10,7 @@ This module was provided in the autoRIFT
 and is required for the  expected workflow provided to ASF. However, in its 
 original form, required too many unpackaged or distributed modules to be found
 in the global namespace and therefore cannot be easily incorporated into this
-plugin.It also still contains oppressive references to master/slave which is no longer
+plugin. It also still contains oppressive references to master/slave which is no longer
 supported by ISCE 2.4+. Changes, as listed in `CHANGES.diff`, were done to
 facilitate better packaging and distribution of the plugin, and remove oppressive
 language.

@@ -101,7 +101,8 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         mkdir_p(process_dir)
         os.chdir(process_dir)
 
-    isce_dem = geometry.prep_isce_dem(os.path.join(dem_dir, dem), lat_limits, lon_limits)
+    dem_file = os.path.join(dem_dir, dem)
+    isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
 
     io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits, aux)
 
@@ -117,10 +118,10 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
             cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
             execute(cmd, logfile=f, uselogging=True)
 
-    in_file_base = os.path.join(dem_dir, dem).replace('_h.tif', '')
+    in_file_base = dem_file.replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
         cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-              f' -d {os.path.join(dem_dir, dem)} -ssm {in_file_base}_StableSurface.tif' \
+              f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
               f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
               f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
               f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \

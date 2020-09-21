@@ -7,7 +7,6 @@ import textwrap
 
 import boto3
 from boto3.s3.transfer import TransferConfig
-from hyp3lib.file_subroutines import mkdir_p
 from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
@@ -34,7 +33,6 @@ def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
 
 def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
     log.info(f"Downloading {ice_sheet} tifs from JPL's AWS bucket")
-    mkdir_p(target_dir)
 
     for logger in ('botocore', 's3transfer'):
         logging.getLogger(logger).setLevel(logging.WARNING)
@@ -85,43 +83,29 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_fi
 def save_topsinsar_mat():
     insar = TopsInSAR(name="topsApp")
     insar.configure()
-    reference_filename = os.path.basename(insar.reference.safe[0])
-    secondary_filename = os.path.basename(insar.secondary.safe[0])
 
-    reference_sensing_times = []
-    secondary_sensing_times = []
-    for swath in range(1, 4):
-        insar.reference.configure()
-        insar.reference.swathNumber = swath
-        insar.reference.parse()
-        reference_sensing_times.append(
-            (insar.reference.product.sensingStart, insar.reference.product.sensingStop)
-        )
+    mat_data = {}
+    for name in ['reference', 'secondary']:
+        scene = insar.__getattribute__(name)
+        mat_data[f'{name}_filename'] = os.path.basename(scene.safe[0])
 
-        insar.secondary.configure()
-        insar.secondary.swathNumber = swath
-        insar.secondary.parse()
-        secondary_sensing_times.append(
-            (insar.secondary.product.sensingStart, insar.secondary.product.sensingStop)
-        )
+        sensing_times = []
+        for swath in range(1, 4):
+            scene.configure()
+            scene.swathNumber = swath
+            scene.parse()
+            sensing_times.append(
+                (scene.product.sensingStart, scene.product.sensingStop)
+            )
 
-    reference_start = min([sensing_time[0] for sensing_time in reference_sensing_times])
-    reference_stop = min([sensing_time[1] for sensing_time in reference_sensing_times])
+        sensing_start = min([sensing_time[0] for sensing_time in sensing_times])
+        sensing_stop = min([sensing_time[1] for sensing_time in sensing_times])
 
-    secondary_start = min([sensing_time[0] for sensing_time in secondary_sensing_times])
-    secondary_stop = min([sensing_time[1] for sensing_time in secondary_sensing_times])
+        sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
 
-    reference_dt = (reference_stop - reference_start) / 2 + reference_start
-    secondary_dt = (secondary_stop - secondary_start) / 2 + secondary_start
+        mat_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S")
 
-    savemat(
-        'topsinsar_filename.mat', {
-            'reference_filename': reference_filename,
-            'secondary_filename': secondary_filename,
-            'reference_dt': reference_dt.strftime("%Y%m%dT%H:%M:%S"),
-            'secondary_dt': secondary_dt.strftime("%Y%m%dT%H:%M:%S"),
-        }
-    )
+    savemat('topsinsar_filename.mat', mat_data)
 
 
 def topsinsar_mat():
