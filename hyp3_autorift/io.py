@@ -87,7 +87,6 @@ def save_topsinsar_mat():
     mat_data = {}
     for name in ['reference', 'secondary']:
         scene = insar.__getattribute__(name)
-        mat_data[f'{name}_filename'] = os.path.basename(scene.safe[0])
 
         sensing_times = []
         for swath in range(1, 4):
@@ -99,10 +98,11 @@ def save_topsinsar_mat():
             )
 
         sensing_start = min([sensing_time[0] for sensing_time in sensing_times])
-        sensing_stop = min([sensing_time[1] for sensing_time in sensing_times])
+        sensing_stop = max([sensing_time[1] for sensing_time in sensing_times])
 
         sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
 
+        mat_data[f'{name}_filename'] = os.path.basename(scene.safe[0])
         mat_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S")
 
     savemat('topsinsar_filename.mat', mat_data)
