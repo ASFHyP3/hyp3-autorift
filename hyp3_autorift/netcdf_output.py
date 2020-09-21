@@ -126,9 +126,10 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
 
     isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
     autorift_version = '1.0.7'
-    source = f'ASF DAAC HyP3 using the {hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} ' \
-             f'running autoRIFT version {autorift_version} as distributed with ISCE version {isce_version.strip()}. ' \
-             f'Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
+    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version' \
+             f' {hyp3_autorift.__version__} running autoRIFT version {autorift_version} as distributed with ISCE ' \
+             f'version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
+             f'{IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
     references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnstock, M., Ligtenberg, S., van den Broeke, M.,\n' \
                  '  and Nilsson, J.: Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
