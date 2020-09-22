@@ -2,9 +2,12 @@
 # flake8: noqa
 
 import datetime
+import subprocess
 
 import netCDF4
 import numpy as np
+
+import hyp3_autorift
 
 
 def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, SY,
@@ -121,6 +124,21 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     author = 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech'
     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
 
+    isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
+    autorift_version = '1.0.7'
+    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version' \
+             f' {hyp3_autorift.__version__} running autoRIFT version {autorift_version} as distributed with ISCE ' \
+             f'version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
+             f'{IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
+    references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
+                 '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnstock, M., Ligtenberg, S., van den Broeke, M.,\n' \
+                 '  and Nilsson, J.: Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
+                 '  the last 7 years, The Cryosphere, 12, 521–547, https://doi.org/10.5194/tc-12-521-2018, 2018.\n' \
+                 '\n' \
+                 'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
+                 '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581\n' \
+                 '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
+                 '* autoRIFT: https://doi.org/10.5281/zenodo.4025445'
     tran = [tran[0], tran[1], 0.0, tran[3], 0.0, tran[5]]
 
     clobber = True  # overwrite existing output nc file
@@ -132,12 +150,13 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     nc_outfile.setncattr('Conventions', 'CF-1.6')
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
-    nc_outfile.setncattr('author', author)
-    nc_outfile.setncattr('institution', institution)
-    #    nc_outfile.setncattr('Software',version)
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('motion_detection_method', detection_method)
     nc_outfile.setncattr('motion_coordinates', coordinates)
+    nc_outfile.setncattr('author', author)
+    nc_outfile.setncattr('institution', institution)
+    nc_outfile.setncattr('source', source)
+    nc_outfile.setncattr('references', references)
 
     varname = 'img_pair_info'
     datatype = np.dtype('S1')
