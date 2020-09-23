@@ -10,9 +10,12 @@ import os
 import shutil
 from pathlib import Path
 
+import numpy as np
 from hyp3lib.execute import execute
 from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
+from hyp3lib.makeAsfBrowse import makeAsfBrowse
+from osgeo import gdal
 
 from hyp3_autorift import geometry
 from hyp3_autorift import io
@@ -22,10 +25,18 @@ log = logging.getLogger(__name__)
 _PRODUCT_LIST = [
     'offset.tif',
     'velocity.tif',
+    'velocity_browse.tif',
+    'velocity_browse.kmz',
+    'velocity_browse.png',
+    'velocity_browse.png.aux.xml',
+    'window_chip_size_max.tif',
+    'window_chip_size_min.tif',
     'window_location.tif',
     'window_offset.tif',
     'window_rdr_off2vel_x_vec.tif',
     'window_rdr_off2vel_y_vec.tif',
+    'window_search_range.tif',
+    'window_stable_surface_mask.tif',
 ]
 
 
@@ -123,6 +134,25 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
               f' -sr window_search_range.tif -csmin window_chip_size_min.tif' \
               f' -csmax window_chip_size_max.tif -nc S'
         execute(cmd, logfile=f, uselogging=True)
+
+    velocity_tif = gdal.Open('velocity.tif')
+    x_velocity = np.ma.masked_invalid(velocity_tif.GetRasterBand(1).ReadAsArray())
+    y_velocity = np.ma.masked_invalid(velocity_tif.GetRasterBand(2).ReadAsArray())
+    velocity = np.sqrt(x_velocity**2 + y_velocity**2)
+
+    browse_file = Path('velocity_browse.tif')
+    driver = gdal.GetDriverByName('GTiff')
+    browse_tif = driver.Create(
+        str(browse_file), velocity.shape[1], velocity.shape[0], 1, gdal.GDT_Byte, ['COMPRESS=LZW']
+    )
+    browse_tif.SetProjection(velocity_tif.GetProjection())
+    browse_tif.SetGeoTransform(velocity_tif.GetGeoTransform())
+    velocity_band = browse_tif.GetRasterBand(1)
+    velocity_band.WriteArray(velocity)
+
+    del velocity_band, browse_tif, velocity_tif
+
+    makeAsfBrowse(str(browse_file), browse_file.stem)
 
     if product:
         mkdir_p(product_dir)
