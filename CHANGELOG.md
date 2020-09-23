@@ -12,7 +12,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Browse and thumbnail images are now created and uploaded for hyp3v2
 
 ### Fixes
-* Restrict ISCE version to 2.4.0 which include autoRIFT 1.0.6
+* Restrict ISCE version to 2.4.0 which includes autoRIFT 1.0.6
 
 ## [0.1.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.0.0...v0.1.0)
 
