@@ -11,8 +11,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * `hyp3_autorift` now requires python >=3.8, and depends on ISCE >=2.4.1 which 
   includes [autoRIFT 1.0.7](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.0.7)
+
+## [0.1.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.1.0...v0.1.1)
+
+### Added
 * A browse image of the ice velocity is produced for HyP3v1 and v2, and a thumbnail 
-  of the browse image will be uploaded for HyP3v2
+  of the browse image will be produced for HyP3v2
+
+### Fixes
+* Restrict ISCE version to 2.4.0 which includes autoRIFT 1.0.6
 
 ## [0.1.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.0.0...v0.1.0)
 
