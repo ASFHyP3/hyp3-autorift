@@ -129,10 +129,10 @@ def main_v2():
 
 def find_product_name(directory):
     try:
-        readme_file = glob.glob(f'{directory}/*.nc')[0]
+        product_file = glob.glob(f'{directory}/*.nc')[0]
     except IndexError:
         raise Exception(f'Could not determine product name, no *.nc file found in {directory}')
-    return os.path.basename(readme_file).split('.')[0]
+    return os.path.basename(product_file).split('.')[0]
 
 
 def hyp3_process(cfg, n):
