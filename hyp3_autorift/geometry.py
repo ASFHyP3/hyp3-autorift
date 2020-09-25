@@ -19,14 +19,13 @@ from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
 log = logging.getLogger(__name__)
 
 
-def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', aux='Orbits', epsg=4326):
+def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
     :param priority: Image priority, either 'reference' (default) or 'secondary'
     :param polarization: Image polarization (default: 'hh')
     :param orbits: Path to the orbital files (default: './Orbits')
-    :param aux: Path to the auxiliary orbital files (default: './Orbits')
     :param epsg: Projection EPSG code (default: 4326)
 
     :return: lat_limits (list), lon_limits (list)
@@ -40,7 +39,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         rdr.safe = [os.path.abspath(safe)]
         rdr.output = priority
         rdr.orbitDir = os.path.abspath(orbits)
-        rdr.auxDir = os.path.abspath(aux)
+        rdr.auxDir = os.path.abspath(orbits)
         rdr.swathNumber = swath
         rdr.polarization = polarization
         rdr.parse()

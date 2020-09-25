@@ -68,8 +68,7 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
     return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
-def process(reference, secondary, download=False, polarization='hh', orbits=None, aux=None, process_dir=None,
-            product=False):
+def process(reference, secondary, download=False, polarization='hh', process_dir=None, product=False):
     """Process a Sentinel-1 image pair
 
     Args:
@@ -78,10 +77,6 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         download: If True, try and download the granules from ASF to the
             current working directory (default: False)
         polarization: Polarization of Sentinel-1 scene (default: 'hh')
-        orbits: Path to the orbital files, otherwise, fetch them from ASF
-            (default: None)
-        aux: Path to the auxiliary orbital files, otherwise, assume same as orbits
-            (default: None)
         process_dir: Path to a directory for processing inside
             (default: None; use current working directory)
         product: Create a product directory in the current working directory with
@@ -104,23 +99,15 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         execute(f'get_asf.py {dl_file_list}')
         os.rmdir('download')  # Really, get_asf.py should do this...
 
-    if orbits is None:
-        orbits = Path('Orbits').resolve()
-        mkdir_p(orbits)
-        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
-        log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
-        log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
-    else:
-        # FIXME: look for correct orbit file in directory
-        reference_state_vec = None
-        secondary_state_vec = None
-
-    if aux is None:
-        aux = orbits
+    orbits = Path('Orbits').resolve()
+    mkdir_p(orbits)
+    reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
+    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
+    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
+    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
     lat_limits, lon_limits = geometry.bounding_box(
-        str(reference), orbits=orbits, aux=aux, polarization=polarization
+        str(reference), orbits=orbits, polarization=polarization
     )
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
@@ -137,7 +124,7 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
     dem_file = os.path.join(dem_dir, dem)
     isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
 
-    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits, aux)
+    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
     with open('topsApp.txt', 'w') as f:
         cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
@@ -223,12 +210,6 @@ def main():
                              'working directory')
     parser.add_argument('-p', '--polarization', default='hh',
                         help='Polarization of the Sentinel-1 scenes')
-    parser.add_argument('--orbits', type=os.path.abspath,
-                        help='Path to the Sentinel-1 orbital files. If this argument'
-                             'is not give, process will try and download them from ASF')
-    parser.add_argument('--aux', type=os.path.abspath,
-                        help='Path to the Sentinel-1 auxiliary orbital files. If this argument'
-                             'is not give, process will try and download them from ASF')
     parser.add_argument('--process-dir', type=os.path.abspath,
                         help='If given, do processing inside this directory, otherwise, '
                              'use the current working directory')

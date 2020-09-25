@@ -42,20 +42,20 @@ def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket=ITS_LIVE_BUCKET, pr
     _download_s3_files(target_dir, bucket, keys)
 
 
-def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
+def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):
     xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>
     <topsApp>
         <component name="topsinsar">
             <component name="reference">
                 <property name="orbit directory">{orbits}</property>
-                <property name="auxiliary data directory">{aux}</property>
+                <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">reference</property>
                 <property name="safe">['{reference}']</property>
                 <property name="polarization">{polarization}</property>
             </component>
             <component name="secondary">
                 <property name="orbit directory">{orbits}</property>
-                <property name="auxiliary data directory">{aux}</property>
+                <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">secondary</property>
                 <property name="safe">['{secondary}']</property>
                 <property name="polarization">{polarization}</property>
