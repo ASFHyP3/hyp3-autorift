@@ -7,7 +7,9 @@ import glob
 import logging
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
+from secrets import token_hex
 
 import numpy as np
 from hyp3lib.execute import execute
@@ -37,6 +39,33 @@ _PRODUCT_LIST = [
     'window_search_range.tif',
     'window_stable_surface_mask.tif',
 ]
+
+
+def least_precise_orbit_of(orbits):
+    if any([orb is None for orb in orbits]):
+        return 'O'
+    if any(['RESORB' in orb for orb in orbits]):
+        return 'R'
+    return 'P'
+
+
+def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240):
+    plat1 = reference_name[2]
+    plat2 = secondary_name[2]
+
+    datetime1 = reference_name[17:32]
+    datetime2 = secondary_name[17:32]
+
+    ref_datetime = datetime.strptime(datetime1, '%Y%m%dT%H%M%S')
+    sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
+    days = abs((ref_datetime - sec_datetime).days)
+
+    pol1 = reference_name[15:16]
+    pol2 = secondary_name[15:16]
+    orb = least_precise_orbit_of(orbit_files)
+    product_id = token_hex(2).upper()
+
+    return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
 def process(reference, secondary, download=False, polarization='hh', orbits=None, aux=None, process_dir=None,
@@ -82,6 +111,10 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
+    else:
+        # FIXME: look for correct orbit file in directory
+        reference_state_vec = None
+        secondary_state_vec = None
 
     if aux is None:
         aux = orbits
@@ -154,15 +187,25 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     del velocity_band, browse_tif, velocity_tif
 
-    makeAsfBrowse(str(browse_file), browse_file.stem)
+    product_name = get_product_name(reference.name, secondary.name, (reference_state_vec, secondary_state_vec))
+    makeAsfBrowse(str(browse_file), product_name)
+
+    netcdf_files = glob.glob('*.nc')
+    if not netcdf_files:
+        raise Exception('Processing failed! Output netCDF file not found')
+    if len(netcdf_files) > 1:
+        log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
     if product:
         mkdir_p(product_dir)
         for f in _PRODUCT_LIST:
             shutil.copyfile(f, os.path.join(product_dir, f))
 
-        for f in glob.iglob('*.nc'):
-            shutil.copyfile(f, os.path.join(product_dir, f))
+        shutil.copyfile(netcdf_files[0], os.path.join(product_dir, f'{product_name}.nc'))
+    else:
+        shutil.move(netcdf_files[0], f'{product_name}.nc')
+
+    return product_name
 
 
 def main():

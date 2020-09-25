@@ -13,7 +13,6 @@ from mimetypes import guess_type
 import boto3
 from PIL import Image
 from hyp3proclib import (
-    build_output_name_pair,
     earlier_granule_first,
     extra_arg_is,
     failure,
@@ -115,15 +114,10 @@ def main_v2():
 
     g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 
-    hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
+    outname = hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
 
-    outname = build_output_name_pair(g1, g2, os.getcwd(), '-autorift')
     product_name = f'{outname}.nc'
-    netcdf_file = glob.glob('*nc')[0]
-    os.rename(netcdf_file, product_name)
     browse_name = f'{outname}.png'
-    browse_file = glob.glob('*.png')[0]
-    os.rename(browse_file, browse_name)
 
     if args.bucket:
         upload_file_to_s3(product_name, 'product', args.bucket, args.bucket_prefix)
@@ -131,6 +125,14 @@ def main_v2():
         thumbnail_name = create_thumbnail(browse_name)
         upload_file_to_s3(thumbnail_name, 'thumbnail', args.bucket, args.bucket_prefix)
 # End v2 functions
+
+
+def find_product_name(directory):
+    try:
+        readme_file = glob.glob(f'{directory}/*.nc')[0]
+    except IndexError:
+        raise Exception(f'Could not determine product name, no *.nc file found in {directory}')
+    return os.path.basename(readme_file).split('.')[0]
 
 
 def hyp3_process(cfg, n):
@@ -154,23 +156,8 @@ def hyp3_process(cfg, n):
 
         process(cfg, 'autorift_proc_pair', autorift_args)
 
-        out_name = build_output_name_pair(g1, g2, cfg['workdir'], cfg['suffix'])
-        log.info(f'Output name: {out_name}')
-
         if extra_arg_is(cfg, 'intermediate_files', 'no'):
-            product_glob = os.path.join(cfg['workdir'], cfg['ftd'], '*.nc')
-            netcdf_files = glob.glob(product_glob)
-
-            if not netcdf_files:
-                log.info(f'No product netCDF files found with: {product_glob}')
-                raise Exception('Processing failed! Output netCDF file not found')
-            if len(netcdf_files) > 1:
-                log.info(f'Too many netCDF files found with: {product_glob}\n'
-                         f'    {netcdf_files}')
-                raise Exception('Processing failed! Too many netCDF files found')
-
-            product_file = f'{out_name}.nc'
-            os.rename(netcdf_files[0], product_file)
+            product_file = glob.glob(os.path.join(cfg['workdir'], cfg['ftd'], '*.nc'))[0]
 
         else:
             tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
@@ -179,6 +166,7 @@ def hyp3_process(cfg, n):
                 log.error('Processing failed')
                 raise Exception('Processing failed: PRODUCT directory not found')
 
+            out_name = find_product_name(tmp_product_dir)
             product_dir = os.path.join(cfg['workdir'], out_name)
             product_file = f'{product_dir}.zip'
             if os.path.isdir(product_dir):
