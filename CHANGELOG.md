@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * `hyp3_autorift` now requires python >=3.8, and depends on ISCE >=2.4.1 which 
   includes [autoRIFT 1.0.7](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.0.7)
+* Output product names have change to follow HyP3's standard pair-processing naming scheme
 
 ## [0.1.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.1.0...v0.1.1)
 
