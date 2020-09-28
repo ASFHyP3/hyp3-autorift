@@ -1,7 +1,6 @@
 """
 AutoRIFT processing for HyP3
 """
-import glob
 import os
 import shutil
 import sys
@@ -14,7 +13,6 @@ from hyp3proclib import (
     earlier_granule_first,
     extra_arg_is,
     failure,
-    record_metrics,
     success,
     upload_product,
     zip_dir,
@@ -71,14 +69,6 @@ def main_v2():
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
 
 
-def find_product_name(directory):
-    try:
-        product_file = glob.glob(f'{directory}/*.nc')[0]
-    except IndexError:
-        raise Exception(f'Could not determine product name, no *.nc file found in {directory}')
-    return os.path.basename(product_file).split('.')[0]
-
-
 def hyp3_process(cfg, n):
     try:
         log.info(f'Processing autoRIFT-ISCE pair "{cfg["sub_name"]}" for "{cfg["username"]}"')
@@ -105,6 +95,8 @@ def hyp3_process(cfg, n):
             process_dir=cfg["ftd"],
             product=extra_arg_is(cfg, 'intermediate_files', 'yes')
         )
+        cfg['attachment'] = product_file.with_suffix('.png')
+        cfg['email_text'] = ' '  # fix line break in email
 
         if extra_arg_is(cfg, 'intermediate_files', 'yes'):
             tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
@@ -126,10 +118,8 @@ def hyp3_process(cfg, n):
             zip_dir(product_dir, product_file)
 
         cfg['final_product_size'] = [os.stat(product_file).st_size, ]
-        cfg['original_product_size'] = 0
 
         with get_db_connection('hyp3-db') as conn:
-            record_metrics(cfg, conn)
             upload_product(product_file, cfg, conn)
             success(conn, cfg)
 
