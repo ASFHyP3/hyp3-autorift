@@ -8,6 +8,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from datetime import datetime
 
 from hyp3lib.aws import upload_file_to_s3
+from hyp3lib.fetch import write_credentials_to_netrc_file
 from hyp3lib.image import create_thumbnail
 from hyp3proclib import (
     earlier_granule_first,
@@ -53,8 +54,7 @@ def main_v2():
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
 
-    with open('get_asf.cfg', 'w') as f:
-        f.write(f'[general]\nusername={args.username}\npassword={args.password}')
+    write_credentials_to_netrc_file(args.username, args.password)
 
     g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 

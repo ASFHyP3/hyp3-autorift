@@ -13,9 +13,11 @@ from secrets import token_hex
 
 import numpy as np
 from hyp3lib.execute import execute
+from hyp3lib.fetch import download_file
 from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.makeAsfBrowse import makeAsfBrowse
+from hyp3lib.scene import get_download_url
 from osgeo import gdal
 
 from hyp3_autorift import geometry
@@ -89,15 +91,12 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
 
     product_dir = os.path.join(os.getcwd(), 'PRODUCT')
 
-    if not reference.is_file() or not secondary.is_file() and download:
-        log.info('Downloading Sentinel-1 image pair')
-        dl_file_list = 'download_list.csv'
-        with open('download_list.csv', 'w') as f:
-            f.write(f'{reference.name}\n'
-                    f'{secondary.name}\n')
-
-        execute(f'get_asf.py {dl_file_list}')
-        os.rmdir('download')  # Really, get_asf.py should do this...
+    if download:
+        for scene in [reference, secondary]:
+            if not scene.is_file():
+                log.info('Downloading Sentinel-1 image pair')
+                scene_url = get_download_url(scene.name)
+                download_file(scene_url, directory=scene.parent)
 
     orbits = Path('Orbits').resolve()
     mkdir_p(orbits)
