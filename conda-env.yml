@@ -15,13 +15,12 @@ dependencies:
   - wheel
   # For running
   - gdal>=3
-  - hyp3lib=1.5
+  - hyp3lib=1.6
   - isce2>=2.4.1
   - boto3
   - importlib_metadata
   - netCDF4
   - numpy
-  - pillow
   - psycopg2  # missing hyp3proclib dep
   - scikit-image  # missing autoRIFT dep
   - scipy

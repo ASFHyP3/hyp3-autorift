@@ -68,7 +68,7 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
     return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
-def process(reference, secondary, download=False, polarization='hh', process_dir=None, product=False):
+def process(reference, secondary, download=False, polarization='hh', process_dir=None, product=False) -> Path:
     """Process a Sentinel-1 image pair
 
     Args:
@@ -188,11 +188,13 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
         for f in _PRODUCT_LIST:
             shutil.copyfile(f, os.path.join(product_dir, f))
 
-        shutil.copyfile(netcdf_files[0], os.path.join(product_dir, f'{product_name}.nc'))
+        product_file = Path(product_dir).resolve() / f'{product_name}.nc'
+        shutil.copyfile(netcdf_files[0], product_file)
     else:
+        product_file = Path(f'{product_name}.nc').resolve()
         shutil.move(netcdf_files[0], f'{product_name}.nc')
 
-    return product_name
+    return product_file
 
 
 def main():

@@ -34,17 +34,17 @@ setup(
     install_requires=[
         'boto3',
         'gdal',
-        'hyp3lib==1.5',
+        'hyp3lib==1.6',
         'hyp3proclib',
         'importlib_metadata',
         'netCDF4',
-        'pillow',
         'numpy',
         'scipy',
     ],
 
     extras_require={
         'develop': [
+            'botocore',
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',

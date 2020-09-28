@@ -2,21 +2,18 @@
 AutoRIFT processing for HyP3
 """
 import glob
-import logging
 import os
 import shutil
 import sys
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from datetime import datetime
-from mimetypes import guess_type
 
-import boto3
-from PIL import Image
+from hyp3lib.aws import upload_file_to_s3
+from hyp3lib.image import create_thumbnail
 from hyp3proclib import (
     earlier_granule_first,
     extra_arg_is,
     failure,
-    process,
     record_metrics,
     success,
     upload_product,
@@ -29,9 +26,6 @@ from hyp3proclib.proc_base import Processor
 from pkg_resources import load_entry_point
 
 import hyp3_autorift
-
-EARTHDATA_LOGIN_DOMAIN = 'urs.earthdata.nasa.gov'
-S3_CLIENT = boto3.client('s3')
 
 
 def entry():
@@ -46,54 +40,6 @@ def entry():
     sys.exit(
         load_entry_point('hyp3_autorift', 'console_scripts', args.entrypoint)()
     )
-
-
-# v2 functions
-def create_thumbnail(input_image, size=(100, 100)):
-    filename, ext = os.path.splitext(input_image)
-    thumbnail_name = f'{filename}_thumb{ext}'
-
-    output_image = Image.open(input_image)
-    output_image.thumbnail(size)
-    output_image.save(thumbnail_name)
-    return thumbnail_name
-
-
-def write_netrc_file(username, password):
-    netrc_file = os.path.join(os.environ['HOME'], '.netrc')
-    if os.path.isfile(netrc_file):
-        logging.warning(f'Using existing .netrc file: {netrc_file}')
-    else:
-        with open(netrc_file, 'w') as f:
-            f.write(f'machine {EARTHDATA_LOGIN_DOMAIN} login {username} password {password}')
-
-
-def string_is_true(s: str) -> bool:
-    return s.lower() == 'true'
-
-
-def get_content_type(filename):
-    content_type = guess_type(filename)[0]
-    if not content_type:
-        content_type = 'application/octet-stream'
-    return content_type
-
-
-def upload_file_to_s3(path_to_file, file_type, bucket, prefix=''):
-    key = os.path.join(prefix, os.path.basename(path_to_file))
-    extra_args = {'ContentType': get_content_type(key)}
-
-    logging.info(f'Uploading s3://{bucket}/{key}')
-    S3_CLIENT.upload_file(path_to_file, bucket, key, extra_args)
-    tag_set = {
-        'TagSet': [
-            {
-                'Key': 'file_type',
-                'Value': file_type
-            }
-        ]
-    }
-    S3_CLIENT.put_object_tagging(Bucket=bucket, Key=key, Tagging=tag_set)
 
 
 def main_v2():
@@ -114,17 +60,15 @@ def main_v2():
 
     g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 
-    outname = hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
+    product_file = hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
 
-    product_name = f'{outname}.nc'
-    browse_name = f'{outname}.png'
+    browse_file = product_file.with_suffix('.png')
 
     if args.bucket:
-        upload_file_to_s3(product_name, 'product', args.bucket, args.bucket_prefix)
-        upload_file_to_s3(browse_name, 'browse', args.bucket, args.bucket_prefix)
-        thumbnail_name = create_thumbnail(browse_name)
-        upload_file_to_s3(thumbnail_name, 'thumbnail', args.bucket, args.bucket_prefix)
-# End v2 functions
+        upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
+        upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
+        thumbnail_file = create_thumbnail(browse_file)
+        upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
 
 
 def find_product_name(directory):
@@ -154,20 +98,22 @@ def hyp3_process(cfg, n):
         if not extra_arg_is(cfg, 'intermediate_files', 'no'):  # handle processes b4 option added
             autorift_args.append('--product')
 
-        process(cfg, 'autorift_proc_pair', autorift_args)
+        product_file = hyp3_autorift.process(
+            reference=f'{g1}.zip',
+            secondary=f'{g2}.zip',
+            download=True,
+            process_dir=cfg["ftd"],
+            product=extra_arg_is(cfg, 'intermediate_files', 'yes')
+        )
 
-        if extra_arg_is(cfg, 'intermediate_files', 'no'):
-            product_file = glob.glob(os.path.join(cfg['workdir'], cfg['ftd'], '*.nc'))[0]
-
-        else:
+        if extra_arg_is(cfg, 'intermediate_files', 'yes'):
             tmp_product_dir = os.path.join(cfg['workdir'], 'PRODUCT')
             if not os.path.isdir(tmp_product_dir):
                 log.info(f'PRODUCT directory not found: {tmp_product_dir}')
                 log.error('Processing failed')
                 raise Exception('Processing failed: PRODUCT directory not found')
 
-            out_name = find_product_name(tmp_product_dir)
-            product_dir = os.path.join(cfg['workdir'], out_name)
+            product_dir = os.path.join(cfg['workdir'], product_file.stem)
             product_file = f'{product_dir}.zip'
             if os.path.isdir(product_dir):
                 shutil.rmtree(product_dir)
