@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   includes [autoRIFT 1.0.7](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.0.7)
 * Upgraded to hyp3lib [v1.6.0](https://github.com/ASFHyP3/hyp3-lib/blob/develop/CHANGELOG.md#160) from v1.5.0
 * Output product names have change to follow HyP3's standard pair-processing naming scheme
+* Browse images are now uploaded for hyp3v1 and will appear in email notifications
 
 ## [0.1.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.1.0...v0.1.1)
 
