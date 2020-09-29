@@ -95,7 +95,7 @@ def hyp3_process(cfg, n):
             process_dir=cfg["ftd"],
             product=extra_arg_is(cfg, 'intermediate_files', 'yes')
         )
-        cfg['attachment'] = product_file.with_suffix('.png')
+        cfg['attachment'] = str(product_file.with_suffix('.png'))
         cfg['email_text'] = ' '  # fix line break in email
 
         if extra_arg_is(cfg, 'intermediate_files', 'yes'):
@@ -120,7 +120,7 @@ def hyp3_process(cfg, n):
         cfg['final_product_size'] = [os.stat(product_file).st_size, ]
 
         with get_db_connection('hyp3-db') as conn:
-            upload_product(product_file, cfg, conn)
+            upload_product(str(product_file), cfg, conn)
             success(conn, cfg)
 
     except Exception as e:
