@@ -7,11 +7,13 @@ import textwrap
 
 import boto3
 from boto3.s3.transfer import TransferConfig
+from botocore import UNSIGNED
+from botocore.config import Config
 from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
-s3_client = boto3.client('s3')
+s3_client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
 ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
 AUTORIFT_PREFIX = 'isce_autoRIFT'
