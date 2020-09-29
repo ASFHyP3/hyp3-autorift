@@ -96,7 +96,7 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
             if not scene.is_file():
                 log.info('Downloading Sentinel-1 image pair')
                 scene_url = get_download_url(scene.stem)
-                download_file(scene_url, directory=scene.parent)
+                download_file(scene_url, directory=scene.parent, chunk_size=5242880)
 
     orbits = Path('Orbits').resolve()
     mkdir_p(orbits)
