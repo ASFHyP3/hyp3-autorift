@@ -1,6 +1,5 @@
 """Geometry routines for working Geogrid"""
 
-import glob
 import logging
 import os
 
@@ -9,28 +8,24 @@ import isceobj
 import numpy as np
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
+from hyp3lib import DemError
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import osr
 
-from hyp3_autorift.io import fetch_jpl_tifs
+from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
 
 log = logging.getLogger(__name__)
 
 
-class GeometryException(Exception):
-    pass
-
-
-def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', aux='Orbits', epsg=4326):
+def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
     :param priority: Image priority, either 'reference' (default) or 'secondary'
     :param polarization: Image polarization (default: 'hh')
     :param orbits: Path to the orbital files (default: './Orbits')
-    :param aux: Path to the auxiliary orbital files (default: './Orbits')
     :param epsg: Projection EPSG code (default: 4326)
 
     :return: lat_limits (list), lon_limits (list)
@@ -44,7 +39,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         rdr.safe = [os.path.abspath(safe)]
         rdr.output = priority
         rdr.orbitDir = os.path.abspath(orbits)
-        rdr.auxDir = os.path.abspath(aux)
+        rdr.auxDir = os.path.abspath(orbits)
         rdr.swathNumber = swath
         rdr.polarization = polarization
         rdr.parse()
@@ -74,7 +69,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     obj.configure()
 
     obj.startingRange = starting_range
-    obj.rangePixelSize = frames[0].bursts[0].rangePixelSize
+    obj.rangePixelSize = range_pixel_size
     obj.sensingStart = sensing_start
     obj.prf = prf
     obj.lookSide = -1
@@ -85,12 +80,8 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
 
     obj.determineBbox()
 
-    if gdal.__version__[0] == '2':
-        lat_limits = obj._ylim
-        lon_limits = obj._xlim
-    else:
-        lat_limits = obj._xlim
-        lon_limits = obj._ylim
+    lat_limits = obj._xlim
+    lon_limits = obj._ylim
 
     log.info(f'Latitude limits [min, max]: {lat_limits}')
     log.info(f'Longitude limits [min, max]: {lon_limits}')
@@ -98,17 +89,14 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', download=False):
+def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
 
-    if download:
-        fetch_jpl_tifs(dem_dir=dem_dir, match='_h.tif')
-
-    dems = glob.glob(os.path.join(dem_dir, '*_h.tif'))
-
+    dems = ['GRE240m_h.tif', 'ANT240m_h.tif']
     bounding_dem = None
     for dem in dems:
-        log.info(f'Checking DEM: {dem}')
-        dem_ds = gdal.Open(dem, gdal.GA_ReadOnly)
+        dem_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}'
+        log.info(f'Checking DEM: {dem_file}')
+        dem_ds = gdal.Open(dem_file, gdal.GA_ReadOnly)
         dem_sr = dem_ds.GetSpatialRef()
         log.debug(f'DEM projection: {dem_sr}')
 
@@ -123,11 +111,7 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
         for lat in lat_limits:
             for lon in lon_limits:
                 for zed in z_limits:
-                    if gdal.__version__[0] == '2':
-                        xyz = trans.TransformPoint(lon, lat, zed)
-                    else:
-                        xyz = trans.TransformPoint(lat, lon, zed)
-
+                    xyz = trans.TransformPoint(lat, lon, zed)
                     all_xyz.append(xyz)
 
         x, y, _ = zip(*all_xyz)
@@ -147,23 +131,22 @@ def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000), dem_dir='DEM', d
 
         if x_limits[0] > dem_x_limits[0] and x_limits[1] < dem_x_limits[1] \
            and y_limits[0] > dem_y_limits[0] and y_limits[1] < dem_y_limits[1]:
-            bounding_dem = os.path.abspath(dem)
+            bounding_dem = dem
             break
 
     if bounding_dem is None:
-        raise GeometryException('Existing DEMs do not (fully) cover the image data')
+        raise DemError('Existing DEMs do not (fully) cover the image data')
 
     log.info(f'Bounding DEM is: {bounding_dem}')
     return bounding_dem
 
 
-def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None, correct=False):
+def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
 
     if isce_dem is None:
         seamstress = createDemStitcher()
         isce_dem = seamstress.defaultName([*lat_limits, *lon_limits])
 
-    # FIXME: Do we really want to *always* append this?
     isce_dem = os.path.abspath(isce_dem + '.wgs84')
     log.info(f'ISCE dem is: {isce_dem}')
 
@@ -175,36 +158,7 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None, correct=Fals
     )
     gdal.Warp(isce_dem, in_ds, options=warp_options)
 
-    # Because gdal is weird
-    in_ds = None
     del in_ds
-
-    if correct:
-        raise NotImplementedError('Correction is not yet implemented.')
-        # FIXME: what file to use for correction??
-        # cr_ds = gdal.OpenShared(correct_file, gdal.GA_ReadOnly)
-        # warp_options = gdal.WarpOptions(
-        #     format='ENVI', outputType=gdal.GDT_Int16, resampleAlg='cubic',
-        #     xRes=0.001, yRes=0.001, dstSRS='EPSG:4326', dstNodata=0,
-        #     outputBounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]]
-        # )
-        # gdal.Warp(isce_dem + '.crt', cr_ds, options=warp_options)
-        #
-        # in_ds = gdal.OpenShared(isce_dem, gdal.GA_Update)
-        # arr = in_ds.GetRasterBand(1).ReadAsArray()
-        #
-        # adj = gdal.Open(isce_dem + '.crt', gdal.GA_ReadOnly)
-        # off = adj.GetRasterBand(1).ReadAsArray()
-        #
-        # arr += off
-        # in_ds.GetRasterBand(1).WriteArray(arr)
-        #
-        # # Because gdal is weird
-        # adj = None
-        # arr = None
-        # in_ds = None
-        # cr_ds = None
-        # del adj, arr, in_ds, cr_ds
 
     isce_ds = gdal.Open(isce_dem, gdal.GA_ReadOnly)
     isce_trans = isce_ds.GetGeoTransform()

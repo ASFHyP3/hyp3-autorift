@@ -26,21 +26,19 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         ],
 
-    python_requires='~=3.6',
+    python_requires='~=3.8',
 
     install_requires=[
-        # FIXME: use boto3 instead of requests for download in hyp3_autorift.io.fetch_jpl_tifs
-        'requests',
         'boto3',
-        'hyp3lib==1.5',
+        'botocore',
+        'gdal',
+        'hyp3lib==1.6.1',
         'hyp3proclib',
         'importlib_metadata',
-        'pillow',
+        'netCDF4',
         'numpy',
         'scipy',
     ],

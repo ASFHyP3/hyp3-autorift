@@ -4,103 +4,63 @@ import argparse
 import logging
 import os
 import textwrap
-from multiprocessing.dummy import Pool
 
-import requests
-from hyp3lib.file_subroutines import mkdir_p
+import boto3
+from boto3.s3.transfer import TransferConfig
+from botocore import UNSIGNED
+from botocore.config import Config
 from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
+s3_client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
-_FILE_LIST = [
-    'ANT240m_dhdx.tif',
-    'ANT240m_dhdy.tif',
-    'ANT240m_h.tif',
-    'ANT240m_StableSurface.tif',
-    'ANT240m_vx0.tif',
-    'ANT240m_vxSearchRange.tif',
-    'ANT240m_vy0.tif',
-    'ANT240m_vySearchRange.tif',
-    'ANT240m_xMaxChipSize.tif',
-    'ANT240m_xMinChipSize.tif',
-    'ANT240m_yMaxChipSize.tif',
-    'ANT240m_yMinChipSize.tif',
-    'GRE240m_dhdx.tif',
-    'GRE240m_dhdy.tif',
-    'GRE240m_h.tif',
-    'GRE240m_StableSurface.tif',
-    'GRE240m_vx0.tif',
-    'GRE240m_vxSearchRange.tif',
-    'GRE240m_vy0.tif',
-    'GRE240m_vySearchRange.tif',
-    'GRE240m_xMaxChipSize.tif',
-    'GRE240m_xMinChipSize.tif',
-    'GRE240m_yMaxChipSize.tif',
-    'GRE240m_yMinChipSize.tif',
-
-]
+ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
+AUTORIFT_PREFIX = 'isce_autoRIFT'
 
 
-def _request_file(url_file_map):
-    url, path = url_file_map
-    if not os.path.exists(path):
-        response = requests.get(url)
-        if response.status_code == 200:
-            with open(path, 'wb') as f:
-                for chunck in response:
-                    f.write(chunck)
-    return path
+def _list_s3_files(bucket, prefix):
+    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+    keys = [item['Key'] for item in response['Contents']]
+    return keys
 
 
-def fetch_jpl_tifs(dem_dir='DEM', endpoint_url='http://jpl.nasa.gov.s3.amazonaws.com/',
-                   bucket='its-live-data', prefix='isce_autoRIFT', match=None):
-    # FIXME: Can't figure out how to get these tifs with boto3, so using requests
-    # import boto3
-    # from botocore import UNSIGNED
-    # from botocore.client import Config
-    # s3 = boto3.client('s3', endpoint_url=endpoint_url, config=Config(signature_version=UNSIGNED))
-    # with open('ANT240m_landice.tif', 'wb') as f:
-    #     s3.download_fileobj('its-live-data', 'isce_autoRIFT/ANT240m_landice.tif', f)
-
-    log.info("Downloading tifs from JPL's AWS bucket")
-    mkdir_p(dem_dir)
-
-    if match:
-        file_list = [file for file in _FILE_LIST if match in file]
-    else:
-        file_list = _FILE_LIST
-
-    url_file_map = [
-        (endpoint_url.replace('http://', f'http://{bucket}.') + f'{prefix}/{file}',
-         os.path.join(dem_dir, file)) for file in file_list
-    ]
-
-    pool = Pool(5)
-    fetched = pool.imap_unordered(_request_file, url_file_map)
-    pool.close()
-    pool.join()
-
-    log.info(f'Downloaded: {fetched}')
+def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
+    transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
+    for key in keys:
+        filename = os.path.join(target_dir, os.path.basename(key))
+        log.info(f'Downloading s3://{bucket}/{key} to {filename}')
+        s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
 
 
-def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_file='topsApp.xml'):
+def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
+    log.info(f"Downloading {ice_sheet} tifs from JPL's AWS bucket")
+
+    for logger in ('botocore', 's3transfer'):
+        logging.getLogger(logger).setLevel(logging.WARNING)
+
+    full_prefix = f'{prefix}/{ice_sheet}'
+    keys = _list_s3_files(bucket, full_prefix)
+    _download_s3_files(target_dir, bucket, keys)
+
+
+def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):
     xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>
     <topsApp>
         <component name="topsinsar">
             <component name="reference">
                 <property name="orbit directory">{orbits}</property>
-                <property name="auxiliary data directory">{aux}</property>
+                <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">reference</property>
                 <property name="safe">['{reference}']</property>
                 <property name="polarization">{polarization}</property>
             </component>
             <component name="secondary">
                 <property name="orbit directory">{orbits}</property>
-                <property name="auxiliary data directory">{aux}</property>
+                <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">secondary</property>
                 <property name="safe">['{secondary}']</property>
-                <property name="polarization">hh</property>
+                <property name="polarization">{polarization}</property>
             </component>
             <property name="demfilename">{dem}</property>
             <property name="do interferogram">False</property>
@@ -125,15 +85,29 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, aux, xml_fi
 def save_topsinsar_mat():
     insar = TopsInSAR(name="topsApp")
     insar.configure()
-    reference_filename = os.path.basename(insar.reference.safe[0])
-    secondary_filename = os.path.basename(insar.secondary.safe[0])
 
-    log.info(f'reference: {reference_filename}')
-    log.info(f'secondary: {secondary_filename}')
+    mat_data = {}
+    for name in ['reference', 'secondary']:
+        scene = insar.__getattribute__(name)
 
-    savemat(
-        'topsinsar_filename.mat', {'reference_filename': reference_filename, 'secondary_filename': secondary_filename}
-    )
+        sensing_times = []
+        for swath in range(1, 4):
+            scene.configure()
+            scene.swathNumber = swath
+            scene.parse()
+            sensing_times.append(
+                (scene.product.sensingStart, scene.product.sensingStop)
+            )
+
+        sensing_start = min([sensing_time[0] for sensing_time in sensing_times])
+        sensing_stop = max([sensing_time[1] for sensing_time in sensing_times])
+
+        sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
+
+        mat_data[f'{name}_filename'] = os.path.basename(scene.safe[0])
+        mat_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S")
+
+    savemat('topsinsar_filename.mat', mat_data)
 
 
 def topsinsar_mat():

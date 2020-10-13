@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Package for processing with autoRIFT ICSE
 """
@@ -8,13 +7,17 @@ import glob
 import logging
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
+from secrets import token_hex
 
 import numpy as np
 from hyp3lib.execute import execute
+from hyp3lib.fetch import download_file
 from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.makeAsfBrowse import makeAsfBrowse
+from hyp3lib.scene import get_download_url
 from osgeo import gdal
 
 from hyp3_autorift import geometry
@@ -40,8 +43,34 @@ _PRODUCT_LIST = [
 ]
 
 
-def process(reference, secondary, download=False, polarization='hh', orbits=None, aux=None, process_dir=None,
-            product=False):
+def least_precise_orbit_of(orbits):
+    if any([orb is None for orb in orbits]):
+        return 'O'
+    if any(['RESORB' in orb for orb in orbits]):
+        return 'R'
+    return 'P'
+
+
+def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240):
+    plat1 = reference_name[2]
+    plat2 = secondary_name[2]
+
+    datetime1 = reference_name[17:32]
+    datetime2 = secondary_name[17:32]
+
+    ref_datetime = datetime.strptime(datetime1, '%Y%m%dT%H%M%S')
+    sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
+    days = abs((ref_datetime - sec_datetime).days)
+
+    pol1 = reference_name[15:16]
+    pol2 = secondary_name[15:16]
+    orb = least_precise_orbit_of(orbit_files)
+    product_id = token_hex(2).upper()
+
+    return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
+
+
+def process(reference, secondary, download=False, polarization='hh', process_dir=None, product=False) -> Path:
     """Process a Sentinel-1 image pair
 
     Args:
@@ -50,10 +79,6 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
         download: If True, try and download the granules from ASF to the
             current working directory (default: False)
         polarization: Polarization of Sentinel-1 scene (default: 'hh')
-        orbits: Path to the orbital files, otherwise, fetch them from ASF
-            (default: None)
-        aux: Path to the auxiliary orbital files, otherwise, assume same as orbits
-            (default: None)
         process_dir: Path to a directory for processing inside
             (default: None; use current working directory)
         product: Create a product directory in the current working directory with
@@ -66,43 +91,38 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     product_dir = os.path.join(os.getcwd(), 'PRODUCT')
 
-    if not reference.is_file() or not secondary.is_file() and download:
-        log.info('Downloading Sentinel-1 image pair')
-        dl_file_list = 'download_list.csv'
-        with open('download_list.csv', 'w') as f:
-            f.write(f'{reference.name}\n'
-                    f'{secondary.name}\n')
+    if download:
+        for scene in [reference, secondary]:
+            if not scene.is_file():
+                scene_url = get_download_url(scene.stem)
+                download_file(scene_url, directory=scene.parent, chunk_size=5242880)
 
-        execute(f'get_asf.py {dl_file_list}')
-        os.rmdir('download')  # Really, get_asf.py should do this...
-
-    if orbits is None:
-        orbits = Path('Orbits').resolve()
-        mkdir_p(orbits)
-        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
-        log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
-        log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
-
-    if aux is None:
-        aux = orbits
+    orbits = Path('Orbits').resolve()
+    mkdir_p(orbits)
+    reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
+    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
+    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
+    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
     lat_limits, lon_limits = geometry.bounding_box(
-        str(reference), orbits=orbits, aux=aux, polarization=polarization
+        str(reference), orbits=orbits, polarization=polarization
     )
 
-    dem = geometry.find_jpl_dem(lat_limits, lon_limits, download=download)
+    dem = geometry.find_jpl_dem(lat_limits, lon_limits)
 
+    dem_dir = os.path.join(os.getcwd(), 'DEM')
+    mkdir_p(dem_dir)
     if download:
-        io.fetch_jpl_tifs(match=os.path.basename(dem)[:3])
+        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
 
     if process_dir:
         mkdir_p(process_dir)
         os.chdir(process_dir)
 
-    isce_dem = geometry.prep_isce_dem(dem, lat_limits, lon_limits)
+    dem_file = os.path.join(dem_dir, dem)
+    isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
 
-    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits, aux)
+    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
     with open('topsApp.txt', 'w') as f:
         cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
@@ -116,10 +136,10 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
             cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
             execute(cmd, logfile=f, uselogging=True)
 
-    in_file_base = dem.replace('_h.tif', '')
+    in_file_base = dem_file.replace('_h.tif', '')
     with open('testGeogrid.txt', 'w') as f:
         cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-              f' -d {dem} -ssm {in_file_base}_StableSurface.tif' \
+              f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
               f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
               f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
               f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
@@ -130,9 +150,9 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
     with open('testautoRIFT.txt', 'w') as f:
         cmd = f'testautoRIFT_ISCE.py' \
               f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
+              f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
               f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-              f' -sr window_search_range.tif -csmin window_chip_size_min.tif' \
-              f' -csmax window_chip_size_max.tif -nc S'
+              f' -ssm window_stable_surface_mask.tif -nc S'
         execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
@@ -152,15 +172,27 @@ def process(reference, secondary, download=False, polarization='hh', orbits=None
 
     del velocity_band, browse_tif, velocity_tif
 
-    makeAsfBrowse(str(browse_file), browse_file.stem)
+    product_name = get_product_name(reference.name, secondary.name, (reference_state_vec, secondary_state_vec))
+    makeAsfBrowse(str(browse_file), product_name)
+
+    netcdf_files = glob.glob('*.nc')
+    if not netcdf_files:
+        raise Exception('Processing failed! Output netCDF file not found')
+    if len(netcdf_files) > 1:
+        log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
     if product:
         mkdir_p(product_dir)
         for f in _PRODUCT_LIST:
             shutil.copyfile(f, os.path.join(product_dir, f))
 
-        for f in glob.iglob('*.nc'):
-            shutil.copyfile(f, os.path.join(product_dir, f))
+        product_file = Path(product_dir).resolve() / f'{product_name}.nc'
+        shutil.copyfile(netcdf_files[0], product_file)
+    else:
+        product_file = Path(f'{product_name}.nc').resolve()
+        shutil.move(netcdf_files[0], f'{product_name}.nc')
+
+    return product_file
 
 
 def main():
@@ -178,12 +210,6 @@ def main():
                              'working directory')
     parser.add_argument('-p', '--polarization', default='hh',
                         help='Polarization of the Sentinel-1 scenes')
-    parser.add_argument('--orbits', type=os.path.abspath,
-                        help='Path to the Sentinel-1 orbital files. If this argument'
-                             'is not give, process will try and download them from ASF')
-    parser.add_argument('--aux', type=os.path.abspath,
-                        help='Path to the Sentinel-1 auxiliary orbital files. If this argument'
-                             'is not give, process will try and download them from ASF')
     parser.add_argument('--process-dir', type=os.path.abspath,
                         help='If given, do processing inside this directory, otherwise, '
                              'use the current working directory')

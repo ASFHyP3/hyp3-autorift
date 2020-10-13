@@ -4,7 +4,8 @@ channels:
   - nodefaults
 dependencies:
   - boto3
-  - python=3.7
+  - botocore
+  - python=3.8
   - pip
   # For packaging, and testing
   - pytest
@@ -14,13 +15,14 @@ dependencies:
   - setuptools_scm
   - wheel
   # For running
-  - hyp3lib=1.5
-  - isce2=2.4.0
+  - gdal>=3
+  - hyp3lib=1.6.1
+  - isce2>=2.4.1
+  - boto3
   - importlib_metadata
+  - netCDF4
   - numpy
-  - pillow
   - psycopg2  # missing hyp3proclib dep
-  - requests
   - scikit-image  # missing autoRIFT dep
   - scipy
   - pip:
