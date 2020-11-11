@@ -26,7 +26,7 @@ def cmdLineParse():
     Command line parser.
     '''
     parser = argparse.ArgumentParser(description="Single-pair InSAR processing of Sentinel-1 data using ISCE modules")
-    
+
     parser.add_argument('-m', '--reference', dest='reference', type=str, required=True,
                         help='Optical reference filename')
     parser.add_argument('-s', '--secondary', dest='secondary', type=str, required=True,
@@ -43,20 +43,19 @@ def runCmd(cmd):
 
 
 
-if __name__ == '__main__':
-    
+def main():
         inps = cmdLineParse()
-        
+
         print (time.strftime("%H:%M:%S"))
 #        pdb.set_trace()
 
         ##########################      DEM preparation      ######################
-        
+
 #        foldername = os.path.split(inps.reference)[1][:-4] + '_' + os.path.split(inps.secondary)[1][:-4]
         foldername = inps.foldername
         reference_name_list = inps.reference
         secondary_name_list = inps.secondary
-        
+
         cmd = 'mkdir ' + foldername
         runCmd(cmd)
         os.chdir(foldername)
@@ -85,7 +84,7 @@ if __name__ == '__main__':
 
 #            from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
             from geogrid import GeogridOptical
-            
+
             obj = GeogridOptical()
             x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(inps.reference, inps.secondary, 1)
             obj.startingX = trans[0]
@@ -154,19 +153,20 @@ if __name__ == '__main__':
         cmd = 'testautoRIFT.py -m ' + inps.reference + ' -s ' + inps.secondary + ' -g window_location.tif -o window_offset.tif -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif -ssm window_stable_surface_mask.tif -nc {0} -fo 1 -urlflag 1 | tee testautoRIFT.txt'.format(sensor)
 
         runCmd(cmd)
-        
+
         print("autoRIFT Done!")
         print (time.strftime("%H:%M:%S"))
-        
+
 
 
         print("Single pair of ###" + foldername + "### Done !!!")
 
         print(time.strftime("%H:%M:%S"))
-        
+
         print("\n")
 
         os.chdir('..')
 
-        
 
+if __name__ == '__main__':
+    main()
