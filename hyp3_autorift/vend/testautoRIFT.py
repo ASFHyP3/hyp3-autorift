@@ -699,7 +699,7 @@ def main():
                     master_split = str.split(master_filename,'_')
                     slave_split = str.split(slave_filename,'_')
 
-                    import netcdf_output as no
+                    from hyp3_autorift import netcdf_output as no
                     version = '1.0.7'
                     pair_type = 'radar'
                     detection_method = 'feature'
@@ -758,7 +758,7 @@ def main():
                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
-                    import netcdf_output as no
+                    from hyp3_autorift import netcdf_output as no
                     version = '1.0.7'
                     pair_type = 'optical'
                     detection_method = 'feature'
@@ -814,7 +814,7 @@ def main():
                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
-                    import netcdf_output as no
+                    from hyp3_autorift import netcdf_output as no
                     version = '1.0.7'
                     pair_type = 'optical'
                     detection_method = 'feature'
