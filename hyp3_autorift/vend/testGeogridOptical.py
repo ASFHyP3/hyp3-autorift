@@ -87,7 +87,7 @@ def loadMetadata(indir):
     from osgeo import gdal, osr
     import struct
     import re
-        
+
     DS = gdal.Open(indir, gdal.GA_ReadOnly)
     trans = DS.GetGeoTransform()
 
@@ -96,7 +96,7 @@ def loadMetadata(indir):
     info.startingY = trans[3]
     info.XSize = trans[1]
     info.YSize = trans[5]
-    
+
     if re.findall("L8",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
@@ -107,7 +107,7 @@ def loadMetadata(indir):
 
     info.numberOfLines = DS.RasterYSize
     info.numberOfSamples = DS.RasterXSize
-    
+
     info.filename = indir
 
 
@@ -120,29 +120,29 @@ def coregisterLoadMetadata(indir_m, indir_s, urlflag):
         '''
     import os
     import numpy as np
-    
+
     from osgeo import gdal, osr
     import struct
     import re
-    
+
     from geogrid import GeogridOptical
 #    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
 
     obj = GeogridOptical()
-    
+
     x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_m, indir_s, urlflag)
-    
+
     if urlflag is 1:
         DS = gdal.Open('/vsicurl/%s' %(indir_m))
     else:
         DS = gdal.Open(indir_m, gdal.GA_ReadOnly)
-    
+
     info = Dummy()
     info.startingX = trans[0]
     info.startingY = trans[3]
     info.XSize = trans[1]
     info.YSize = trans[5]
-    
+
     if re.findall("L8",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
@@ -150,17 +150,17 @@ def coregisterLoadMetadata(indir_m, indir_s, urlflag):
         info.time = DS.GetDescription().split('_')[2]
     else:
         raise Exception('Optical data NOT supported yet!')
-    
+
     info.numberOfLines = ysize1
     info.numberOfSamples = xsize1
-    
+
     info.filename = indir_m
 
     if urlflag is 1:
         DS1 = gdal.Open('/vsicurl/%s' %(indir_s))
     else:
         DS1 = gdal.Open(indir_s, gdal.GA_ReadOnly)
-    
+
     info1 = Dummy()
 
     if re.findall("L8",DS1.GetDescription()).__len__() > 0:
@@ -178,7 +178,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     '''
     Wire and run geogrid.
     '''
-    
+
     from geogrid import GeogridOptical
 #    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
 
@@ -199,7 +199,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
     obj.chipSizeX0 = 240
-    
+
     obj.urlflag = urlflag
     obj.dat1name = info.filename
     obj.demname = dem
@@ -226,13 +226,13 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.runGeogrid()
 
 
-if __name__ == '__main__':
+def main():
     '''
     Main driver.
     '''
 
     inps = cmdLineParse()
-    
+
     if inps.urlflag is not None:
         metadata_m, metadata_s = coregisterLoadMetadata(inps.indir_m, inps.indir_s, inps.urlflag)
     else:
@@ -240,3 +240,7 @@ if __name__ == '__main__':
         metadata_s = loadMetadata(inps.indir_s)
 
     runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile, inps.urlflag)
+
+
+if __name__ == '__main__':
+    main()
