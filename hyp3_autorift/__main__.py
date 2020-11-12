@@ -41,10 +41,25 @@ def entry():
     )
 
 
+def earlier_granule_first(g1, g2):
+    if g1.startswith('S1'):
+        date_slice = slice(17,32)
+    elif g1.startswith('S2'):
+        date_slice = slice(11, 26)
+    elif g1.startswith('L'):
+        date_slice = slice(17, 25)
+    else:
+        raise ValueError(f'Unsupported scene format: {g1}')
+
+    if g1[date_slice] <= g2[date_slice]:
+        return g1, g2
+    return g2, g1
+
+
 def main_v2():
     parser = ArgumentParser()
-    parser.add_argument('--username', required=True)
-    parser.add_argument('--password', required=True)
+    parser.add_argument('--username')
+    parser.add_argument('--password')
     parser.add_argument('--bucket')
     parser.add_argument('--bucket-prefix', default='')
     parser.add_argument('granules', type=str.split, nargs='+')
@@ -54,11 +69,12 @@ def main_v2():
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
 
-    write_credentials_to_netrc_file(args.username, args.password)
+    if args.username and args.password:
+        write_credentials_to_netrc_file(args.username, args.password)
 
     g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 
-    product_file = hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
+    product_file = hyp3_autorift.process(g1, g2)
 
     browse_file = product_file.with_suffix('.png')
 
