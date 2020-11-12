@@ -12,6 +12,7 @@ from pathlib import Path
 from secrets import token_hex
 
 import numpy as np
+import requests
 from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
 from hyp3lib.file_subroutines import mkdir_p
@@ -41,6 +42,21 @@ _PRODUCT_LIST = [
     'window_search_range.tif',
     'window_stable_surface_mask.tif',
 ]
+
+
+def get_s2_url(scene_name):
+    search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+    payload = {
+        'query': {
+            'sentinel:product_id': {
+                'eq': scene_name,
+            }
+        }
+    }
+    response = requests.post(search_url, json=payload)
+    response.raise_for_status()
+    download_url = response.json()['features'][0]['assets']['B03']['href']
+    return download_url
 
 
 def least_precise_orbit_of(orbits):

@@ -24,6 +24,7 @@ dependencies:
   - netCDF4
   - numpy
   - psycopg2  # missing hyp3proclib dep
+  - requests
   - scikit-image  # missing autoRIFT dep
   - scipy
   - pip:
