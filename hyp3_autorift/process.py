@@ -90,9 +90,7 @@ def process(reference: str, secondary: str) -> Path:
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
-        lat_limits, lon_limits = geometry.bounding_box(
-            reference, orbits=orbits
-        )
+        lat_limits, lon_limits = geometry.bounding_box(reference, orbits=orbits)
 
     else:
         reference_url = get_s2_url(reference)
@@ -106,16 +104,16 @@ def process(reference: str, secondary: str) -> Path:
 
     dem_file = os.path.join(dem_dir, dem)
     in_file_base = dem_file.replace('_h.tif', '')
-    dem_parameters = f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
-                     f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
-                     f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
-                     f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
-                     f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
-                     f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
-    autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif' \
-                          ' -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
-                          ' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-                          ' -ssm window_stable_surface_mask.tif'
+    geogrid_parameters = f'-d {dem_file} -ssm {in_file_base}_StableSurface.tif ' \
+                         f'-sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif ' \
+                         f'-vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif ' \
+                         f'-srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif ' \
+                         f'-csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif ' \
+                         f'-csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
+    autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif ' \
+                          '-csmin window_chip_size_min.tif -csmax window_chip_size_max.tif ' \
+                          '-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif ' \
+                          '-ssm window_stable_surface_mask.tif'
 
     if reference.startswith('S1'):
         isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
@@ -135,7 +133,7 @@ def process(reference: str, secondary: str) -> Path:
                 execute(cmd, logfile=f, uselogging=True)
 
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogrid_ISCE.py -r reference -s secondary {dem_parameters}'
+            cmd = f'testGeogrid_ISCE.py -r reference -s secondary {geogrid_parameters}'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
@@ -145,7 +143,7 @@ def process(reference: str, secondary: str) -> Path:
 
     else:
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -m {reference_url} -s {secondary_url} {dem_parameters} -urlflag 1'
+            cmd = f'testGeogridOptical.py -m {reference_url} -s {secondary_url} {geogrid_parameters} -urlflag 1'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
