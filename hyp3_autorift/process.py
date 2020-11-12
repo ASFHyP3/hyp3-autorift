@@ -70,90 +70,98 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
     return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
-def process(reference, secondary, download=False, polarization='hh', process_dir=None, product=False) -> Path:
+def process(reference: str, secondary: str) -> Path:
     """Process a Sentinel-1 image pair
 
     Args:
-        reference: Path to reference Sentinel-1 SAFE zip archive
-        secondary: Path to secondary Sentinel-1 SAFE zip archive
-        download: If True, try and download the granules from ASF to the
-            current working directory (default: False)
-        polarization: Polarization of Sentinel-1 scene (default: 'hh')
-        process_dir: Path to a directory for processing inside
-            (default: None; use current working directory)
-        product: Create a product directory in the current working directory with
-            copies of the product-level files (no intermediate files; default: False)
+        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat scene
+        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat scene
     """
 
-    # Ensure we have absolute paths
-    reference = Path(reference).resolve()
-    secondary = Path(secondary).resolve()
-
-    product_dir = os.path.join(os.getcwd(), 'PRODUCT')
-
-    if download:
+    if reference.startswith('S1'):
         for scene in [reference, secondary]:
-            if not scene.is_file():
-                scene_url = get_download_url(scene.stem)
-                download_file(scene_url, directory=scene.parent, chunk_size=5242880)
+            scene_url = get_download_url(scene)
+            download_file(scene_url, chunk_size=5242880)
 
-    orbits = Path('Orbits').resolve()
-    mkdir_p(orbits)
-    reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
-    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
-    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
+        orbits = Path('Orbits').resolve()
+        mkdir_p(orbits)
+        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits) #TODO check paths
+        log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
+        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
+        log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
-    lat_limits, lon_limits = geometry.bounding_box(
-        str(reference), orbits=orbits, polarization=polarization
-    )
+        lat_limits, lon_limits = geometry.bounding_box(
+            reference, orbits=orbits
+        )
+
+    else:
+        reference_url = get_s2_url(reference)
+        secondary_url = get_s2_url(seconday)
+        lat_limits, lon_limits = geometry.bounding_box_optical(reference_url)
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
-
     dem_dir = os.path.join(os.getcwd(), 'DEM')
     mkdir_p(dem_dir)
-    if download:
-        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
-
-    if process_dir:
-        mkdir_p(process_dir)
-        os.chdir(process_dir)
+    io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
 
     dem_file = os.path.join(dem_dir, dem)
-    isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
 
-    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
+    if reference.startswith('S1'):
+        isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
 
-    with open('topsApp.txt', 'w') as f:
-        cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
-        execute(cmd, logfile=f, uselogging=True)
+        io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
-    m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
-    s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
-
-    with open('createImages.txt', 'w') as f:
-        for slc in [m_slc, s_slc]:
-            cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
+        with open('topsApp.txt', 'w') as f:
+            cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
             execute(cmd, logfile=f, uselogging=True)
 
-    in_file_base = dem_file.replace('_h.tif', '')
-    with open('testGeogrid.txt', 'w') as f:
-        cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-              f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
-              f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
-              f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
-              f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
-              f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
-              f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
-        execute(cmd, logfile=f, uselogging=True)
+        m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
+        s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
-    with open('testautoRIFT.txt', 'w') as f:
-        cmd = f'testautoRIFT_ISCE.py' \
-              f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
-              f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
-              f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-              f' -ssm window_stable_surface_mask.tif -nc S'
-        execute(cmd, logfile=f, uselogging=True)
+        with open('createImages.txt', 'w') as f:
+            for slc in [m_slc, s_slc]:
+                cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
+                execute(cmd, logfile=f, uselogging=True)
+
+        in_file_base = dem_file.replace('_h.tif', '')
+        with open('testGeogrid.txt', 'w') as f:
+            cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
+                  f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
+                  f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
+                  f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
+                  f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
+                  f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
+                  f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
+            execute(cmd, logfile=f, uselogging=True)
+
+        with open('testautoRIFT.txt', 'w') as f:
+            cmd = f'testautoRIFT_ISCE.py' \
+                  f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
+                  f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
+                  f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
+                  f' -ssm window_stable_surface_mask.tif -nc S'
+            execute(cmd, logfile=f, uselogging=True)
+
+    else:
+        in_file_base = dem_file.replace('_h.tif', '')
+        with open('testGeogrid.txt', 'w') as f:
+            cmd = f'testGeogridOptical.py -m {reference_url} -s {secondary_url}' \
+                  f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
+                  f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
+                  f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
+                  f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
+                  f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
+                  f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif' \
+                  ' -urlflag 1'
+            execute(cmd, logfile=f, uselogging=True)
+
+        with open('testautoRIFT.txt', 'w') as f:
+            cmd = f'testautoRIFT.py' \
+                  f' -m {reference_url} -s {secondary_url} -g window_location.tif -o window_offset.tif' \
+                  f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
+                  f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
+                  f' -ssm window_stable_surface_mask.tif -nc S2 -fo 1 -url'
+            execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
     x_velocity = np.ma.masked_invalid(velocity_tif.GetRasterBand(1).ReadAsArray())
@@ -172,7 +180,7 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
 
     del velocity_band, browse_tif, velocity_tif
 
-    product_name = get_product_name(reference.name, secondary.name, (reference_state_vec, secondary_state_vec))
+    product_name = get_product_name(reference, secondary, (reference_state_vec, secondary_state_vec))
     makeAsfBrowse(str(browse_file), product_name)
 
     netcdf_files = glob.glob('*.nc')
@@ -181,16 +189,8 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
     if len(netcdf_files) > 1:
         log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
-    if product:
-        mkdir_p(product_dir)
-        for f in _PRODUCT_LIST:
-            shutil.copyfile(f, os.path.join(product_dir, f))
-
-        product_file = Path(product_dir).resolve() / f'{product_name}.nc'
-        shutil.copyfile(netcdf_files[0], product_file)
-    else:
-        product_file = Path(f'{product_name}.nc').resolve()
-        shutil.move(netcdf_files[0], f'{product_name}.nc')
+    product_file = Path(f'{product_name}.nc').resolve()
+    shutil.move(netcdf_files[0], f'{product_name}.nc')
 
     return product_file
 
