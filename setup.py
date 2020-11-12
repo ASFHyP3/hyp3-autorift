@@ -40,6 +40,7 @@ setup(
         'importlib_metadata',
         'netCDF4',
         'numpy',
+        'requests',
         'scipy',
     ],
 

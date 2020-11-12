@@ -68,6 +68,7 @@ def least_precise_orbit_of(orbits):
 
 
 def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240):
+    mission = reference_name[0:2]
     plat1 = reference_name[2]
     plat2 = secondary_name[2]
 
@@ -83,7 +84,8 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
     orb = least_precise_orbit_of(orbit_files)
     product_id = token_hex(2).upper()
 
-    return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
+    return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}' \
+           f'_A_{product_id}'
 
 
 def process(reference: str, secondary: str) -> Path:
@@ -110,15 +112,15 @@ def process(reference: str, secondary: str) -> Path:
 
     else:
         reference_url = get_s2_url(reference)
-        secondary_url = get_s2_url(seconday)
-        lat_limits, lon_limits = geometry.bounding_box_optical(reference_url)
+        secondary_url = get_s2_url(secondary)
+        lat_limits, lon_limits = geometry.bounding_box_optical(reference_url)  # TODO implement
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
     dem_dir = os.path.join(os.getcwd(), 'DEM')
     mkdir_p(dem_dir)
     io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
 
-    dem_file = os.path.join(dem_dir, dem)
+    dem_file = os.path.join(dem_dir, dem)  # TODO prefix url to dem filename for S2
     in_file_base = dem_file.replace('_h.tif', '')
     geogrid_parameters = f'-d {dem_file} -ssm {in_file_base}_StableSurface.tif ' \
                          f'-sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif ' \
@@ -184,7 +186,7 @@ def process(reference: str, secondary: str) -> Path:
 
     del velocity_band, browse_tif, velocity_tif
 
-    product_name = get_product_name(reference, secondary, (reference_state_vec, secondary_state_vec)) # TODO fix for S2
+    product_name = get_product_name(reference, secondary, (reference_state_vec, secondary_state_vec))  # TODO fix for S2
     makeAsfBrowse(str(browse_file), product_name)
 
     netcdf_files = glob.glob('*.nc')
