@@ -105,6 +105,17 @@ def process(reference: str, secondary: str) -> Path:
     io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
 
     dem_file = os.path.join(dem_dir, dem)
+    in_file_base = dem_file.replace('_h.tif', '')
+    dem_parameters = f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
+                     f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
+                     f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
+                     f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
+                     f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
+                     f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
+    autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif' \
+                          ' -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
+                          ' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
+                          ' -ssm window_stable_surface_mask.tif'
 
     if reference.startswith('S1'):
         isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
@@ -123,44 +134,23 @@ def process(reference: str, secondary: str) -> Path:
                 cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
                 execute(cmd, logfile=f, uselogging=True)
 
-        in_file_base = dem_file.replace('_h.tif', '')
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-                  f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
-                  f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
-                  f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
-                  f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
-                  f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
-                  f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
+            cmd = f'testGeogrid_ISCE.py -r reference -s secondary {dem_parameters}'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
             cmd = f'testautoRIFT_ISCE.py' \
-                  f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
-                  f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
-                  f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-                  f' -ssm window_stable_surface_mask.tif -nc S'
+                  f' -r {m_slc} -s {s_slc} {autorift_parameters} -nc S'
             execute(cmd, logfile=f, uselogging=True)
 
     else:
-        in_file_base = dem_file.replace('_h.tif', '')
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -m {reference_url} -s {secondary_url}' \
-                  f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
-                  f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
-                  f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
-                  f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
-                  f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
-                  f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif' \
-                  ' -urlflag 1'
+            cmd = f'testGeogridOptical.py -m {reference_url} -s {secondary_url} {dem_parameters} -urlflag 1'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
             cmd = f'testautoRIFT.py' \
-                  f' -m {reference_url} -s {secondary_url} -g window_location.tif -o window_offset.tif' \
-                  f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
-                  f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-                  f' -ssm window_stable_surface_mask.tif -nc S2 -fo 1 -url'
+                  f' -m {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -url'
             execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
@@ -180,7 +170,7 @@ def process(reference: str, secondary: str) -> Path:
 
     del velocity_band, browse_tif, velocity_tif
 
-    product_name = get_product_name(reference, secondary, (reference_state_vec, secondary_state_vec))
+    product_name = get_product_name(reference, secondary, (reference_state_vec, secondary_state_vec)) # TODO fix for S2
     makeAsfBrowse(str(browse_file), product_name)
 
     netcdf_files = glob.glob('*.nc')
