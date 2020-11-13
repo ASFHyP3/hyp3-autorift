@@ -44,7 +44,7 @@ _PRODUCT_LIST = [
 ]
 
 
-def get_s2_url(scene_name):
+def get_s2_metadata(scene_name):
     search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
     payload = {
         'query': {
@@ -55,8 +55,7 @@ def get_s2_url(scene_name):
     }
     response = requests.post(search_url, json=payload)
     response.raise_for_status()
-    download_url = response.json()['features'][0]['assets']['B03']['href']
-    return download_url
+    return response.json()['features'][0]
 
 
 def least_precise_orbit_of(orbits):
@@ -88,12 +87,13 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
            f'_A_{product_id}'
 
 
-def process(reference: str, secondary: str) -> Path:
+def process(reference: str, secondary: str, polarization: str = 'hh') -> Path:
     """Process a Sentinel-1 image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat scene
+        polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
     """
 
     if reference.startswith('S1'):
@@ -103,17 +103,22 @@ def process(reference: str, secondary: str) -> Path:
 
         orbits = Path('Orbits').resolve()
         mkdir_p(orbits)
-        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits) #TODO check paths
+        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits)
         log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
-        lat_limits, lon_limits = geometry.bounding_box(reference, orbits=orbits)
+        lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
     else:
-        reference_url = get_s2_url(reference)
-        secondary_url = get_s2_url(secondary)
-        lat_limits, lon_limits = geometry.bounding_box_optical(reference_url)  # TODO implement
+        reference_metadata = get_s2_metadata(reference)
+
+        reference_url = reference_metadata['assets']['B03']['href']
+        secondary_url = get_s2_metadata(secondary)['assets']['B03']['href']  # TODO parameterize band?
+
+        bbox = reference_metadata['bbox']
+        lat_limits = (bbox[1], bbox[3])
+        lon_limits = (bbox[0], bbox[2])
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
     dem_dir = os.path.join(os.getcwd(), 'DEM')
@@ -211,17 +216,8 @@ def main():
                         help='Reference Sentinel-1 SAFE zip archive')
     parser.add_argument('secondary', type=os.path.abspath,
                         help='Secondary Sentinel-1 SAFE zip archive')
-    parser.add_argument('-d', '--download', action='store_true',
-                        help='Download the granules from ASF to the current'
-                             'working directory')
     parser.add_argument('-p', '--polarization', default='hh',
                         help='Polarization of the Sentinel-1 scenes')
-    parser.add_argument('--process-dir', type=os.path.abspath,
-                        help='If given, do processing inside this directory, otherwise, '
-                             'use the current working directory')
-    parser.add_argument('--product', action='store_true',
-                        help='Create a product directory in the current working directory '
-                             'with copies of the product-level files (no intermediate files)')
     args = parser.parse_args()
 
     process(**args.__dict__)

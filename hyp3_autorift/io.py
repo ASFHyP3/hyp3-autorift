@@ -52,14 +52,14 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
                 <property name="orbit directory">{orbits}</property>
                 <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">reference</property>
-                <property name="safe">['{reference}']</property>
+                <property name="safe">['{reference}.zip']</property>
                 <property name="polarization">{polarization}</property>
             </component>
             <component name="secondary">
                 <property name="orbit directory">{orbits}</property>
                 <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">secondary</property>
-                <property name="safe">['{secondary}']</property>
+                <property name="safe">['{secondary}.zip']</property>
                 <property name="polarization">{polarization}</property>
             </component>
             <property name="demfilename">{dem}</property>
