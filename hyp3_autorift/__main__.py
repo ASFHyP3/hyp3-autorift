@@ -42,7 +42,7 @@ def entry():
 
 def earlier_granule_first(g1, g2):
     if g1.startswith('S1'):
-        date_slice = slice(17,32)
+        date_slice = slice(17, 32)
     elif g1.startswith('S2'):
         date_slice = slice(11, 26)
     elif g1.startswith('L'):
