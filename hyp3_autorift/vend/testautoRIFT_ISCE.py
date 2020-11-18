@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This is a substantially modified copy of the testautoRIFT_ISCE.py script
-# provided in the autoRIFT v1.0.4 release, See the LICENSE file in this directory
-# for the original terms and conditions, and CHANGES.diff for a detailed
+# provided in the autoRIFT release, See the LICENSE file in this directory
+# for the original terms and conditions, and README.md and CHANGES.diff for a detailed
 # description of the changes. Notice, all changes are released under the terms
 # and conditions of hyp3-autorift's LICENSE.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,11 +64,9 @@ def cmdLineParse():
 
     parser = argparse.ArgumentParser(description='Output geo grid')
     parser.add_argument('-r', '--input_r', dest='indir_r', type=str, required=True,
-            help='Input reference image file name (in ISCE format and radar coordinates) or Input reference image file '
-                 'name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input reference image file name (in ISCE format and radar coordinates) or Input reference image file name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input secondary image file name (in ISCE format and radar coordinates) or Input secondary image file '
-                 'name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input secondary image file name (in ISCE format and radar coordinates) or Input secondary image file name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-g', '--input_g', dest='grid_location', type=str, required=False,
             help='Input pixel indices file name')
     parser.add_argument('-o', '--input_o', dest='init_offset', type=str, required=False,
@@ -389,7 +387,7 @@ def main():
 
     if inps.optical_flag == 1:
         if urlflag is 1:
-            data_m, data_s = loadProductOpticalURL(inps.indir_m, inps.indir_s)
+            data_m, data_s = loadProductOpticalURL(inps.indir_r, inps.indir_s)
         else:
             data_m = loadProductOptical(inps.indir_r)
             data_s = loadProductOptical(inps.indir_s)
@@ -685,8 +683,8 @@ def main():
                     secondary_filename = conts['secondary_filename'][0]
                     reference_dt = conts['reference_dt'][0]
                     secondary_dt = conts['secondary_dt'][0]
-                    reference_split = str.split(reference_filename, '_')
-                    secondary_split = str.split(secondary_filename, '_')
+                    reference_split = str.split(reference_filename,'_')
+                    secondary_split = str.split(secondary_filename,'_')
 
                     version = '1.0.7'
                     pair_type = 'radar'
@@ -831,33 +829,33 @@ def main():
                     YPixelSize = float(str.split(runCmd('fgrep "Y-direction pixel size:" testGeogrid.txt'))[3])
                     epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
 
-                    master_path = inps.indir_m
-                    slave_path = inps.indir_s
+                    reference_path = inps.indir_r
+                    secondary_path = inps.indir_s
 
-                    master_split = master_path.split('_')
-                    slave_split = slave_path.split('_')
+                    reference_split = reference_path.split('_')
+                    secondary_split = secondary_path.split('_')
 
-                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
-                    slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
+                    reference_filename = reference_split[0][-3:]+'_'+reference_split[2]+'_'+reference_split[4][:3]+'_'+os.path.basename(reference_path)
+                    secondary_filename = secondary_split[0][-3:]+'_'+secondary_split[2]+'_'+secondary_split[4][:3]+'_'+os.path.basename(secondary_path)
 
-                    master_time = ['00','00','00']
-                    slave_time = ['00','00','00']
+                    reference_time = ['00','00','00']
+                    secondary_time = ['00','00','00']
 
-                    master_time = datetime.time(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                    slave_time = datetime.time(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+                    reference_time = datetime.time(int(reference_time[0]),int(reference_time[1]),int(float(reference_time[2])))
+                    secondary_time = datetime.time(int(secondary_time[0]),int(secondary_time[1]),int(float(secondary_time[2])))
 
                     version = '1.0.7'
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
 
-                    out_nc_filename = master_filename[0:-4]+'_'+slave_filename[0:-4]+'.nc'
+                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
                     out_nc_filename = './' + out_nc_filename
                     roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                    d0 = datetime.date(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
-                    d1 = datetime.date(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
+                    d0 = datetime.date(np.int(reference_split[2][0:4]),np.int(reference_split[2][4:6]),np.int(reference_split[2][6:8]))
+                    d1 = datetime.date(np.int(secondary_split[2][0:4]),np.int(secondary_split[2][4:6]),np.int(secondary_split[2][6:8]))
                     date_dt_base = d1 - d0
                     date_dt = np.float64(np.abs(date_dt_base.days))
                     if date_dt_base.days < 0:
@@ -867,15 +865,14 @@ def main():
                         date_ct = d0 + (d1 - d0)/2
                         date_center = date_ct.strftime("%Y%m%d")
 
-                    master_dt = master_split[2] + master_time.strftime("T%H:%M:%S")
-                    slave_dt = slave_split[2] + slave_time.strftime("T%H:%M:%S")
+                    reference_dt = reference_split[2] + reference_time.strftime("T%H:%M:%S")
+                    secondary_dt = secondary_split[2] + secondary_time.strftime("T%H:%M:%S")
 
-                    IMG_INFO_DICT = {'mission_img1':master_split[0][-3],'satellite_img1':master_split[0][-2:],'correction_level_img1':master_split[4][:3],'acquisition_date_img1':master_dt,'mission_img2':slave_split[0][-3],'satellite_img2':slave_split[0][-2:],'correction_level_img2':slave_split[4][:3],'acquisition_date_img2':slave_dt,'date_dt':date_dt,'date_center':date_center,'roi_valid_percentage':roi_valid_percentage,'autoRIFT_software_version':version}
+                    IMG_INFO_DICT = {'mission_img1':reference_split[0][-3],'satellite_img1':reference_split[0][-2:],'correction_level_img1':reference_split[4][:3],'acquisition_date_img1':reference_dt,'mission_img2':secondary_split[0][-3],'satellite_img2':secondary_split[0][-2:],'correction_level_img2':secondary_split[4][:3],'acquisition_date_img2':secondary_dt,'date_dt':date_dt,'date_center':date_center,'roi_valid_percentage':roi_valid_percentage,'autoRIFT_software_version':version}
 
                     error_vector = np.array([57.,57.])
 
-                    no.netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, SY, offset2vx_1,
-                                       offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_shift_applied, dx_mean_shift, dy_mean_shift, error_vector)
+                    no.netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, SY, offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_shift_applied, dx_mean_shift, dy_mean_shift, error_vector)
 
                 elif inps.nc_sensor is None:
                     print('netCDF packaging not performed')
