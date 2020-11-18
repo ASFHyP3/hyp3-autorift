@@ -115,7 +115,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         reference_metadata = get_s2_metadata(reference)
 
         reference_url = reference_metadata['assets'][band]['href']
-        secondary_url = get_s2_metadata(secondary)['assets'][band]['href']  # TODO parameterize band?
+        secondary_url = get_s2_metadata(secondary)['assets'][band]['href']
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
