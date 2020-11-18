@@ -122,11 +122,14 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lon_limits = (bbox[0], bbox[2])
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
-    dem_dir = os.path.join(os.getcwd(), 'DEM')
-    mkdir_p(dem_dir)
-    io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
+    if reference.startswith('S1'):
+        dem_dir = os.path.join(os.getcwd(), 'DEM')
+        mkdir_p(dem_dir)
+        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
+        dem_file = os.path.join(dem_dir, dem)
+    else:
+        dem_file = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'  # TODO move this to find_jpl_dem?
 
-    dem_file = os.path.join(dem_dir, dem)  # TODO prefix url to dem filename for S2
     in_file_base = dem_file.replace('_h.tif', '')
     geogrid_parameters = f'-d {dem_file} -ssm {in_file_base}_StableSurface.tif ' \
                          f'-sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif ' \
