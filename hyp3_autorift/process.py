@@ -173,7 +173,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -m {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -url'
+            cmd = f'testautoRIFT.py -m {reference_url} -s {secondary_url} {autorift_parameters} -nc L -fo 1 -url'
             execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
