@@ -35,7 +35,7 @@ setup(
         'boto3',
         'botocore',
         'gdal',
-        'hyp3lib==1.6.1',
+        'hyp3lib==1.6.2',
         'hyp3proclib',
         'importlib_metadata',
         'netCDF4',
