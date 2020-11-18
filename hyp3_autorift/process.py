@@ -87,13 +87,14 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
            f'_A_{product_id}'
 
 
-def process(reference: str, secondary: str, polarization: str = 'hh') -> Path:
-    """Process a Sentinel-1 image pair
+def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B03') -> Path:
+    """Process a Sentinel-1, Sentinel-2, or Landsat image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat scene
         polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
+        band: Band to process for Landsat scenes
     """
 
     if reference.startswith('S1'):
@@ -113,8 +114,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh') -> Path:
     else:
         reference_metadata = get_s2_metadata(reference)
 
-        reference_url = reference_metadata['assets']['B03']['href']
-        secondary_url = get_s2_metadata(secondary)['assets']['B03']['href']  # TODO parameterize band?
+        reference_url = reference_metadata['assets'][band]['href']
+        secondary_url = get_s2_metadata(secondary)['assets'][band]['href']  # TODO parameterize band?
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
