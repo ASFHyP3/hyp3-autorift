@@ -112,6 +112,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
     else:
+        reference_state_vec = None
+        secondary_state_vec = None
         reference_metadata = get_s2_metadata(reference)
 
         reference_url = reference_metadata['assets'][band]['href']
@@ -173,7 +175,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -m {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -url'
+            cmd = f'testautoRIFT.py -m {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -urlflag 1'
             execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
