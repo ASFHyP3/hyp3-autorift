@@ -66,13 +66,25 @@ def least_precise_orbit_of(orbits):
     return 'P'
 
 
+def get_datetime(scene_name):
+    if scene_name.startswith('S1'):
+        date_slice = slice(17, 32)
+    elif scene_name.startswith('S2'):
+        date_slice = slice(11, 26)
+    # elif scene_name.startswith('L'):  # TODO landsat has a different srtptime format
+    #     date_slice = slice(17, 25)
+    else:
+        raise ValueError(f'Unsupported scene format: {scene_name}')
+    return scene_name[date_slice]
+
+
 def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240):
     mission = reference_name[0:2]
     plat1 = reference_name[2]
     plat2 = secondary_name[2]
 
-    datetime1 = reference_name[17:32]
-    datetime2 = secondary_name[17:32]
+    datetime1 = get_datetime(reference_name)
+    datetime2 = get_datetime(secondary_name)
 
     ref_datetime = datetime.strptime(datetime1, '%Y%m%dT%H%M%S')
     sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
