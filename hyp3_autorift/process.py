@@ -148,7 +148,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
         with open('topsApp.txt', 'w') as f:
-            cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
+            cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --steps --end=mergebursts'
             execute(cmd, logfile=f, uselogging=True)
 
         m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
