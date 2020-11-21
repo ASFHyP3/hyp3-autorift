@@ -3,7 +3,7 @@ from io import BytesIO
 from hyp3_autorift import io
 
 
-def test_get_keys_for_dem():
+def test_get_s3_keys_for_dem():
     expected = [
         'Prefix/GRE240m_h.tif',
         'Prefix/GRE240m_StableSurface.tif',
@@ -18,7 +18,7 @@ def test_get_keys_for_dem():
         'Prefix/GRE240m_xMaxChipSize.tif',
         'Prefix/GRE240m_yMaxChipSize.tif',
     ]
-    assert sorted(io._get_keys_for_dem('Prefix', 'GRE240m')) == sorted(expected)
+    assert sorted(io._get_s3_keys_for_dem('Prefix', 'GRE240m')) == sorted(expected)
 
 
 def test_download_s3_files(tmp_path, s3_stub):

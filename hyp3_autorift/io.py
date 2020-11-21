@@ -27,7 +27,7 @@ def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
         s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
 
 
-def _get_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
+def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
     tags = [
         'h',
         'StableSurface',
@@ -52,7 +52,7 @@ def fetch_jpl_tifs(dem='GRE240m', target_dir='DEM', bucket=ITS_LIVE_BUCKET, pref
     for logger in ('botocore', 's3transfer'):
         logging.getLogger(logger).setLevel(logging.WARNING)
 
-    keys = _get_keys_for_dem(prefix, dem)
+    keys = _get_s3_keys_for_dem(prefix, dem)
     _download_s3_files(target_dir, bucket, keys)
 
 
