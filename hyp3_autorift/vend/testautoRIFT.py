@@ -688,7 +688,7 @@ def main():
                     reference_split = str.split(reference_filename,'_')
                     secondary_split = str.split(secondary_filename,'_')
 
-                    version = '1.0.7'
+                    version = '1.0.8'
                     pair_type = 'radar'
                     detection_method = 'feature'
                     coordinates = 'radar'
@@ -766,7 +766,7 @@ def main():
                     reference_time = datetime.time(int(reference_time[0]),int(reference_time[1]),int(float(reference_time[2])))
                     secondary_time = datetime.time(int(secondary_time[0]),int(secondary_time[1]),int(float(secondary_time[2])))
 
-                    version = '1.0.7'
+                    version = '1.0.8'
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
@@ -846,7 +846,7 @@ def main():
                     reference_time = datetime.time(int(reference_time[0]),int(reference_time[1]),int(float(reference_time[2])))
                     secondary_time = datetime.time(int(secondary_time[0]),int(secondary_time[1]),int(float(secondary_time[2])))
 
-                    version = '1.0.7'
+                    version = '1.0.8'
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
