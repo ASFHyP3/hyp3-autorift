@@ -148,11 +148,11 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
             execute(cmd, logfile=f, uselogging=True)
 
-        m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
+        r_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
         s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
         with open('createImages.txt', 'w') as f:
-            for slc in [m_slc, s_slc]:
+            for slc in [r_slc, s_slc]:
                 cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
                 execute(cmd, logfile=f, uselogging=True)
 
@@ -161,7 +161,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT_ISCE.py -r {m_slc} -s {s_slc} {autorift_parameters} -nc S'
+            cmd = f'testautoRIFT_ISCE.py -r {r_slc} -s {s_slc} {autorift_parameters} -nc S'
             execute(cmd, logfile=f, uselogging=True)
 
     else:
