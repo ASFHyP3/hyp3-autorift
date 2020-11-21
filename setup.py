@@ -63,7 +63,6 @@ setup(
         'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main',
         'testautoRIFT.py = hyp3_autorift.vend.testautoRIFT:main',
         'testGeogridOptical.py = hyp3_autorift.vend.testGeogridOptical:main',
-        'optical = hyp3_autorift.vend.single_scene_proc_optical_fetchDEM_full:main',
         # FIXME: Only needed for testautoRIFT_ISCE.py
         'topsinsar_filename.py = hyp3_autorift.io:topsinsar_mat',
         ]

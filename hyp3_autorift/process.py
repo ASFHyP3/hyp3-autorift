@@ -106,7 +106,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat scene
         polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
-        band: Band to process for Landsat scenes
+        band: Band to process for Sentinel-2 or Landsat scenes
     """
 
     if reference.startswith('S1'):
