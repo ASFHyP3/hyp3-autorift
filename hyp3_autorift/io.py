@@ -19,12 +19,6 @@ ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
 AUTORIFT_PREFIX = 'isce_autoRIFT'
 
 
-def _list_s3_files(bucket, prefix):
-    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-    keys = [item['Key'] for item in response['Contents']]
-    return keys
-
-
 def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
     transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
     for key in keys:
@@ -33,14 +27,32 @@ def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
         s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
 
 
-def fetch_jpl_tifs(ice_sheet='GRE', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
-    log.info(f"Downloading {ice_sheet} tifs from JPL's AWS bucket")
+def _get_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
+    tags = [
+        'h',
+        'StableSurface',
+        'dhdx',
+        'dhdy',
+        'vx0',
+        'vy0',
+        'vxSearchRange',
+        'vySearchRange',
+        'xMinChipSize',
+        'yMinChipSize',
+        'xMaxChipSize',
+        'yMaxChipSize',
+    ]
+    keys = [f'{prefix}/{dem}_{tag}.tif' for tag in tags]
+    return keys
+
+
+def fetch_jpl_tifs(dem='GRE240m', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
+    log.info(f"Downloading {dem} tifs from JPL's AWS bucket")
 
     for logger in ('botocore', 's3transfer'):
         logging.getLogger(logger).setLevel(logging.WARNING)
 
-    full_prefix = f'{prefix}/{ice_sheet}'
-    keys = _list_s3_files(bucket, full_prefix)
+    keys = _get_keys_for_dem(prefix, dem)
     _download_s3_files(target_dir, bucket, keys)
 
 
