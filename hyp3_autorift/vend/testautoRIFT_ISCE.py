@@ -124,16 +124,16 @@ def loadProductOptical(filename):
 
     return img
 
-def loadProductOpticalURL(file_m, file_s):
+def loadProductOpticalURL(file_r, file_s):
     '''
     Load the product using Product Manager.
     '''
 
     obj = GeogridOptical()
 
-    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(file_m, file_s, 1)
+    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(file_r, file_s, 1)
 
-    DS1 = gdal.Open('/vsicurl/%s' %(file_m))
+    DS1 = gdal.Open('/vsicurl/%s' % (file_r))
     DS2 = gdal.Open('/vsicurl/%s' %(file_s))
 
     I1 = DS1.ReadAsArray(xoff=x1a, yoff=y1a, xsize=xsize1, ysize=ysize1)
@@ -387,16 +387,16 @@ def main():
 
     if inps.optical_flag == 1:
         if urlflag is 1:
-            data_m, data_s = loadProductOpticalURL(inps.indir_r, inps.indir_s)
+            data_r, data_s = loadProductOpticalURL(inps.indir_r, inps.indir_s)
         else:
-            data_m = loadProductOptical(inps.indir_r)
+            data_r = loadProductOptical(inps.indir_r)
             data_s = loadProductOptical(inps.indir_s)
 #        # test with lena/Venus image
 #        conts = sio.loadmat(inps.indir_r)
-#        data_m = conts['I']
+#        data_r = conts['I']
 #        data_s = conts['I1']
     else:
-        data_m = loadProduct(inps.indir_r)
+        data_r = loadProduct(inps.indir_r)
         data_s = loadProduct(inps.indir_s)
 
 
@@ -475,7 +475,7 @@ def main():
 
 
 
-    Dx, Dy, InterpMask, ChipSizeX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(data_m, data_s, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, inps.optical_flag, nodata)
+    Dx, Dy, InterpMask, ChipSizeX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(data_r, data_s, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, inps.optical_flag, nodata)
 
     if inps.optical_flag == 0:
         Dy = -Dy
