@@ -183,11 +183,11 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
     else:
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -m {reference_url} -s {secondary_url} {geogrid_parameters} -urlflag 1'
+            cmd = f'testGeogridOptical.py -r {reference_url} -s {secondary_url} {geogrid_parameters} -urlflag 1'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -m {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -urlflag 1'
+            cmd = f'testautoRIFT.py -r {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -urlflag 1'
             execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
