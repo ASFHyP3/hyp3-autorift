@@ -122,25 +122,24 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     if reference.startswith('S1'):
         dem_dir = os.path.join(os.getcwd(), 'DEM')
         mkdir_p(dem_dir)
-        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
-        dem_file = os.path.join(dem_dir, dem)
+        io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
+        dem_prefix = os.path.join(dem_dir, dem)
     else:
-        dem_file = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'  # TODO move this to find_jpl_dem?
+        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'  # TODO move this to find_jpl_dem?
 
-    in_file_base = dem_file.replace('_h.tif', '')
-    geogrid_parameters = f'-d {dem_file} -ssm {in_file_base}_StableSurface.tif ' \
-                         f'-sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif ' \
-                         f'-vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif ' \
-                         f'-srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif ' \
-                         f'-csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif ' \
-                         f'-csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
+    geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
+                         f'-sx {dem_prefix}_dhdx.tif -sy {dem_prefix}_dhdy.tif ' \
+                         f'-vx {dem_prefix}_vx0.tif -vy {dem_prefix}_vy0.tif ' \
+                         f'-srx {dem_prefix}_vxSearchRange.tif -sry {dem_prefix}_vySearchRange.tif ' \
+                         f'-csminx {dem_prefix}_xMinChipSize.tif -csminy {dem_prefix}_yMinChipSize.tif ' \
+                         f'-csmaxx {dem_prefix}_xMaxChipSize.tif -csmaxy {dem_prefix}_yMaxChipSize.tif'
     autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif ' \
                           '-csmin window_chip_size_min.tif -csmax window_chip_size_max.tif ' \
                           '-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif ' \
                           '-ssm window_stable_surface_mask.tif'
 
     if reference.startswith('S1'):
-        isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
+        isce_dem = geometry.prep_isce_dem(f'{dem_prefix}_h.tif', lat_limits, lon_limits)
 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
@@ -148,11 +147,11 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
             execute(cmd, logfile=f, uselogging=True)
 
-        m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
+        r_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
         s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
         with open('createImages.txt', 'w') as f:
-            for slc in [m_slc, s_slc]:
+            for slc in [r_slc, s_slc]:
                 cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
                 execute(cmd, logfile=f, uselogging=True)
 
@@ -161,7 +160,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT_ISCE.py -r {m_slc} -s {s_slc} {autorift_parameters} -nc S'
+            cmd = f'testautoRIFT_ISCE.py -r {r_slc} -s {s_slc} {autorift_parameters} -nc S'
             execute(cmd, logfile=f, uselogging=True)
 
     else:
