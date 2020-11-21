@@ -26,23 +26,6 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
-_PRODUCT_LIST = [
-    'offset.tif',
-    'velocity.tif',
-    'velocity_browse.tif',
-    'velocity_browse.kmz',
-    'velocity_browse.png',
-    'velocity_browse.png.aux.xml',
-    'window_chip_size_max.tif',
-    'window_chip_size_min.tif',
-    'window_location.tif',
-    'window_offset.tif',
-    'window_rdr_off2vel_x_vec.tif',
-    'window_rdr_off2vel_y_vec.tif',
-    'window_search_range.tif',
-    'window_stable_surface_mask.tif',
-]
-
 
 def get_s2_metadata(scene_name):
     search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'

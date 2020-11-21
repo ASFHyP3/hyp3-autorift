@@ -16,6 +16,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Upgraded to isce2 [v2.4.2](https://github.com/isce-framework/isce2/releases/tag/v2.4.2) from v2.4.1
 * Upgraded to hyp3lib [v1.6.2](https://github.com/ASFHyP3/hyp3-lib/blob/develop/CHANGELOG.md#162) from v1.6.1
 
+### Removed
+* Removed the "include intermediate files" option when running jobs via HyP3 v1
+
 ## [0.2.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.1.0...v0.2.0)
 
 ### Changed
