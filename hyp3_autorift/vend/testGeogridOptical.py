@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# This is a substantially modified copy of the testGeogrid_ISCE.py script
+# as described in the README.md in this directory. See the LICENSE file in this
+# directory for the original terms and conditions, and CHANGES.diff for a detailed
+# description of the changes. Notice, all changes are released under the terms
+# and conditions of hyp3-autorift's LICENSE.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 #
@@ -26,19 +31,24 @@
 #
 # Authors: Piyush Agram, Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import argparse
+import os
+import re
+from datetime import date
 
+import numpy as np
+from geogrid import GeogridOptical
+from osgeo import gdal
 
 def cmdLineParse():
     '''
     Command line parser.
     '''
-    import argparse
-
     parser = argparse.ArgumentParser(description='Output geo grid')
-    parser.add_argument('-m', '--input_m', dest='indir_m', type=str, required=True,
-            help='Input master image file name (in GeoTIFF format and Cartesian coordinates)')
+    parser.add_argument('-r', '--input_r', dest='indir_r', type=str, required=True,
+            help='Input reference image file name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input slave image file name (in GeoTIFF format and Cartesian coordinates)')
+            help='Input secondary image file name (in GeoTIFF format and Cartesian coordinates)')
 #    parser.add_argument('-o', '--output', dest='outfile', type=str, default='geogrid.csv',
 #            help='Output grid mapping')
     parser.add_argument('-d', '--dem', dest='demfile', type=str, required=True,
@@ -81,13 +91,6 @@ def loadMetadata(indir):
     '''
     Input file.
     '''
-    import os
-    import numpy as np
-
-    from osgeo import gdal, osr
-    import struct
-    import re
-
     DS = gdal.Open(indir, gdal.GA_ReadOnly)
     trans = DS.GetGeoTransform()
 
@@ -114,28 +117,19 @@ def loadMetadata(indir):
     return info
 
 
-def coregisterLoadMetadata(indir_m, indir_s, urlflag):
+def coregisterLoadMetadata(indir_r, indir_s, urlflag):
     '''
         Input file.
         '''
-    import os
-    import numpy as np
-
-    from osgeo import gdal, osr
-    import struct
-    import re
-
-    from geogrid import GeogridOptical
-#    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
 
     obj = GeogridOptical()
 
-    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_m, indir_s, urlflag)
+    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_r, indir_s, urlflag)
 
     if urlflag is 1:
-        DS = gdal.Open('/vsicurl/%s' %(indir_m))
+        DS = gdal.Open('/vsicurl/%s' % (indir_r))
     else:
-        DS = gdal.Open(indir_m, gdal.GA_ReadOnly)
+        DS = gdal.Open(indir_r, gdal.GA_ReadOnly)
 
     info = Dummy()
     info.startingX = trans[0]
@@ -154,7 +148,7 @@ def coregisterLoadMetadata(indir_m, indir_s, urlflag):
     info.numberOfLines = ysize1
     info.numberOfSamples = xsize1
 
-    info.filename = indir_m
+    info.filename = indir_r
 
     if urlflag is 1:
         DS1 = gdal.Open('/vsicurl/%s' %(indir_s))
@@ -179,17 +173,12 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     Wire and run geogrid.
     '''
 
-    from geogrid import GeogridOptical
-#    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
-
     obj = GeogridOptical()
 
     obj.startingX = info.startingX
     obj.startingY = info.startingY
     obj.XSize = info.XSize
     obj.YSize = info.YSize
-    from datetime import date
-    import numpy as np
     d0 = date(np.int(info.time[0:4]),np.int(info.time[4:6]),np.int(info.time[6:8]))
     d1 = date(np.int(info1.time[0:4]),np.int(info1.time[4:6]),np.int(info1.time[6:8]))
     date_dt_base = d1 - d0
@@ -234,12 +223,12 @@ def main():
     inps = cmdLineParse()
 
     if inps.urlflag is not None:
-        metadata_m, metadata_s = coregisterLoadMetadata(inps.indir_m, inps.indir_s, inps.urlflag)
+        metadata_r, metadata_s = coregisterLoadMetadata(inps.indir_r, inps.indir_s, inps.urlflag)
     else:
-        metadata_m = loadMetadata(inps.indir_m)
+        metadata_r = loadMetadata(inps.indir_r)
         metadata_s = loadMetadata(inps.indir_s)
 
-    runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile, inps.urlflag)
+    runGeogrid(metadata_r, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile, inps.urlflag)
 
 
 if __name__ == '__main__':

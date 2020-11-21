@@ -33,6 +33,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import argparse
 import os
+import re
 from datetime import date
 
 import numpy as np
@@ -82,6 +83,8 @@ def cmdLineParse():
             help='Input stable surface mask')
     parser.add_argument('-fo', '--flag_optical', dest='optical_flag', type=bool, required=False, default=0,
             help='flag for reading optical data (e.g. Landsat): use 1 for on and 0 (default) for off')
+    parser.add_argument('-urlflag', '--urlflag', dest='urlflag', type=int, required=False,
+            help='flag for reading and coregistering optical data (GeoTIFF images, e.g. Landsat): use 1 for url read and 0 for local machine read; if not specified (i.e. None; default), will just read from local machine without coregistration')
 
     return parser.parse_args()
 
@@ -176,6 +179,55 @@ def loadMetadataOptical(indir):
     return info
 
 
+def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
+    '''
+        Input file.
+        '''
+
+    obj = GeogridOptical()
+
+    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_r, indir_s, urlflag)
+
+    if urlflag is 1:
+        DS = gdal.Open('/vsicurl/%s' % (indir_r))
+    else:
+        DS = gdal.Open(indir_r, gdal.GA_ReadOnly)
+
+    info = Dummy()
+    info.startingX = trans[0]
+    info.startingY = trans[3]
+    info.XSize = trans[1]
+    info.YSize = trans[5]
+
+    if re.findall("L8",DS.GetDescription()).__len__() > 0:
+        nameString = os.path.basename(DS.GetDescription())
+        info.time = nameString.split('_')[3]
+    elif re.findall("S2",DS.GetDescription()).__len__() > 0:
+        info.time = DS.GetDescription().split('_')[2]
+    else:
+        raise Exception('Optical data NOT supported yet!')
+
+    info.numberOfLines = ysize1
+    info.numberOfSamples = xsize1
+
+    info.filename = indir_r
+
+    if urlflag is 1:
+        DS1 = gdal.Open('/vsicurl/%s' %(indir_s))
+    else:
+        DS1 = gdal.Open(indir_s, gdal.GA_ReadOnly)
+
+    info1 = Dummy()
+
+    if re.findall("L8",DS1.GetDescription()).__len__() > 0:
+        nameString1 = os.path.basename(DS1.GetDescription())
+        info1.time = nameString1.split('_')[3]
+    elif re.findall("S2",DS1.GetDescription()).__len__() > 0:
+        info1.time = DS1.GetDescription().split('_')[2]
+    else:
+        raise Exception('Optical data NOT supported yet!')
+
+    return info, info1
 
 
 def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
@@ -223,12 +275,10 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
 
 
 
-def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
+def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, urlflag):
     '''
     Wire and run geogrid.
     '''
-
-#    from geogrid import GeogridOptical
 
     obj = GeogridOptical()
 
@@ -246,6 +296,7 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.nodata_out = -32767
     obj.chipSizeX0 = 240
 
+    obj.urlflag = urlflag
     obj.dat1name = info.filename
     obj.demname = dem
     obj.dhdxname = dhdx
@@ -271,7 +322,6 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.runGeogrid()
 
 
-
 def main():
     '''
     Main driver.
@@ -280,13 +330,19 @@ def main():
     inps = cmdLineParse()
 
     if inps.optical_flag == 1:
-        metadata_m = loadMetadataOptical(inps.indir_r)
-        metadata_s = loadMetadataOptical(inps.indir_s)
-        runGeogridOptical(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
+        if inps.urlflag is not None:
+            metadata_r, metadata_s = coregisterLoadMetadataOptical(inps.indir_r, inps.indir_s, inps.urlflag)
+        else:
+            metadata_r = loadMetadataOptical(inps.indir_r)
+            metadata_s = loadMetadataOptical(inps.indir_s)
+        runGeogridOptical(metadata_r, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile,
+                          inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile,
+                          inps.csmaxyfile, inps.ssmfile, inps.urlflag)
     else:
-        metadata_m = loadMetadata(inps.indir_r)
+        metadata_r = loadMetadata(inps.indir_r)
         metadata_s = loadMetadata(inps.indir_s)
-        runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
+        runGeogrid(metadata_r, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile,
+                   inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
 
 
 if __name__ == '__main__':
