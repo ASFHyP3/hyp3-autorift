@@ -125,7 +125,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
         dem_prefix = os.path.join(dem_dir, dem)
     else:
-        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'  # TODO move this to find_jpl_dem?
+        # TODO move this to find_jpl_dem?
+        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'
 
     geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
                          f'-sx {dem_prefix}_dhdx.tif -sy {dem_prefix}_dhdy.tif ' \
