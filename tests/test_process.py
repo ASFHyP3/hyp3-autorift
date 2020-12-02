@@ -39,3 +39,13 @@ def test_get_product_name():
     }
     name = get_product_name(**payload)
     assert match(r'S1AB_20150101T230038_20200924T005722_VVO2093_VEL40_A_[0-9A-F]{4}$', name)
+
+    payload = {
+        'reference_name': 'S2B_MSIL2A_20200903T151809_N0214_R068_T22WEB_20200903T194353',
+        'secondary_name': 'S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
+        'orbit_files': None,
+        'band': 'B03',
+        'pixel_spacing': 40,
+    }
+    name = get_product_name(**payload)
+    assert match(r'S2BB_20200903T151809_20200913T151809_B03010_VEL40_A_[0-9A-F]{4}$', name)
