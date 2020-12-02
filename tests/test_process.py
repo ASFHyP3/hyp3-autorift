@@ -43,7 +43,6 @@ def test_get_product_name():
     payload = {
         'reference_name': 'S2B_MSIL2A_20200903T151809_N0214_R068_T22WEB_20200903T194353',
         'secondary_name': 'S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
-        'orbit_files': None,
         'band': 'B03',
         'pixel_spacing': 40,
     }
