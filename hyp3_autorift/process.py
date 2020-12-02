@@ -61,7 +61,7 @@ def get_datetime(scene_name):
     return scene_name[date_slice]
 
 
-def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240):
+def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
     mission = reference_name[0:2]
     plat1 = reference_name[2]
     plat2 = secondary_name[2]
@@ -73,25 +73,32 @@ def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=
     sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
     days = abs((ref_datetime - sec_datetime).days)
 
-    pol1 = reference_name[15:16]
-    pol2 = secondary_name[15:16]
-    orb = least_precise_orbit_of(orbit_files)
+    if reference_name.startswith('S1'):
+        polarization1 = reference_name[15:16]
+        polarization2 = secondary_name[15:16]
+        orbit = least_precise_orbit_of(orbit_files)
+        misc = polarization1 + polarization2 + orbit
+    else:
+        misc = band
+
     product_id = token_hex(2).upper()
 
-    return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}' \
-           f'_A_{product_id}'
+    return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{misc}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
-def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B03') -> Path:
+def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B08') -> Path:
     """Process a Sentinel-1, Sentinel-2, or Landsat image pair
 
     Args:
-        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat scene
-        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat scene
+        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat 8 scene
+        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat 8 scene
         polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
-        band: Band to process for Sentinel-2 or Landsat scenes
+        band: Band to process for Sentinel-2 or Landsat 8 scenes
     """
 
+    orbits = None
+    reference_url = None
+    secondary_url = None
     if reference.startswith('S1'):
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)
@@ -190,7 +197,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
     del velocity_band, browse_tif, velocity_tif
 
-    product_name = get_product_name(reference, secondary, (reference_state_vec, secondary_state_vec))  # TODO fix for S2
+    product_name = get_product_name(reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
+                                    band=band)
     makeAsfBrowse(str(browse_file), product_name)
 
     netcdf_files = glob.glob('*.nc')
