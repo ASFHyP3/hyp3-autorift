@@ -61,7 +61,7 @@ def get_datetime(scene_name):
     return scene_name[date_slice]
 
 
-def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240, band='B03'):
+def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
     mission = reference_name[0:2]
     plat1 = reference_name[2]
     plat2 = secondary_name[2]
