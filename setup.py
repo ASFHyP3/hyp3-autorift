@@ -49,6 +49,7 @@ setup(
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',
+            'responses',
         ]
     },
 

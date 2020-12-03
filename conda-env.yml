@@ -11,6 +11,7 @@ dependencies:
   - pytest
   - pytest-console-scripts
   - pytest-cov
+  - responses
   - setuptools
   - setuptools_scm
   - wheel

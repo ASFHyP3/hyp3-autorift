@@ -26,10 +26,11 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
+SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+
 
 def get_s2_metadata(scene_name):
-    search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
-    response = requests.get(f'{search_url}/{scene_name}')
+    response = requests.get(f'{SEARCH_URL}/{scene_name}')
     response.raise_for_status()
 
     if response.json().get('code') != 404:
@@ -42,10 +43,12 @@ def get_s2_metadata(scene_name):
             }
         }
     }
-    response = requests.post(search_url, json=payload)
+    response = requests.post(SEARCH_URL, json=payload)
     response.raise_for_status()
+    print(response.json())
     if response.json()['numberReturned'] == 0:
-        raise Exception(f'Scene could not be found: {scene_name}')
+        raise ValueError(f'Scene could not be found: {scene_name}')
+    print(response.json())
     return response.json()['features'][0]
 
 
@@ -60,10 +63,12 @@ def least_precise_orbit_of(orbits):
 def get_datetime(scene_name):
     if scene_name.startswith('S1'):
         date_slice = slice(17, 32)
-    elif scene_name.startswith('S2'):
+    elif len(scene_name) > 24 and scene_name.startswith('S2'):
         date_slice = slice(11, 26)
-    # elif scene_name.startswith('L'):  # TODO landsat has a different srtptime format
-    #     date_slice = slice(17, 25)
+    elif scene_name.startswith('S2'):
+        date_slice = slice(10, 18)
+    elif scene_name.startswith('L'):
+        date_slice = slice(17, 25)
     else:
         raise ValueError(f'Unsupported scene format: {scene_name}')
     return scene_name[date_slice]
@@ -107,6 +112,9 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     orbits = None
     reference_url = None
     secondary_url = None
+    reference_state_vec = None
+    secondary_state_vec = None
+
     if reference.startswith('S1'):
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)
@@ -122,12 +130,13 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
     else:
-        reference_state_vec = None
-        secondary_state_vec = None
         reference_metadata = get_s2_metadata(reference)
-
+        reference = reference_metadata['properties']['sentinel:product_id']
         reference_url = reference_metadata['assets'][band]['href']
-        secondary_url = get_s2_metadata(secondary)['assets'][band]['href']
+
+        secondary_metadata = get_s2_metadata(secondary)
+        secondary = secondary_metadata['properties']['sentinel:product_id']
+        secondary_url = secondary_metadata['assets'][band]['href']
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])

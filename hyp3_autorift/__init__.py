@@ -2,8 +2,6 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-from hyp3_autorift.process import process
-
 try:
     __version__ = version(__name__)
 except PackageNotFoundError:
@@ -15,5 +13,4 @@ except PackageNotFoundError:
 
 __all__ = [
     '__version__',
-    'process'
 ]
