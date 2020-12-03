@@ -45,10 +45,8 @@ def get_s2_metadata(scene_name):
     }
     response = requests.post(S2_SEARCH_URL, json=payload)
     response.raise_for_status()
-    print(response.json())
-    if response.json()['numberReturned'] == 0:
+    if not response.json().get('numberReturned'):
         raise ValueError(f'Scene could not be found: {scene_name}')
-    print(response.json())
     return response.json()['features'][0]
 
 
@@ -91,7 +89,7 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
         orbit = least_precise_orbit_of(orbit_files)
         misc = polarization1 + polarization2 + orbit
     else:
-        misc = band
+        misc = band.ljust(3, '-')
 
     product_id = token_hex(2).upper()
 

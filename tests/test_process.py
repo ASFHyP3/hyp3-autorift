@@ -125,8 +125,8 @@ def test_get_product_name():
     payload = {
         'reference_name': 'LE07_L2SP_233095_20200306_20200822_02_T2',
         'secondary_name': 'LE07_L2SP_233095_20190115_20200827_02_T2',
-        'band': 'B08',
+        'band': 'B7',
         'pixel_spacing': 40,
     }
     name = process.get_product_name(**payload)
-    assert match(r'LE77_20200306T000000_20190115T000000_B08416_VEL40_A_[0-9A-F]{4}$', name)
+    assert match(r'LE77_20200306T000000_20190115T000000_B7-416_VEL40_A_[0-9A-F]{4}$', name)
