@@ -11,11 +11,11 @@ from hyp3_autorift import process
 def test_get_s2_metadata_not_found():
 
     responses.add(
-        responses.GET, f'{process.SEARCH_URL}/foo',
+        responses.GET, f'{process.S2_SEARCH_URL}/foo',
         body='{"code": 404, "message": "Item not found"}', status=200,
     )
     responses.add(
-        responses.POST, process.SEARCH_URL,
+        responses.POST, process.S2_SEARCH_URL,
         body='{"numberReturned": 0}', status=200,
     )
 
@@ -26,7 +26,7 @@ def test_get_s2_metadata_not_found():
 @responses.activate
 def test_get_s2_metadata_cog_id():
     responses.add(
-        responses.GET, f'{process.SEARCH_URL}/2FS2B_22WEB_20200913_0_L2A',
+        responses.GET, f'{process.S2_SEARCH_URL}/2FS2B_22WEB_20200913_0_L2A',
         body='{"foo": "bar"}', status=200,
     )
 
@@ -36,11 +36,11 @@ def test_get_s2_metadata_cog_id():
 @responses.activate
 def test_get_s2_metadata_esa_id():
     responses.add(
-        responses.GET, f'{process.SEARCH_URL}/S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
+        responses.GET, f'{process.S2_SEARCH_URL}/S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
         body='{"code": 404, "message": "Item not found"}', status=200,
     )
     responses.add(
-        responses.POST, process.SEARCH_URL,
+        responses.POST, process.S2_SEARCH_URL,
         body='{"numberReturned": 1, "features": [{"foo": "bar"}]}', status=200,
     )
 

@@ -26,11 +26,11 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
-SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
 
 
 def get_s2_metadata(scene_name):
-    response = requests.get(f'{SEARCH_URL}/{scene_name}')
+    response = requests.get(f'{S2_SEARCH_URL}/{scene_name}')
     response.raise_for_status()
 
     if response.json().get('code') != 404:
@@ -43,7 +43,7 @@ def get_s2_metadata(scene_name):
             }
         }
     }
-    response = requests.post(SEARCH_URL, json=payload)
+    response = requests.post(S2_SEARCH_URL, json=payload)
     response.raise_for_status()
     print(response.json())
     if response.json()['numberReturned'] == 0:
