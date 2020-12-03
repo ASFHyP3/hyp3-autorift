@@ -62,16 +62,15 @@ def least_precise_orbit_of(orbits):
 
 def get_datetime(scene_name):
     if scene_name.startswith('S1'):
-        date_slice = slice(17, 32)
-    elif len(scene_name) > 24 and scene_name.startswith('S2'):
-        date_slice = slice(11, 26)
-    elif scene_name.startswith('S2'):
-        date_slice = slice(10, 18)
-    elif scene_name.startswith('L'):
-        date_slice = slice(17, 25)
-    else:
-        raise ValueError(f'Unsupported scene format: {scene_name}')
-    return scene_name[date_slice]
+        return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S2') and len(scene_name) > 24:  # ESA
+        return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S2'):  # COG
+        return datetime.strptime(scene_name[10:18], '%Y%m%d')
+    if scene_name.startswith('L'):
+        return datetime.strptime(scene_name[17:25], '%Y%m%d')
+
+    raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
 def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
@@ -79,11 +78,8 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
     plat1 = reference_name[2]
     plat2 = secondary_name[2]
 
-    datetime1 = get_datetime(reference_name)
-    datetime2 = get_datetime(secondary_name)
-
-    ref_datetime = datetime.strptime(datetime1, '%Y%m%dT%H%M%S')
-    sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
+    ref_datetime = get_datetime(reference_name)
+    sec_datetime = get_datetime(secondary_name)
     days = abs((ref_datetime - sec_datetime).days)
 
     if reference_name.startswith('S1'):

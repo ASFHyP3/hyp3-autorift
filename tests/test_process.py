@@ -1,3 +1,4 @@
+from datetime import datetime
 from re import match
 
 import pytest
@@ -48,25 +49,25 @@ def test_get_s2_metadata_esa_id():
 
 def test_get_datetime():
     granule = 'S1B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81'
-    assert process.get_datetime(granule) == '20201203T095903'
+    assert process.get_datetime(granule) == datetime(year=2020, month=12, day=3, hour=9, minute=59, second=3)
 
     granule = 'S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2'
-    assert process.get_datetime(granule) == '20180605T233148'
+    assert process.get_datetime(granule) == datetime(year=2018, month=6, day=5, hour=23, minute=31, second=48)
 
     granule = 'S2B_22WEB_20200913_0_L2A'
-    assert process.get_datetime(granule) == '20200913'
+    assert process.get_datetime(granule) == datetime(year=2020, month=9, day=13)
 
     granule = 'S2A_11UNA_20201203_0_L2A'
-    assert process.get_datetime(granule) == '20201203'
+    assert process.get_datetime(granule) == datetime(year=2020, month=12, day=3)
 
     granule = 'S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530'
-    assert process.get_datetime(granule) == '20200913T151809'
+    assert process.get_datetime(granule) == datetime(year=2020, month=9, day=13, hour=15, minute=18, second=9)
 
     granule = 'S2A_MSIL2A_20201203T190751_N0214_R013_T11UNA_20201203T195322'
-    assert process.get_datetime(granule) == '20201203T190751'
+    assert process.get_datetime(granule) == datetime(year=2020, month=12, day=3, hour=19, minute=7, second=51)
 
     granule = 'LE07_L2SP_233095_20200102_20200822_02_T2'
-    assert process.get_datetime(granule) == '20200102'
+    assert process.get_datetime(granule) == datetime(year=2020, month=1, day=2)
 
     with pytest.raises(ValueError):
         process.get_datetime('AB_adsflafjladsf')
