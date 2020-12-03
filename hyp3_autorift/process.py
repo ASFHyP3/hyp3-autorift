@@ -44,7 +44,7 @@ def get_s2_metadata(scene_name):
     }
     response = requests.post(search_url, json=payload)
     response.raise_for_status()
-    if len(response.json()['numberReturned']) == 0:
+    if response.json()['numberReturned'] == 0:
         raise Exception(f'Scene could not be found: {scene_name}')
     return response.json()['features'][0]
 
