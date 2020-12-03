@@ -75,12 +75,15 @@ def get_datetime(scene_name):
 
 def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
     mission = reference_name[0:2]
-    plat1 = reference_name[2]
-    plat2 = secondary_name[2]
+    plat1 = reference_name.split('_')[0][-1]
+    plat2 = secondary_name.split('_')[0][-1]
 
     ref_datetime = get_datetime(reference_name)
     sec_datetime = get_datetime(secondary_name)
     days = abs((ref_datetime - sec_datetime).days)
+
+    datetime1 = ref_datetime.strftime('%Y%m%dT%H%M%S')
+    datetime2 = sec_datetime.strftime('%Y%m%dT%H%M%S')
 
     if reference_name.startswith('S1'):
         polarization1 = reference_name[15:16]
