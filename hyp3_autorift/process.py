@@ -12,6 +12,7 @@ from pathlib import Path
 from secrets import token_hex
 
 import numpy as np
+import requests
 from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
 from hyp3lib.file_subroutines import mkdir_p
@@ -25,22 +26,19 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
-_PRODUCT_LIST = [
-    'offset.tif',
-    'velocity.tif',
-    'velocity_browse.tif',
-    'velocity_browse.kmz',
-    'velocity_browse.png',
-    'velocity_browse.png.aux.xml',
-    'window_chip_size_max.tif',
-    'window_chip_size_min.tif',
-    'window_location.tif',
-    'window_offset.tif',
-    'window_rdr_off2vel_x_vec.tif',
-    'window_rdr_off2vel_y_vec.tif',
-    'window_search_range.tif',
-    'window_stable_surface_mask.tif',
-]
+
+def get_s2_metadata(scene_name):
+    search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+    payload = {
+        'query': {
+            'sentinel:product_id': {
+                'eq': scene_name,
+            }
+        }
+    }
+    response = requests.post(search_url, json=payload)
+    response.raise_for_status()
+    return response.json()['features'][0]
 
 
 def least_precise_orbit_of(orbits):
@@ -51,109 +49,136 @@ def least_precise_orbit_of(orbits):
     return 'P'
 
 
-def get_product_name(reference_name, secondary_name, orbit_files, pixel_spacing=240):
+def get_datetime(scene_name):
+    if scene_name.startswith('S1'):
+        date_slice = slice(17, 32)
+    elif scene_name.startswith('S2'):
+        date_slice = slice(11, 26)
+    # elif scene_name.startswith('L'):  # TODO landsat has a different srtptime format
+    #     date_slice = slice(17, 25)
+    else:
+        raise ValueError(f'Unsupported scene format: {scene_name}')
+    return scene_name[date_slice]
+
+
+def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
+    mission = reference_name[0:2]
     plat1 = reference_name[2]
     plat2 = secondary_name[2]
 
-    datetime1 = reference_name[17:32]
-    datetime2 = secondary_name[17:32]
+    datetime1 = get_datetime(reference_name)
+    datetime2 = get_datetime(secondary_name)
 
     ref_datetime = datetime.strptime(datetime1, '%Y%m%dT%H%M%S')
     sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
     days = abs((ref_datetime - sec_datetime).days)
 
-    pol1 = reference_name[15:16]
-    pol2 = secondary_name[15:16]
-    orb = least_precise_orbit_of(orbit_files)
+    if reference_name.startswith('S1'):
+        polarization1 = reference_name[15:16]
+        polarization2 = secondary_name[15:16]
+        orbit = least_precise_orbit_of(orbit_files)
+        misc = polarization1 + polarization2 + orbit
+    else:
+        misc = band
+
     product_id = token_hex(2).upper()
 
-    return f'S1{plat1}{plat2}_{datetime1}_{datetime2}_{pol1}{pol2}{orb}{days:03}_VEL{pixel_spacing}_A_{product_id}'
+    return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{misc}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
-def process(reference, secondary, download=False, polarization='hh', process_dir=None, product=False) -> Path:
-    """Process a Sentinel-1 image pair
+def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B08') -> Path:
+    """Process a Sentinel-1, Sentinel-2, or Landsat image pair
 
     Args:
-        reference: Path to reference Sentinel-1 SAFE zip archive
-        secondary: Path to secondary Sentinel-1 SAFE zip archive
-        download: If True, try and download the granules from ASF to the
-            current working directory (default: False)
-        polarization: Polarization of Sentinel-1 scene (default: 'hh')
-        process_dir: Path to a directory for processing inside
-            (default: None; use current working directory)
-        product: Create a product directory in the current working directory with
-            copies of the product-level files (no intermediate files; default: False)
+        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat 8 scene
+        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat 8 scene
+        polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
+        band: Band to process for Sentinel-2 or Landsat 8 scenes
     """
 
-    # Ensure we have absolute paths
-    reference = Path(reference).resolve()
-    secondary = Path(secondary).resolve()
-
-    product_dir = os.path.join(os.getcwd(), 'PRODUCT')
-
-    if download:
+    orbits = None
+    reference_url = None
+    secondary_url = None
+    if reference.startswith('S1'):
         for scene in [reference, secondary]:
-            if not scene.is_file():
-                scene_url = get_download_url(scene.stem)
-                download_file(scene_url, directory=scene.parent, chunk_size=5242880)
+            scene_url = get_download_url(scene)
+            download_file(scene_url, chunk_size=5242880)
 
-    orbits = Path('Orbits').resolve()
-    mkdir_p(orbits)
-    reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference.stem, directory=orbits)
-    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary.stem, directory=orbits)
-    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
+        orbits = Path('Orbits').resolve()
+        mkdir_p(orbits)
+        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits)
+        log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
+        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
+        log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
-    lat_limits, lon_limits = geometry.bounding_box(
-        str(reference), orbits=orbits, polarization=polarization
-    )
+        lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
+
+    else:
+        reference_state_vec = None
+        secondary_state_vec = None
+        reference_metadata = get_s2_metadata(reference)
+
+        reference_url = reference_metadata['assets'][band]['href']
+        secondary_url = get_s2_metadata(secondary)['assets'][band]['href']
+
+        bbox = reference_metadata['bbox']
+        lat_limits = (bbox[1], bbox[3])
+        lon_limits = (bbox[0], bbox[2])
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
+    if reference.startswith('S1'):
+        dem_dir = os.path.join(os.getcwd(), 'DEM')
+        mkdir_p(dem_dir)
+        io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
+        dem_prefix = os.path.join(dem_dir, dem)
+    else:
+        # TODO move this to find_jpl_dem?
+        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'
 
-    dem_dir = os.path.join(os.getcwd(), 'DEM')
-    mkdir_p(dem_dir)
-    if download:
-        io.fetch_jpl_tifs(ice_sheet=dem[:3], target_dir=dem_dir)
+    geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
+                         f'-sx {dem_prefix}_dhdx.tif -sy {dem_prefix}_dhdy.tif ' \
+                         f'-vx {dem_prefix}_vx0.tif -vy {dem_prefix}_vy0.tif ' \
+                         f'-srx {dem_prefix}_vxSearchRange.tif -sry {dem_prefix}_vySearchRange.tif ' \
+                         f'-csminx {dem_prefix}_xMinChipSize.tif -csminy {dem_prefix}_yMinChipSize.tif ' \
+                         f'-csmaxx {dem_prefix}_xMaxChipSize.tif -csmaxy {dem_prefix}_yMaxChipSize.tif'
+    autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif ' \
+                          '-csmin window_chip_size_min.tif -csmax window_chip_size_max.tif ' \
+                          '-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif ' \
+                          '-ssm window_stable_surface_mask.tif'
 
-    if process_dir:
-        mkdir_p(process_dir)
-        os.chdir(process_dir)
+    if reference.startswith('S1'):
+        isce_dem = geometry.prep_isce_dem(f'{dem_prefix}_h.tif', lat_limits, lon_limits)
 
-    dem_file = os.path.join(dem_dir, dem)
-    isce_dem = geometry.prep_isce_dem(dem_file, lat_limits, lon_limits)
+        io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
-    io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
-
-    with open('topsApp.txt', 'w') as f:
-        cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
-        execute(cmd, logfile=f, uselogging=True)
-
-    m_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
-    s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
-
-    with open('createImages.txt', 'w') as f:
-        for slc in [m_slc, s_slc]:
-            cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
+        with open('topsApp.txt', 'w') as f:
+            cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
             execute(cmd, logfile=f, uselogging=True)
 
-    in_file_base = dem_file.replace('_h.tif', '')
-    with open('testGeogrid.txt', 'w') as f:
-        cmd = f'testGeogrid_ISCE.py -r reference -s secondary' \
-              f' -d {dem_file} -ssm {in_file_base}_StableSurface.tif' \
-              f' -sx {in_file_base}_dhdx.tif -sy {in_file_base}_dhdy.tif' \
-              f' -vx {in_file_base}_vx0.tif -vy {in_file_base}_vy0.tif' \
-              f' -srx {in_file_base}_vxSearchRange.tif -sry {in_file_base}_vySearchRange.tif' \
-              f' -csminx {in_file_base}_xMinChipSize.tif -csminy {in_file_base}_yMinChipSize.tif' \
-              f' -csmaxx {in_file_base}_xMaxChipSize.tif -csmaxy {in_file_base}_yMaxChipSize.tif'
-        execute(cmd, logfile=f, uselogging=True)
+        r_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
+        s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
-    with open('testautoRIFT.txt', 'w') as f:
-        cmd = f'testautoRIFT_ISCE.py' \
-              f' -r {m_slc} -s {s_slc} -g window_location.tif -o window_offset.tif' \
-              f' -sr window_search_range.tif -csmin window_chip_size_min.tif -csmax window_chip_size_max.tif' \
-              f' -vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif' \
-              f' -ssm window_stable_surface_mask.tif -nc S'
-        execute(cmd, logfile=f, uselogging=True)
+        with open('createImages.txt', 'w') as f:
+            for slc in [r_slc, s_slc]:
+                cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
+                execute(cmd, logfile=f, uselogging=True)
+
+        with open('testGeogrid.txt', 'w') as f:
+            cmd = f'testGeogrid_ISCE.py -r reference -s secondary {geogrid_parameters}'
+            execute(cmd, logfile=f, uselogging=True)
+
+        with open('testautoRIFT.txt', 'w') as f:
+            cmd = f'testautoRIFT_ISCE.py -r {r_slc} -s {s_slc} {autorift_parameters} -nc S'
+            execute(cmd, logfile=f, uselogging=True)
+
+    else:
+        with open('testGeogrid.txt', 'w') as f:
+            cmd = f'testGeogridOptical.py -r {reference_url} -s {secondary_url} {geogrid_parameters} -urlflag 1'
+            execute(cmd, logfile=f, uselogging=True)
+
+        with open('testautoRIFT.txt', 'w') as f:
+            cmd = f'testautoRIFT.py -r {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -urlflag 1'
+            execute(cmd, logfile=f, uselogging=True)
 
     velocity_tif = gdal.Open('velocity.tif')
     x_velocity = np.ma.masked_invalid(velocity_tif.GetRasterBand(1).ReadAsArray())
@@ -172,7 +197,8 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
 
     del velocity_band, browse_tif, velocity_tif
 
-    product_name = get_product_name(reference.name, secondary.name, (reference_state_vec, secondary_state_vec))
+    product_name = get_product_name(reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
+                                    band=band)
     makeAsfBrowse(str(browse_file), product_name)
 
     netcdf_files = glob.glob('*.nc')
@@ -181,16 +207,8 @@ def process(reference, secondary, download=False, polarization='hh', process_dir
     if len(netcdf_files) > 1:
         log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
-    if product:
-        mkdir_p(product_dir)
-        for f in _PRODUCT_LIST:
-            shutil.copyfile(f, os.path.join(product_dir, f))
-
-        product_file = Path(product_dir).resolve() / f'{product_name}.nc'
-        shutil.copyfile(netcdf_files[0], product_file)
-    else:
-        product_file = Path(f'{product_name}.nc').resolve()
-        shutil.move(netcdf_files[0], f'{product_name}.nc')
+    product_file = Path(f'{product_name}.nc').resolve()
+    shutil.move(netcdf_files[0], f'{product_name}.nc')
 
     return product_file
 
@@ -205,17 +223,8 @@ def main():
                         help='Reference Sentinel-1 SAFE zip archive')
     parser.add_argument('secondary', type=os.path.abspath,
                         help='Secondary Sentinel-1 SAFE zip archive')
-    parser.add_argument('-d', '--download', action='store_true',
-                        help='Download the granules from ASF to the current'
-                             'working directory')
     parser.add_argument('-p', '--polarization', default='hh',
                         help='Polarization of the Sentinel-1 scenes')
-    parser.add_argument('--process-dir', type=os.path.abspath,
-                        help='If given, do processing inside this directory, otherwise, '
-                             'use the current working directory')
-    parser.add_argument('--product', action='store_true',
-                        help='Create a product directory in the current working directory '
-                             'with copies of the product-level files (no intermediate files)')
     args = parser.parse_args()
 
     process(**args.__dict__)

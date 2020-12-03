@@ -11,7 +11,6 @@ from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import write_credentials_to_netrc_file
 from hyp3lib.image import create_thumbnail
 from hyp3proclib import (
-    earlier_granule_first,
     extra_arg_is,
     failure,
     success,
@@ -41,10 +40,25 @@ def entry():
     )
 
 
+def earlier_granule_first(g1, g2):
+    if g1.startswith('S1'):
+        date_slice = slice(17, 32)
+    elif g1.startswith('S2'):
+        date_slice = slice(11, 26)
+    elif g1.startswith('L'):
+        date_slice = slice(17, 25)
+    else:
+        raise ValueError(f'Unsupported scene format: {g1}')
+
+    if g1[date_slice] <= g2[date_slice]:
+        return g1, g2
+    return g2, g1
+
+
 def main_v2():
     parser = ArgumentParser()
-    parser.add_argument('--username', required=True)
-    parser.add_argument('--password', required=True)
+    parser.add_argument('--username')
+    parser.add_argument('--password')
     parser.add_argument('--bucket')
     parser.add_argument('--bucket-prefix', default='')
     parser.add_argument('granules', type=str.split, nargs='+')
@@ -54,11 +68,12 @@ def main_v2():
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
 
-    write_credentials_to_netrc_file(args.username, args.password)
+    if args.username and args.password:
+        write_credentials_to_netrc_file(args.username, args.password)
 
     g1, g2 = earlier_granule_first(args.granules[0], args.granules[1])
 
-    product_file = hyp3_autorift.process(f'{g1}.zip', f'{g2}.zip', download=True)
+    product_file = hyp3_autorift.process(g1, g2)
 
     browse_file = product_file.with_suffix('.png')
 
@@ -84,17 +99,7 @@ def hyp3_process(cfg, n):
         cfg['ftd'] = '_'.join([g1[17:17+15], g2[17:17+15]])
         log.debug(f'FTD dir is: {cfg["ftd"]}')
 
-        autorift_args = [f'{g1}.zip', f'{g2}.zip', '--process-dir', f'{cfg["ftd"]}', '--download']
-        if not extra_arg_is(cfg, 'intermediate_files', 'no'):  # handle processes b4 option added
-            autorift_args.append('--product')
-
-        product_file = hyp3_autorift.process(
-            reference=f'{g1}.zip',
-            secondary=f'{g2}.zip',
-            download=True,
-            process_dir=cfg["ftd"],
-            product=extra_arg_is(cfg, 'intermediate_files', 'yes')
-        )
+        product_file = hyp3_autorift.process(g1, g2)
         cfg['attachment'] = str(product_file.with_suffix('.png'))
         cfg['email_text'] = ' '  # fix line break in email
 
