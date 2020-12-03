@@ -30,19 +30,23 @@ log = logging.getLogger(__name__)
 def get_s2_metadata(scene_name):
     search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
     response = requests.get(f'{search_url}/{scene_name}')
-    if response.status_code == 404:
-        payload = {
-            'query': {
-                'sentinel:product_id': {
-                    'eq': scene_name,
-                }
+    response.raise_for_status()
+
+    if response.json().get('code') != 404:
+        return response.json()
+
+    payload = {
+        'query': {
+            'sentinel:product_id': {
+                'eq': scene_name,
             }
         }
-        response = requests.post(search_url, json=payload)
-        response.raise_for_status()
-        return response.json()['features'][0]
+    }
+    response = requests.post(search_url, json=payload)
     response.raise_for_status()
-    return response.json()
+    if len(response.json()['numberReturned']) == 0:
+        raise Exception(f'Scene could not be found: {scene_name}')
+    return response.json()['features'][0]
 
 
 def least_precise_orbit_of(orbits):
