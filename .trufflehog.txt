@@ -2,3 +2,4 @@
 .gitlab-ci.yml
 Dockerfile
 .*install_autoRIFT_ISCE_conda.sh$
+.*single_scene.*_full.py$

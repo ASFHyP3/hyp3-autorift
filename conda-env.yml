@@ -11,18 +11,21 @@ dependencies:
   - pytest
   - pytest-console-scripts
   - pytest-cov
+  - responses
   - setuptools
   - setuptools_scm
   - wheel
   # For running
   - gdal>=3
-  - hyp3lib=1.6.1
-  - isce2>=2.4.1
+  - hyp3lib=1.6.2
+  - isce2=2.4.2
+  - autorift=1.0.8
   - boto3
   - importlib_metadata
   - netCDF4
   - numpy
   - psycopg2  # missing hyp3proclib dep
+  - requests
   - scikit-image  # missing autoRIFT dep
   - scipy
   - pip:

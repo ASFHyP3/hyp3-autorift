@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This is a substantially modified copy of the testautoRIFT_ISCE.py script
+# This is a substantially modified copy of the testautoRIFT.py script
 # provided in the autoRIFT release, See the LICENSE file in this directory
 # for the original terms and conditions, and README.md and CHANGES.diff for a detailed
 # description of the changes. Notice, all changes are released under the terms
@@ -41,9 +41,8 @@ import time
 import cv2
 import numpy as np
 import scipy.io as sio
-import isce
-from contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
-from contrib.geo_autoRIFT.geogrid import GeogridOptical
+from autoRIFT import autoRIFT
+from geogrid import GeogridOptical
 from isceobj.Util.ImageUtil import ImageLib as IML
 from osgeo import gdal
 
@@ -124,6 +123,7 @@ def loadProductOptical(filename):
 
     return img
 
+
 def loadProductOpticalURL(file_r, file_s):
     '''
     Load the product using Product Manager.
@@ -154,8 +154,8 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     '''
 
 
-    obj = autoRIFT_ISCE()
-    obj.configure()
+    obj = autoRIFT()
+#    obj.configure()
 
 #    ##########     uncomment if starting from preprocessed images
 #    I1 = I1.astype(np.uint8)
@@ -290,6 +290,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     print("Uniform Data Type Done!!!")
     print(time.time()-t1)
 
+
 #    pdb.set_trace()
 
 #    obj.sparseSearchSampleRate = 16
@@ -304,6 +305,9 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
             obj.OverSampleRatio = {obj.ChipSize0X:16,obj.ChipSize0X*2:32,obj.ChipSize0X*4:64,obj.ChipSize0X*8:64}
         else:
             obj.OverSampleRatio = {obj.ChipSize0X:32,obj.ChipSize0X*2:64,obj.ChipSize0X*4:128,obj.ChipSize0X*8:128}
+
+
+
 
 
 
@@ -411,7 +415,6 @@ def main():
     CSMINy0 = None
     CSMAXx0 = None
     CSMAXy0 = None
-    SSM = None
     noDataMask = None
     nodata = None
 
@@ -472,7 +475,6 @@ def main():
         SSM = SSM.astype('bool')
         band=None
         ds=None
-
 
 
     Dx, Dy, InterpMask, ChipSizeX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(data_r, data_s, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, inps.optical_flag, nodata)
@@ -666,7 +668,6 @@ def main():
                 VY = offset2vy_1 * DX + offset2vy_2 * DY
                 VX = VX.astype(np.float32)
                 VY = VY.astype(np.float32)
-
             ########################################################################################
                 ############   netCDF packaging for Sentinel and Landsat dataset; can add other sensor format as well
                 if inps.nc_sensor == "S":
@@ -677,6 +678,7 @@ def main():
                     epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
     #                print (str(rangePixelSize)+"      "+str(azimuthPixelSize))
 
+
                     runCmd('topsinsar_filename.py')
                     conts = sio.loadmat('topsinsar_filename.mat')
                     reference_filename = conts['reference_filename'][0]
@@ -686,7 +688,7 @@ def main():
                     reference_split = str.split(reference_filename,'_')
                     secondary_split = str.split(secondary_filename,'_')
 
-                    version = '1.0.7'
+                    version = '1.0.8'
                     pair_type = 'radar'
                     detection_method = 'feature'
                     coordinates = 'radar'
@@ -764,7 +766,7 @@ def main():
                     reference_time = datetime.time(int(reference_time[0]),int(reference_time[1]),int(float(reference_time[2])))
                     secondary_time = datetime.time(int(secondary_time[0]),int(secondary_time[1]),int(float(secondary_time[2])))
 
-                    version = '1.0.7'
+                    version = '1.0.8'
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
@@ -844,7 +846,7 @@ def main():
                     reference_time = datetime.time(int(reference_time[0]),int(reference_time[1]),int(float(reference_time[2])))
                     secondary_time = datetime.time(int(secondary_time[0]),int(secondary_time[1]),int(float(secondary_time[2])))
 
-                    version = '1.0.7'
+                    version = '1.0.8'
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'

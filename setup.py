@@ -27,7 +27,7 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
-        ],
+    ],
 
     python_requires='~=3.8',
 
@@ -35,11 +35,12 @@ setup(
         'boto3',
         'botocore',
         'gdal',
-        'hyp3lib==1.6.1',
+        'hyp3lib==1.6.2',
         'hyp3proclib',
         'importlib_metadata',
         'netCDF4',
         'numpy',
+        'requests',
         'scipy',
     ],
 
@@ -48,6 +49,7 @@ setup(
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',
+            'responses',
         ]
     },
 
@@ -60,7 +62,9 @@ setup(
         'autorift_proc_pair = hyp3_autorift.process:main',
         'testautoRIFT_ISCE.py = hyp3_autorift.vend.testautoRIFT_ISCE:main',
         'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main',
-        # FIXME: Only needed for testautoRIFT_ISCE.py
+        'testautoRIFT.py = hyp3_autorift.vend.testautoRIFT:main',
+        'testGeogridOptical.py = hyp3_autorift.vend.testGeogridOptical:main',
+        # FIXME: Only needed for testautoRIFT.py and testautoRIFT_ISCE.py
         'topsinsar_filename.py = hyp3_autorift.io:topsinsar_mat',
         ]
     },

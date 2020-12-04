@@ -91,10 +91,10 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
 
 def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
 
-    dems = ['GRE240m_h.tif', 'ANT240m_h.tif']
+    dems = ['GRE240m', 'ANT240m']
     bounding_dem = None
     for dem in dems:
-        dem_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}'
+        dem_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}_h.tif'
         log.info(f'Checking DEM: {dem_file}')
         dem_ds = gdal.Open(dem_file, gdal.GA_ReadOnly)
         dem_sr = dem_ds.GetSpatialRef()
