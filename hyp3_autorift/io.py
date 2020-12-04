@@ -33,6 +33,8 @@ def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
         'StableSurface',
         'dhdx',
         'dhdy',
+        'dhdxs',
+        'dhdys',
         'vx0',
         'vy0',
         'vxSearchRange',
