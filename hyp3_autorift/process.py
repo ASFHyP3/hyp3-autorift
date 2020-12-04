@@ -26,9 +26,16 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
+S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+
 
 def get_s2_metadata(scene_name):
-    search_url = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+    response = requests.get(f'{S2_SEARCH_URL}/{scene_name}')
+    response.raise_for_status()
+
+    if response.json().get('code') != 404:
+        return response.json()
+
     payload = {
         'query': {
             'sentinel:product_id': {
@@ -36,8 +43,10 @@ def get_s2_metadata(scene_name):
             }
         }
     }
-    response = requests.post(search_url, json=payload)
+    response = requests.post(S2_SEARCH_URL, json=payload)
     response.raise_for_status()
+    if not response.json().get('numberReturned'):
+        raise ValueError(f'Scene could not be found: {scene_name}')
     return response.json()['features'][0]
 
 
@@ -51,27 +60,28 @@ def least_precise_orbit_of(orbits):
 
 def get_datetime(scene_name):
     if scene_name.startswith('S1'):
-        date_slice = slice(17, 32)
-    elif scene_name.startswith('S2'):
-        date_slice = slice(11, 26)
-    # elif scene_name.startswith('L'):  # TODO landsat has a different srtptime format
-    #     date_slice = slice(17, 25)
-    else:
-        raise ValueError(f'Unsupported scene format: {scene_name}')
-    return scene_name[date_slice]
+        return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S2') and len(scene_name) > 24:  # ESA
+        return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S2'):  # COG
+        return datetime.strptime(scene_name[10:18], '%Y%m%d')
+    if scene_name.startswith('L'):
+        return datetime.strptime(scene_name[17:25], '%Y%m%d')
+
+    raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
 def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
     mission = reference_name[0:2]
-    plat1 = reference_name[2]
-    plat2 = secondary_name[2]
+    plat1 = reference_name.split('_')[0][-1]
+    plat2 = secondary_name.split('_')[0][-1]
 
-    datetime1 = get_datetime(reference_name)
-    datetime2 = get_datetime(secondary_name)
-
-    ref_datetime = datetime.strptime(datetime1, '%Y%m%dT%H%M%S')
-    sec_datetime = datetime.strptime(datetime2, '%Y%m%dT%H%M%S')
+    ref_datetime = get_datetime(reference_name)
+    sec_datetime = get_datetime(secondary_name)
     days = abs((ref_datetime - sec_datetime).days)
+
+    datetime1 = ref_datetime.strftime('%Y%m%dT%H%M%S')
+    datetime2 = sec_datetime.strftime('%Y%m%dT%H%M%S')
 
     if reference_name.startswith('S1'):
         polarization1 = reference_name[15:16]
@@ -79,7 +89,7 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
         orbit = least_precise_orbit_of(orbit_files)
         misc = polarization1 + polarization2 + orbit
     else:
-        misc = band
+        misc = band.ljust(3, '-')
 
     product_id = token_hex(2).upper()
 
@@ -99,6 +109,9 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     orbits = None
     reference_url = None
     secondary_url = None
+    reference_state_vec = None
+    secondary_state_vec = None
+
     if reference.startswith('S1'):
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)
@@ -114,12 +127,13 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
     else:
-        reference_state_vec = None
-        secondary_state_vec = None
         reference_metadata = get_s2_metadata(reference)
-
+        reference = reference_metadata['properties']['sentinel:product_id']
         reference_url = reference_metadata['assets'][band]['href']
-        secondary_url = get_s2_metadata(secondary)['assets'][band]['href']
+
+        secondary_metadata = get_s2_metadata(secondary)
+        secondary = secondary_metadata['properties']['sentinel:product_id']
+        secondary_url = secondary_metadata['assets'][band]['href']
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
