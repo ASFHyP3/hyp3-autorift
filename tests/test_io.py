@@ -19,6 +19,7 @@ def test_get_s3_keys_for_dem():
         'Prefix/GRE240m_yMinChipSize.tif',
         'Prefix/GRE240m_xMaxChipSize.tif',
         'Prefix/GRE240m_yMaxChipSize.tif',
+        'Prefix/GRE240m_masks.tif',
     ]
     assert sorted(io._get_s3_keys_for_dem('Prefix', 'GRE240m')) == sorted(expected)
 

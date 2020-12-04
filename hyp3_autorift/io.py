@@ -43,6 +43,7 @@ def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
         'yMinChipSize',
         'xMaxChipSize',
         'yMaxChipSize',
+        'masks',
     ]
     keys = [f'{prefix}/{dem}_{tag}.tif' for tag in tags]
     return keys
