@@ -21,7 +21,7 @@ dependencies:
   - isce2=2.4.2
   - autorift=1.0.8
   - boto3
-  - importlib_metadata
+  - matplotlib-base
   - netCDF4
   - numpy
   - psycopg2  # missing hyp3proclib dep

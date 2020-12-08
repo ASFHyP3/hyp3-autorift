@@ -37,7 +37,7 @@ setup(
         'gdal',
         'hyp3lib==1.6.2',
         'hyp3proclib',
-        'importlib_metadata',
+        'matplotlib',
         'netCDF4',
         'numpy',
         'requests',
