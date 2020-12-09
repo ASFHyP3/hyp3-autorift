@@ -38,8 +38,13 @@ COLOR_MAP = np.array([
 
 def make_browse(out_file: Path, data: np.ndarray,
                 min_value: Optional[float] = None, max_value: Optional[float] = 625.) -> Path:
-    cmap = LinearSegmentedColormap.from_list('its-live', COLOR_MAP[:, 1:] / 255)
-    pchip = PchipInterpolator(COLOR_MAP[:, 0], np.linspace(0, 1, COLOR_MAP.shape[0]))
+    rgb_values = COLOR_MAP[:, 1:] / 255
+    cmap = LinearSegmentedColormap.from_list('its-live', rgb_values)
+
+    data_values = COLOR_MAP[:, 0]
+    pchip = PchipInterpolator(data_values, np.linspace(0, 1, len(data_values)))
+
     image = pchip(np.clip(data, min_value, max_value))
     plt.imsave(out_file, image, cmap=cmap)
+
     return out_file
