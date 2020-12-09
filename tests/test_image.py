@@ -14,3 +14,4 @@ def test_make_browse(tmp_path):
 
     with Image.open(out_file) as img:
         assert img.format == 'PNG'
+        assert img.size == data.shape
