@@ -46,6 +46,7 @@ setup(
 
     extras_require={
         'develop': [
+            'pillow',
             'pytest',
             'pytest-cov',
             'pytest-console-scripts',

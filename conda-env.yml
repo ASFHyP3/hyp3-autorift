@@ -8,6 +8,7 @@ dependencies:
   - python=3.8
   - pip
   # For packaging, and testing
+  - pillow
   - pytest
   - pytest-console-scripts
   - pytest-cov
