@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.interpolate import PchipInterpolator
 
