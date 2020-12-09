@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
 
+import numpy as np
 import requests
 from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
@@ -207,7 +208,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
-        image.make_browse(product_file.with_suffix('.png'), velocity)
+        data = np.ma.masked_values(velocity, -32767.).filled(0)
+    image.make_browse(product_file.with_suffix('.png'), data)
 
     return product_file
 
