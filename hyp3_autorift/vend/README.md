@@ -6,7 +6,8 @@ be easily incorporated from a package manager or installed appropriately.
 ## `testautoRIFT_ISCE.py` and `testautoRIFT.py`
 
 ---
-*Note: A patch from autoRIFT was applied to these files, which will be included in the next release:*
+*Note: A patch from autoRIFT was applied to these files to prevent failures due
+ to stable surface miss-classification, which will be included in the next release:*
 ```diff
 -                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
 +                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
