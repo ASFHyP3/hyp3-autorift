@@ -7,7 +7,8 @@ be easily incorporated from a package manager or installed appropriately.
 
 ---
 *Note: A patch from autoRIFT was applied to these files to prevent failures due
- to stable surface misclassification, which will be included in the next release:*
+to stable surface misclassification, which will be included in the next autoRIFT
+release:*
 ```diff
 -                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
 +                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
