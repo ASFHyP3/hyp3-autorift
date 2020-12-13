@@ -1,0 +1,223 @@
+--- a/testautoRIFT.py
++++ b/testautoRIFT.py
+@@ -390,7 +390,7 @@ def main():
+     urlflag = inps.urlflag
+
+     if inps.optical_flag == 1:
+-        if urlflag is 1:
++        if urlflag == 1:
+             data_r, data_s = loadProductOpticalURL(inps.indir_r, inps.indir_s)
+         else:
+             data_r = loadProductOptical(inps.indir_r)
+@@ -595,7 +595,7 @@ def main():
+                 xcount = int(str.split(runCmd('fgrep "Dimensions of geogrid:" testGeogrid.txt'))[3])
+                 ycount = int(str.split(runCmd('fgrep "Dimensions of geogrid:" testGeogrid.txt'))[5])
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(vxrefname))
+                 else:
+                     ds = gdal.Open(vxrefname)
+@@ -604,7 +604,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(vyrefname))
+                 else:
+                     ds = gdal.Open(vyrefname)
+@@ -613,7 +613,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(sxname))
+                 else:
+                     ds = gdal.Open(sxname)
+@@ -622,7 +622,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(syname))
+                 else:
+                     ds = gdal.Open(syname)
+@@ -631,7 +631,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(maskname))
+                 else:
+                     ds = gdal.Open(maskname)
+@@ -643,7 +643,7 @@ def main():
+                 DXref = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref - offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref
+                 DYref = offset2vx_1 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref - offset2vy_1 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref
+
+-                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
++                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+
+                 if stable_count == 0:
+                     stable_shift_applied = 0
+@@ -692,10 +692,13 @@ def main():
+                     pair_type = 'radar'
+                     detection_method = 'feature'
+                     coordinates = 'radar'
++                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+     #                out_nc_filename = 'Jakobshavn.nc'
+-                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
++                    PPP = roi_valid_percentage * 100
++                    out_nc_filename = reference_filename[0:-4]+'_X_'+secondary_filename[0:-4]+'_G0240V02_P{0}{1}{2}.nc'.format(int(PPP/10),int((PPP-int(PPP/10)*10)),int((PPP-int(PPP/10)*10-int((PPP-int(PPP/10)*10)))*10))
+                     out_nc_filename = './' + out_nc_filename
+-                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
++
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+
+@@ -770,10 +773,12 @@ def main():
+                     pair_type = 'optical'
+                     detection_method = 'feature'
+                     coordinates = 'map'
++                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
+-                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
++                    PPP = roi_valid_percentage * 100
++                    out_nc_filename = reference_filename[0:-8]+'_X_'+secondary_filename[0:-8]+'_G0240V02_P{0}{1}{2}.nc'.format(int(PPP/10),int((PPP-int(PPP/10)*10)),int((PPP-int(PPP/10)*10-int((PPP-int(PPP/10)*10)))*10))
+                     out_nc_filename = './' + out_nc_filename
+-                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                     d0 = datetime.date(np.int(reference_split[3][0:4]),np.int(reference_split[3][4:6]),np.int(reference_split[3][6:8]))
+@@ -851,9 +856,11 @@ def main():
+                     detection_method = 'feature'
+                     coordinates = 'map'
+
+-                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
+-                    out_nc_filename = './' + out_nc_filename
+                     roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
++                    PPP = roi_valid_percentage * 100
++                    out_nc_filename = reference_filename[0:-8]+'_X_'+secondary_filename[0:-8]+'_G0240V02_P{0}{1}{2}.nc'.format(int(PPP/10),int((PPP-int(PPP/10)*10)),int((PPP-int(PPP/10)*10-int((PPP-int(PPP/10)*10)))*10))
++                    out_nc_filename = './' + out_nc_filename
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                     d0 = datetime.date(np.int(reference_split[2][0:4]),np.int(reference_split[2][4:6]),np.int(reference_split[2][6:8]))
+--- a/testautoRIFT_ISCE.py
++++ b/testautoRIFT_ISCE.py
+@@ -133,7 +133,7 @@ def loadProductOpticalURL(file_r, file_s):
+
+     x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(file_r, file_s, 1)
+
+-    DS1 = gdal.Open('/vsicurl/%s' % (file_r))
++    DS1 = gdal.Open('/vsicurl/%s' %(file_r))
+     DS2 = gdal.Open('/vsicurl/%s' %(file_s))
+
+     I1 = DS1.ReadAsArray(xoff=x1a, yoff=y1a, xsize=xsize1, ysize=ysize1)
+@@ -386,7 +386,7 @@ def main():
+     urlflag = inps.urlflag
+
+     if inps.optical_flag == 1:
+-        if urlflag is 1:
++        if urlflag == 1:
+             data_r, data_s = loadProductOpticalURL(inps.indir_r, inps.indir_s)
+         else:
+             data_r = loadProductOptical(inps.indir_r)
+@@ -593,7 +593,7 @@ def main():
+                 xcount = int(str.split(runCmd('fgrep "Dimensions of geogrid:" testGeogrid.txt'))[3])
+                 ycount = int(str.split(runCmd('fgrep "Dimensions of geogrid:" testGeogrid.txt'))[5])
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(vxrefname))
+                 else:
+                     ds = gdal.Open(vxrefname)
+@@ -602,7 +602,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(vyrefname))
+                 else:
+                     ds = gdal.Open(vyrefname)
+@@ -611,7 +611,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(sxname))
+                 else:
+                     ds = gdal.Open(sxname)
+@@ -620,7 +620,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(syname))
+                 else:
+                     ds = gdal.Open(syname)
+@@ -629,7 +629,7 @@ def main():
+                 ds = None
+                 band = None
+
+-                if urlflag is 1:
++                if urlflag == 1:
+                     ds = gdal.Open('/vsicurl/%s' %(maskname))
+                 else:
+                     ds = gdal.Open(maskname)
+@@ -641,7 +641,7 @@ def main():
+                 DXref = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref - offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref
+                 DYref = offset2vx_1 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref - offset2vy_1 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref
+
+-                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
++                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+
+                 if stable_count == 0:
+                     stable_shift_applied = 0
+@@ -690,10 +690,13 @@ def main():
+                     pair_type = 'radar'
+                     detection_method = 'feature'
+                     coordinates = 'radar'
++                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+     #                out_nc_filename = 'Jakobshavn.nc'
+-                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
++                    PPP = roi_valid_percentage * 100
++                    out_nc_filename = reference_filename[0:-4]+'_X_'+secondary_filename[0:-4]+'_G0240V02_P{0}{1}{2}.nc'.format(int(PPP/10),int((PPP-int(PPP/10)*10)),int((PPP-int(PPP/10)*10-int((PPP-int(PPP/10)*10)))*10))
+                     out_nc_filename = './' + out_nc_filename
+-                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
++
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+
+@@ -768,10 +771,12 @@ def main():
+                     pair_type = 'optical'
+                     detection_method = 'feature'
+                     coordinates = 'map'
++                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
+-                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
++                    PPP = roi_valid_percentage * 100
++                    out_nc_filename = reference_filename[0:-8]+'_X_'+secondary_filename[0:-8]+'_G0240V02_P{0}{1}{2}.nc'.format(int(PPP/10),int((PPP-int(PPP/10)*10)),int((PPP-int(PPP/10)*10-int((PPP-int(PPP/10)*10)))*10))
+                     out_nc_filename = './' + out_nc_filename
+-                    roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                     d0 = datetime.date(np.int(reference_split[3][0:4]),np.int(reference_split[3][4:6]),np.int(reference_split[3][6:8]))
+@@ -849,9 +854,11 @@ def main():
+                     detection_method = 'feature'
+                     coordinates = 'map'
+
+-                    out_nc_filename = reference_filename[0:-4]+'_'+secondary_filename[0:-4]+'.nc'
+-                    out_nc_filename = './' + out_nc_filename
+                     roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
++                    PPP = roi_valid_percentage * 100
++                    out_nc_filename = reference_filename[0:-8]+'_X_'+secondary_filename[0:-8]+'_G0240V02_P{0}{1}{2}.nc'.format(int(PPP/10),int((PPP-int(PPP/10)*10)),int((PPP-int(PPP/10)*10-int((PPP-int(PPP/10)*10)))*10))
++                    out_nc_filename = './' + out_nc_filename
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                     d0 = datetime.date(np.int(reference_split[2][0:4]),np.int(reference_split[2][4:6]),np.int(reference_split[2][6:8]))
