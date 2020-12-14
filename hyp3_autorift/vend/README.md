@@ -8,12 +8,9 @@ be easily incorporated from a package manager or installed appropriately.
 ---
 *Note: A patch from autoRIFT was applied to these files to prevent failures due
 to stable surface misclassification, which will be included in the next autoRIFT
-release:*
-```diff
--                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
-+                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
-```
+release. See `PRE109-PATCH.diff` for the changes applied.*
 ---
+
 
 These modules were provided in the autoRIFT 
 [v1.0.8 release](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.0.8),
