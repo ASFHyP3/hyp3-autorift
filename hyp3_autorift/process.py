@@ -17,11 +17,11 @@ from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
 from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
-from hyp3lib.makeAsfBrowse import makeAsfBrowse
 from hyp3lib.scene import get_download_url
-from osgeo import gdal
+from netCDF4 import Dataset
 
 from hyp3_autorift import geometry
+from hyp3_autorift import image
 from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
@@ -194,35 +194,22 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             cmd = f'testautoRIFT.py -r {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -urlflag 1'
             execute(cmd, logfile=f, uselogging=True)
 
-    velocity_tif = gdal.Open('velocity.tif')
-    x_velocity = np.ma.masked_invalid(velocity_tif.GetRasterBand(1).ReadAsArray())
-    y_velocity = np.ma.masked_invalid(velocity_tif.GetRasterBand(2).ReadAsArray())
-    velocity = np.sqrt(x_velocity**2 + y_velocity**2)
-
-    browse_file = Path('velocity_browse.tif')
-    driver = gdal.GetDriverByName('GTiff')
-    browse_tif = driver.Create(
-        str(browse_file), velocity.shape[1], velocity.shape[0], 1, gdal.GDT_Byte, ['COMPRESS=LZW']
-    )
-    browse_tif.SetProjection(velocity_tif.GetProjection())
-    browse_tif.SetGeoTransform(velocity_tif.GetGeoTransform())
-    velocity_band = browse_tif.GetRasterBand(1)
-    velocity_band.WriteArray(velocity)
-
-    del velocity_band, browse_tif, velocity_tif
-
-    product_name = get_product_name(reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
-                                    band=band)
-    makeAsfBrowse(str(browse_file), product_name)
-
     netcdf_files = glob.glob('*.nc')
     if not netcdf_files:
         raise Exception('Processing failed! Output netCDF file not found')
     if len(netcdf_files) > 1:
         log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
+    product_name = get_product_name(
+        reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
+    )
     product_file = Path(f'{product_name}.nc').resolve()
-    shutil.move(netcdf_files[0], f'{product_name}.nc')
+    shutil.move(netcdf_files[0], str(product_file))
+
+    with Dataset(product_file) as nc:
+        velocity = nc.variables['v']
+        data = np.ma.masked_values(velocity, -32767.).filled(0)
+    image.make_browse(product_file.with_suffix('.png'), data)
 
     return product_file
 

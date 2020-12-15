@@ -10,6 +10,13 @@ import numpy as np
 import hyp3_autorift
 
 
+def v_error_cal(vx_error, vy_error):
+    vx = np.random.normal(0, vx_error, 1000000)
+    vy = np.random.normal(0, vy_error, 1000000)
+    v = np.sqrt(vx**2 + vy**2)
+    return np.std(v)
+
+
 def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, SY,
                      offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                      rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
@@ -19,11 +26,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
         vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
         temp = vx_mean_shift
         temp[np.logical_not(SSM)] = np.nan
-        vx_mean_shift = np.median(temp[(temp > -500) & (temp < 500)])
+        vx_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
         vy_mean_shift = offset2vy_1 * dx_mean_shift + offset2vy_2 * dy_mean_shift
         temp = vy_mean_shift
         temp[np.logical_not(SSM)] = np.nan
-        vy_mean_shift = np.median(temp[(temp > -500) & (temp < 500)])
+        vy_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
     else:
         vx_mean_shift = 0.0
         vy_mean_shift = 0.0
@@ -125,7 +132,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
 
     isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-    autorift_version = '1.0.7'
+    autorift_version = '1.0.8'
     source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version' \
              f' {hyp3_autorift.__version__} running autoRIFT version {autorift_version} as distributed with ISCE ' \
              f'version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
@@ -332,6 +339,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     var[:] = np.round(np.clip(V, -32768, 32767)).astype(np.int16)
     var.setncattr('missing_value', np.int16(NoDataValue))
 
+    v_error = v_error_cal(vx_error, vy_error)
     varname = 'v_error'
     datatype = np.dtype('int16')
     dimensions = ('y', 'x')
@@ -346,6 +354,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
         var.setncattr('description', 'velocity magnitude error')
     var.setncattr('units', 'm/y')
     V_error = np.sqrt((vx_error * VX / V) ** 2 + (vy_error * VY / V) ** 2)
+    V_error[V==0] = v_error
     V_error[noDataMask] = NoDataValue
     var[:] = np.round(np.clip(V_error, -32768, 32767)).astype(np.int16)
     var.setncattr('missing_value', np.int16(NoDataValue))
