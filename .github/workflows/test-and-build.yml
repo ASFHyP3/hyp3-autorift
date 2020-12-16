@@ -11,11 +11,12 @@ on:
       - develop
 
 env:
-  HYP3_REGISTRY: 626226570674.dkr.ecr.us-east-1.amazonaws.com
-  S3_PYPI_HOST: hyp3-pypi.s3-website-us-east-1.amazonaws.com
-  AWS_REGION: us-east-1
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  HYP3_REGISTRY: 845172464411.dkr.ecr.us-west-2.amazonaws.com
+  S3_PYPI_HOST: hyp3-pypi-west.s3-website-us-west-2.amazonaws.com
+  S3_PYPI_BUCKET: hyp3-pypi-west
+  AWS_REGION: us-west-2
+  AWS_ACCESS_KEY_ID: ${{ secrets.V2_AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.V2_AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   pytest:
@@ -26,7 +27,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          python-version: 3.7
+          python-version: 3.8
           activate-environment: hyp3-autorift
           environment-file: conda-env.yml
 
@@ -39,9 +40,8 @@ jobs:
       - name: Safety analysis of conda environment
         shell: bash -l {0}
         run: |
-          # Ignore Safety vulerability #38264, GDAL < 3.1, because GAMMA binaries are built against GDAL 2.*
-          python -m pip freeze | safety check --full-report -i 38264 --stdin
-          conda list --export | awk -F '=' '/^[^#]/ {print $1 "==" $2}' | safety check --full-report -i 38264 --stdin
+          python -m pip freeze | safety check --full-report --stdin
+          conda list --export | awk -F '=' '/^[^#]/ {print $1 "==" $2}' | safety check --full-report --stdin
 
 
   package:
@@ -128,9 +128,8 @@ jobs:
           export SDIST_VERSION=$(python setup.py --version)
           echo "::set-output name=version::${SDIST_VERSION}"
           python setup.py sdist bdist_wheel
-          echo "Uploading version ${SDIST_VERSION} to S3-PyPI"
-          s3pypi --bucket hyp3-pypi --force --verbose
-
+          echo "Uploading version ${SDIST_VERSION} to ${S3_PYPI_BUCKET}"
+          s3pypi --bucket ${S3_PYPI_BUCKET} --private --force --verbose
 
   dockerize:
     runs-on: ubuntu-latest
@@ -152,7 +151,7 @@ jobs:
           export SDIST_VERSION=${{ needs.package.outputs.SDIST_VERSION }}
           export CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)
           echo "Building ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_}"
-          docker pull ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:test
+          docker pull ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:test || true
           docker build --no-cache \
                 -t ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_} \
                 --label org.opencontainers.image.created="${CI_JOB_TIMESTAMP}" \
