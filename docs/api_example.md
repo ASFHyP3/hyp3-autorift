@@ -50,8 +50,9 @@ The job list may contain up to 200 job definitions.
 
 For each supported satellite mission, the granule (scene) pairs to process are
 provided by ID:
-* Sentinel-1: [ESA granule ID]()
-* Sentinel-2: [ESA granule ID]() *or* [COG ID on AWS](https://registry.opendata.aws/sentinel-2-l2a-cogs/#:~:text=The%20Sentinel%2D2%20mission%20is,great%20use%20in%20ongoing%20studies.)
+* Sentinel-1: [ESA granule ID](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/naming-conventions)
+* Sentinel-2: [ESA granule ID](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-2-msi/naming-convention) 
+  *or* [COG ID on AWS](https://registry.opendata.aws/sentinel-2-l2a-cogs/#:~:text=The%20Sentinel%2D2%20mission%20is,great%20use%20in%20ongoing%20studies.)
 * Landsat: *Support coming soon*
 
 To submit an example set of jobs including all supported missions, you could write a job list like:
