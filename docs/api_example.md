@@ -24,7 +24,7 @@ If you get a `Code 401` you are not currently authenticated.
 
 ## Submitting jobs
 
-Jobs are submitted through the API by providing a JSON payload with the list of job
+Jobs are submitted through the API by providing a JSON payload with a list of job
 definitions. A minimal job list for a single Sentinel-1 autoRIFT job would look like:
 
 ```json
@@ -37,7 +37,7 @@ definitions. A minimal job list for a single Sentinel-1 autoRIFT job would look 
         "granules": [
           "S1A_IW_SLC__1SSH_20170221T204710_20170221T204737_015387_0193F6_AB07",
           "S1B_IW_SLC__1SSH_20170227T204628_20170227T204655_004491_007D11_6654"
-         ]
+        ]
       }
     }
   ]
@@ -50,11 +50,11 @@ The job list may contain up to 200 job definitions.
 
 For each supported satellite mission, the granule (scene) pairs to process are
 provided by ID:
-* Sentinel-1: ESA granule ID
-* Sentinel-2: ESA granule ID *or* [COG ID on AWS](https://registry.opendata.aws/sentinel-2-l2a-cogs/#:~:text=The%20Sentinel%2D2%20mission%20is,great%20use%20in%20ongoing%20studies.)
+* Sentinel-1: [ESA granule ID]()
+* Sentinel-2: [ESA granule ID]() *or* [COG ID on AWS](https://registry.opendata.aws/sentinel-2-l2a-cogs/#:~:text=The%20Sentinel%2D2%20mission%20is,great%20use%20in%20ongoing%20studies.)
 * Landsat: *Support coming soon*
 
-So, to submit an example set of jobs for all supported missions, you could write a job like:
+To submit an example set of jobs including all supported missions, you could write a job list like:
 
 ```json
 {
@@ -93,7 +93,7 @@ So, to submit an example set of jobs for all supported missions, you could write
 }
 ```
 
-Now, with your JSON jobs definition, you can `POST` to the `/jobs` endpoint to
+With your JSON jobs definition, you can `POST` to the `/jobs` endpoint to
 submit the jobs. 
 
 1. click the green `POST` button next to `/jobs`
@@ -108,8 +108,8 @@ JSON response of your job list, with some additional job attributes filled in.
 
 ## Querying jobs
 
-You can `GET` job information from the `/jobs` endpoint. `GET /jobs` requests allow you
-to provide query parameters to filter jobs:
+You can `GET` job information from the `/jobs` endpoint. You may provide query
+parameters to filter jobs which jobs are returned:
 ![GET /jobs query](imgs/get_jobs_query.png)
 
 For our above examples, you can get the job that was submitted with Sentinel-2 COG IDs by
