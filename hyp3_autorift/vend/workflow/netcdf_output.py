@@ -177,7 +177,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
 #    INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
 
     
-    tran = [tran[0], tran[1], 0.0, tran[3], 0.0, tran[5]]
+    tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
     
     clobber = True     # overwrite existing output nc file
 
