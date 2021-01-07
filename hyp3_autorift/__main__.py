@@ -114,7 +114,7 @@ def hyp3_process(cfg, n):
             upload_product(str(product_file), cfg, conn)
             success(conn, cfg)
 
-    except Exception as e:
+    except Exception as e:  # noqa: B902
         log.exception('autoRIFT processing failed!')
         log.exception('Notifying user')
         failure(cfg, str(e))
