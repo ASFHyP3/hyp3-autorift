@@ -36,7 +36,6 @@ setup(
         'botocore',
         'gdal',
         'hyp3lib==1.6.2',
-        'hyp3proclib',
         'matplotlib',
         'netCDF4',
         'numpy',
@@ -57,9 +56,7 @@ setup(
     packages=find_packages(),
 
     entry_points={'console_scripts': [
-        'autorift = hyp3_autorift.__main__:entry',
         'hyp3_autorift = hyp3_autorift.__main__:main',
-        'hyp3_autorift_v2 = hyp3_autorift.__main__:main_v2',
         'autorift_proc_pair = hyp3_autorift.process:main',
         'testautoRIFT_ISCE.py = hyp3_autorift.vend.testautoRIFT_ISCE:main',
         'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main',
