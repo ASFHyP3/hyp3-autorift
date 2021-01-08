@@ -27,6 +27,13 @@ from hyp3_autorift import io
 log = logging.getLogger(__name__)
 
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+LC2_SEACH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
+
+
+def get_lc2_metadata(scene_name):
+    response = requests.get(f'{LC2_SEACH_URL}/{scene_name}')
+    response.raise_for_status()
+    return response.json()
 
 
 def get_s2_metadata(scene_name):
@@ -100,10 +107,10 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     """Process a Sentinel-1, Sentinel-2, or Landsat image pair
 
     Args:
-        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat 8 scene
-        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat 8 scene
+        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat Collection 2 scene
+        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat Collection 2 scene
         polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
-        band: Band to process for Sentinel-2 or Landsat 8 scenes
+        band: Band to process for Sentinel-2 or Landsat Collection 2 scenes
     """
 
     orbits = None
@@ -126,7 +133,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
-    else:
+    elif reference.startswith('S2'):
         reference_metadata = get_s2_metadata(reference)
         reference = reference_metadata['properties']['sentinel:product_id']
         reference_url = reference_metadata['assets'][band]['href']
@@ -138,6 +145,22 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
+
+    elif reference.startswith('L'):
+        if band == 'B08':
+            band = 'B8'
+        reference_metadata = get_lc2_metadata(reference)
+        reference_url = reference_metadata['assets'][f'{band}.TIF']['href']
+
+        secondary_metadata = get_lc2_metadata(secondary)
+        secondary_url = secondary_metadata['assets'][f'{band}.TIF']['href']
+
+        bbox = reference_metadata['bbox']
+        lat_limits = (bbox[1], bbox[3])
+        lon_limits = (bbox[0], bbox[2])
+
+    else:
+        raise NotImplementedError(f'autoRIFT processing not available for this platform. {reference}, {secondary}')
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
     if reference.startswith('S1'):
@@ -221,11 +244,13 @@ def main():
         description=__doc__,
     )
     parser.add_argument('reference', type=os.path.abspath,
-                        help='Reference Sentinel-1 SAFE zip archive')
+                        help='Reference Sentinel-1, Sentinel-2, or Landsat Collection 2 scene')
     parser.add_argument('secondary', type=os.path.abspath,
-                        help='Secondary Sentinel-1 SAFE zip archive')
+                        help='Secondary Sentinel-1, Sentinel-2, or Landsat Collection 2 scene')
     parser.add_argument('-p', '--polarization', default='hh',
                         help='Polarization of the Sentinel-1 scenes')
+    parser.add_argument('-b', '--band', default='B08',
+                        help='Band to process for Sentinel-2 or Landsat Collection 2 scenes')
     args = parser.parse_args()
 
     process(**args.__dict__)
