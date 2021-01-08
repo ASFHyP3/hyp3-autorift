@@ -163,14 +163,14 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {reference}, {secondary}')
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
-    if reference.startswith('S1'):
+    if reference.startswith('S2'):
+        # TODO move this to find_jpl_dem?
+        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'
+    else:
         dem_dir = os.path.join(os.getcwd(), 'DEM')
         mkdir_p(dem_dir)
         io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
         dem_prefix = os.path.join(dem_dir, dem)
-    else:
-        # TODO move this to find_jpl_dem?
-        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'
 
     geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
                          f'-sx {dem_prefix}_dhdx.tif -sy {dem_prefix}_dhdy.tif ' \
@@ -209,12 +209,26 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
     else:
+        if reference.startswith('L'):
+            ref_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', reference_url.replace(
+                'https://landsatlook.usgs.gov/data/', ''))
+            sec_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', secondary_url.replace(
+                'https://landsatlook.usgs.gov/data/', ''))
+            urlflag = 0
+            sensor = 'L'
+        else:
+            ref_loc = reference_url
+            sec_loc = secondary_url
+            urlflag = 1
+            sensor = 'S2'
+
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -r {reference_url} -s {secondary_url} {geogrid_parameters} -urlflag 1'
+            cmd = f'testGeogridOptical.py -r {ref_loc} -s {sec_loc} {geogrid_parameters} -urlflag {urlflag}'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -r {reference_url} -s {secondary_url} {autorift_parameters} -nc S2 -fo 1 -urlflag 1'
+            cmd = f'testautoRIFT.py -r {ref_loc} -s {sec_loc} {autorift_parameters} -nc {sensor} -fo 1 -urlflag' \
+                  f' {urlflag}'
             execute(cmd, logfile=f, uselogging=True)
 
     netcdf_files = glob.glob('*.nc')

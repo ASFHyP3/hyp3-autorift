@@ -13,18 +13,32 @@ from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
-s3_client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
 ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
 AUTORIFT_PREFIX = 'isce_autoRIFT'
 
 
+def download_s3_files_requester_pays(target_dir, bucket, key):
+    s3_client = boto3.client('s3')
+    response = s3_client.get_object(Bucket=bucket, Key=key, RequestPayer='requester')
+    filename = os.path.join(target_dir, os.path.basename(key))
+    with open(filename, 'wb') as f:
+        f.write(response['Body'].read())
+    return filename
+
+
 def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
+    s3_client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
     transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
+    file_list = []
     for key in keys:
         filename = os.path.join(target_dir, os.path.basename(key))
+        if os.path.exists(filename):
+            continue
+        file_list.append(filename)
         log.info(f'Downloading s3://{bucket}/{key} to {filename}')
         s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
+    return file_list
 
 
 def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
