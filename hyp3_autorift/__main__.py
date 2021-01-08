@@ -1,29 +1,13 @@
 """
 AutoRIFT processing for HyP3
 """
-import sys
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser
 
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import write_credentials_to_netrc_file
 from hyp3lib.image import create_thumbnail
-from pkg_resources import load_entry_point
 
 from hyp3_autorift.process import get_datetime, process
-
-
-def entry():
-    parser = ArgumentParser(prefix_chars='+', formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '++entrypoint', choices=['hyp3_autorift'], default='hyp3_autorift',
-        help='Select the HyP3 entrypoint version to use'
-    )
-    args, unknowns = parser.parse_known_args()
-
-    sys.argv = [args.entrypoint, *unknowns]
-    sys.exit(
-        load_entry_point('hyp3_autorift', 'console_scripts', args.entrypoint)()
-    )
 
 
 def main():
