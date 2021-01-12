@@ -3,8 +3,28 @@ from re import match
 
 import pytest
 import responses
+from requests import HTTPError
 
 from hyp3_autorift import process
+
+
+@responses.activate
+def test_get_lc2_metadata_not_found():
+    responses.add(
+        responses.GET, f'{process.LC2_SEARCH_URL}/foo',
+        body='{"message": "Item not found"}', status=400,
+    )
+    with pytest.raises(HTTPError):
+        process.get_lc2_metadata('foo')
+
+
+@responses.activate
+def test_get_lc2_metadata():
+    responses.add(
+        responses.GET, f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200703_20200913_02_T1',
+        body='{"foo": "bar"}', status=200,
+    )
+    assert process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1') == {'foo': 'bar'}
 
 
 @responses.activate

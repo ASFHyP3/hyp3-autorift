@@ -27,11 +27,11 @@ from hyp3_autorift import io
 log = logging.getLogger(__name__)
 
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
-LC2_SEACH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
+LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 
 
 def get_lc2_metadata(scene_name):
-    response = requests.get(f'{LC2_SEACH_URL}/{scene_name}')
+    response = requests.get(f'{LC2_SEARCH_URL}/{scene_name}')
     response.raise_for_status()
     return response.json()
 

@@ -3,6 +3,24 @@ from io import BytesIO
 from hyp3_autorift import io
 
 
+def test_download_s3_files_requester_pays(tmp_path, s3_stub):
+    s3_stub.add_response(
+        'get_object',
+        expected_params={
+            'Bucket': 'myBucket',
+            'Key': 'foobar.txt',
+            'RequestPayer': 'requester',
+        },
+        service_response={
+            'Body': BytesIO(b'123'),
+        },
+    )
+    file = io.download_s3_files_requester_pays(tmp_path, 'myBucket', 'foobar.txt')
+    assert (tmp_path / 'foobar.txt').exists()
+    assert (tmp_path / 'foobar.txt').read_text() == '123'
+    assert str(tmp_path / 'foobar.txt') == file
+
+
 def test_get_s3_keys_for_dem():
     expected = [
         'Prefix/GRE240m_h.tif',
@@ -47,8 +65,8 @@ def test_download_s3_files(tmp_path, s3_unsigned_stub):
                 'Body': BytesIO(b'123'),
             },
         )
-    io._download_s3_files(tmp_path, 'myBucket', keys)
-    for key in keys:
+    downloaded = io._download_s3_files(tmp_path, 'myBucket', keys)
+    for key, down in zip(keys, downloaded):
         assert (tmp_path / key).exists()
-        with open(tmp_path / key, 'r') as f:
-            assert f.read() == '123'
+        assert (tmp_path / key).read_text() == '123'
+        assert str(tmp_path / key) == down
