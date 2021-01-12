@@ -52,7 +52,7 @@ For each supported satellite mission, the granule (scene) pairs to process are
 provided by ID:
 * Sentinel-1: [ESA granule ID](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/naming-conventions)
 * Sentinel-2: [ESA granule ID](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-2-msi/naming-convention) 
-  *or* [Earth Search ID on AWS](https://registry.opendata.aws/sentinel-2/)
+  *or* [Element 84 Earth Search ID](https://registry.opendata.aws/sentinel-2/)
 * Landsat-8 Collection 2: [USGS scene ID](https://www.usgs.gov/faqs/what-naming-convention-landsat-collection-2-level-1-and-level-2-scenes?qt-news_science_products=0#qt-news_science_products)
 
 To submit an example set of jobs including all supported missions, you could write a job list like:
