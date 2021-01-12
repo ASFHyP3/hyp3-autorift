@@ -52,8 +52,8 @@ For each supported satellite mission, the granule (scene) pairs to process are
 provided by ID:
 * Sentinel-1: [ESA granule ID](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/naming-conventions)
 * Sentinel-2: [ESA granule ID](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-2-msi/naming-convention) 
-  *or* [COG ID on AWS](https://registry.opendata.aws/sentinel-2-l2a-cogs/#:~:text=The%20Sentinel%2D2%20mission%20is,great%20use%20in%20ongoing%20studies.)
-* Landsat: *Support coming soon*
+  *or* [Earth Search ID on AWS](https://registry.opendata.aws/sentinel-2/)
+* Landsat Collection 2: [USGS scene ID](https://www.usgs.gov/faqs/what-naming-convention-landsat-collection-2-level-1-and-level-2-scenes?qt-news_science_products=0#qt-news_science_products)
 
 To submit an example set of jobs including all supported missions, you could write a job list like:
 
@@ -74,8 +74,8 @@ To submit an example set of jobs including all supported missions, you could wri
       "name": "s2-esa-example",
       "job_parameters": {
         "granules": [
-          "S1A_IW_SLC__1SSH_20170221T204710_20170221T204737_015387_0193F6_AB07",
-          "S1B_IW_SLC__1SSH_20170227T204628_20170227T204655_004491_007D11_6654"
+          "S2B_MSIL1C_20200612T150759_N0209_R025_T22WEB_20200612T184700",
+          "S2A_MSIL1C_20200627T150921_N0209_R025_T22WEB_20200627T170912"
         ]
       },
       "job_type": "AUTORIFT"
@@ -84,8 +84,18 @@ To submit an example set of jobs including all supported missions, you could wri
       "name": "s2-cog-example",
       "job_parameters": {
         "granules": [
-          "S2B_22WEB_20200903_0_L2A",
-          "S2B_22WEB_20200913_0_L2A"
+          "S2B_22WEB_20200612_0_L1C",
+          "S2A_22WEB_20200627_0_L1C"
+        ]
+      },
+      "job_type": "AUTORIFT"
+    }
+    {
+      "name": "l8-example",
+      "job_parameters": {
+        "granules": [
+          "LC08_L1TP_009011_20200703_20200913_02_T1",
+          "LC08_L1TP_009011_20200820_20200905_02_T1"
         ]
       },
       "job_type": "AUTORIFT"
