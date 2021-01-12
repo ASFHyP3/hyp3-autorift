@@ -104,7 +104,7 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
 
 
 def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B08') -> Path:
-    """Process a Sentinel-1, Sentinel-2, or Landsat image pair
+    """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
@@ -144,7 +144,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         reference_url = reference_url.replace('s3://sentinel-s2-l1c/', '')
         ref_loc = Path.cwd() / f'{reference}_{Path(reference_url).name}'
-        io.download_s3_files_requester_pays(ref_loc, bucket, reference_url)
+        io.download_s3_file_requester_pays(ref_loc, bucket, reference_url)
 
         secondary_metadata = get_s2_metadata(secondary)
         secondary = secondary_metadata['properties']['sentinel:product_id']
@@ -152,7 +152,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         secondary_url = secondary_url.replace('s3://sentinel-s2-l1c/', '')
         sec_loc = Path.cwd() / f'{secondary}_{Path(secondary_url).name}'
-        io.download_s3_files_requester_pays(sec_loc, bucket, secondary_url)
+        io.download_s3_file_requester_pays(sec_loc, bucket, secondary_url)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -169,14 +169,14 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         reference_url = reference_url.replace('https://landsatlook.usgs.gov/data/', '')
         ref_loc = Path.cwd() / Path(reference_url).name
-        io.download_s3_files_requester_pays(ref_loc, bucket, reference_url)
+        io.download_s3_file_requester_pays(ref_loc, bucket, reference_url)
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_url = secondary_metadata['assets'][f'{band}.TIF']['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         secondary_url = secondary_url.replace('https://landsatlook.usgs.gov/data/', '')
         sec_loc = Path.cwd() / Path(secondary_url).name
-        io.download_s3_files_requester_pays(sec_loc, bucket, secondary_url)
+        io.download_s3_file_requester_pays(sec_loc, bucket, secondary_url)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])

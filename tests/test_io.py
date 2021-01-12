@@ -15,7 +15,7 @@ def test_download_s3_files_requester_pays(tmp_path, s3_stub):
             'Body': BytesIO(b'123'),
         },
     )
-    file = io.download_s3_files_requester_pays(tmp_path / 'foobar.txt', 'myBucket', 'foobar.txt')
+    file = io.download_s3_file_requester_pays(tmp_path / 'foobar.txt', 'myBucket', 'foobar.txt')
     assert (tmp_path / 'foobar.txt').exists()
     assert (tmp_path / 'foobar.txt').read_text() == '123'
     assert tmp_path / 'foobar.txt' == file
