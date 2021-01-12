@@ -3,7 +3,7 @@ from io import BytesIO
 from hyp3_autorift import io
 
 
-def test_download_s3_files_requester_pays(tmp_path, s3_stub):
+def test_download_s3_file_requester_pays(tmp_path, s3_stub):
     s3_stub.add_response(
         'get_object',
         expected_params={
@@ -65,8 +65,8 @@ def test_download_s3_files(tmp_path, s3_unsigned_stub):
                 'Body': BytesIO(b'123'),
             },
         )
-    downloaded = io._download_s3_files(tmp_path, 'myBucket', keys)
-    for key, down in zip(keys, downloaded):
+    downloaded_files = io._download_s3_files(tmp_path, 'myBucket', keys)
+    for key, downloaded_file in zip(keys, downloaded_files):
         assert (tmp_path / key).exists()
         assert (tmp_path / key).read_text() == '123'
-        assert str(tmp_path / key) == down
+        assert str(tmp_path / key) == downloaded_file

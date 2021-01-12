@@ -10,6 +10,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
+from typing import Optional
 
 import numpy as np
 import requests
@@ -103,6 +104,23 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
     return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{misc}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
+def get_platform(scene: str) -> str:
+    if scene.startswith('S1') or scene.startswith('S2'):
+        return scene[0:2]
+    elif scene.startswith('L'):
+        return scene[0]
+    else:
+        raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
+
+
+def get_bucket(platform: str) -> Optional[str]:
+    if platform == 'S2':
+        return 'sentinel-s2-l1c'
+    elif platform == 'L':
+        return 'usgs-landsat'
+    return
+
+
 def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B08') -> Path:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
@@ -118,9 +136,11 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     secondary_path = None
     reference_state_vec = None
     secondary_state_vec = None
-    sensor = None
+    lat_limits, lon_limits = None, None
+    platform = get_platform(reference)
+    bucket = get_bucket(platform)
 
-    if reference.startswith('S1'):
+    if platform == 'S1':
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)
             download_file(scene_url, chunk_size=5242880)
@@ -134,15 +154,12 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
-    elif reference.startswith('S2'):
-        sensor = 'S2'
-        bucket = 'sentinel-s2-l1c'
-
+    elif platform == 'S2':
         reference_metadata = get_s2_metadata(reference)
         reference = reference_metadata['properties']['sentinel:product_id']
         reference_url = reference_metadata['assets'][band]['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
-        reference_url = reference_url.replace('s3://sentinel-s2-l1c/', '')
+        reference_url = reference_url.replace(f's3://{bucket}/', '')
         reference_path = Path.cwd() / f'{reference}_{Path(reference_url).name}'
         io.download_s3_file_requester_pays(reference_path, bucket, reference_url)
 
@@ -150,7 +167,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         secondary = secondary_metadata['properties']['sentinel:product_id']
         secondary_url = secondary_metadata['assets'][band]['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
-        secondary_url = secondary_url.replace('s3://sentinel-s2-l1c/', '')
+        secondary_url = secondary_url.replace(f's3://{bucket}/', '')
         secondary_path = Path.cwd() / f'{secondary}_{Path(secondary_url).name}'
         io.download_s3_file_requester_pays(secondary_path, bucket, secondary_url)
 
@@ -158,10 +175,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    elif reference.startswith('L'):
-        sensor = 'L'
-        bucket = 'usgs-landsat'
-
+    elif platform == 'L':
         if band == 'B08':
             band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
@@ -182,9 +196,6 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    else:
-        raise NotImplementedError(f'autoRIFT processing not available for this platform. {reference}, {secondary}')
-
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
     dem_dir = os.path.join(os.getcwd(), 'DEM')
     mkdir_p(dem_dir)
@@ -202,7 +213,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
                           '-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif ' \
                           '-ssm window_stable_surface_mask.tif'
 
-    if reference.startswith('S1'):
+    if platform == 'S1':
         isce_dem = geometry.prep_isce_dem(f'{dem_prefix}_h.tif', lat_limits, lon_limits)
 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
@@ -229,12 +240,13 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
     else:
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -r {reference_path.name} -s {secondary_path.name} {geogrid_parameters} -urlflag 0'
+            cmd = f'testGeogridOptical.py -r {reference_path.name} -s {secondary_path.name} {geogrid_parameters} ' \
+                  f'-urlflag 0'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -r {reference_path.name} -s {secondary_path.name} {autorift_parameters} -nc {sensor} -fo 1 ' \
-                  f'-urlflag 0'
+            cmd = f'testautoRIFT.py -r {reference_path.name} -s {secondary_path.name} {autorift_parameters} ' \
+                  f'-nc {platform} -fo 1 -urlflag 0'
             execute(cmd, logfile=f, uselogging=True)
 
     netcdf_files = glob.glob('*.nc')
