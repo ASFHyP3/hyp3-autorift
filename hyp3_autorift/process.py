@@ -118,6 +118,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     secondary_url = None
     reference_state_vec = None
     secondary_state_vec = None
+    sensor = None
+    bucket = None
 
     if reference.startswith('S1'):
         for scene in [reference, secondary]:
@@ -134,34 +136,40 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
 
     elif reference.startswith('S2'):
+        sensor = 'S2'
+        bucket = 'sentinel-s2-l1c'
+
         reference_metadata = get_s2_metadata(reference)
         reference = reference_metadata['properties']['sentinel:product_id']
         reference_url = reference_metadata['assets'][band]['href']
-        reference_url = reference_url.replace()
+        # FIXME: This is only because autoRIFT can't handle /vsis3/
+        reference_url = reference_url.replace('s3://sentinel-s2-l1c/', '')
 
         secondary_metadata = get_s2_metadata(secondary)
         secondary = secondary_metadata['properties']['sentinel:product_id']
         secondary_url = secondary_metadata['assets'][band]['href']
+        # FIXME: This is only because autoRIFT can't handle /vsis3/
+        secondary_url = secondary_url.replace('s3://sentinel-s2-l1c/', '')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
     elif reference.startswith('L'):
+        sensor = 'L'
+        bucket = 'usgs-landsat'
+
         if band == 'B08':
             band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
         reference_url = reference_metadata['assets'][f'{band}.TIF']['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
-        reference_url = reference_url.replace(
-                'https://landsatlook.usgs.gov/data/', ''
-        )
+        reference_url = reference_url.replace('https://landsatlook.usgs.gov/data/', '')
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_url = secondary_metadata['assets'][f'{band}.TIF']['href']
-        secondary_url = secondary_url.replace(
-            'https://landsatlook.usgs.gov/data/', ''
-        )
+        # FIXME: This is only because autoRIFT can't handle /vsis3/
+        secondary_url = secondary_url.replace('https://landsatlook.usgs.gov/data/', '')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -171,14 +179,10 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {reference}, {secondary}')
 
     dem = geometry.find_jpl_dem(lat_limits, lon_limits)
-    if reference.startswith('S2'):
-        # TODO move this to find_jpl_dem?
-        dem_prefix = f'http://{io.ITS_LIVE_BUCKET}.s3.amazonaws.com/{io.AUTORIFT_PREFIX}/{dem}'
-    else:
-        dem_dir = os.path.join(os.getcwd(), 'DEM')
-        mkdir_p(dem_dir)
-        io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
-        dem_prefix = os.path.join(dem_dir, dem)
+    dem_dir = os.path.join(os.getcwd(), 'DEM')
+    mkdir_p(dem_dir)
+    io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
+    dem_prefix = os.path.join(dem_dir, dem)
 
     geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
                          f'-sx {dem_prefix}_dhdx.tif -sy {dem_prefix}_dhdy.tif ' \
@@ -217,24 +221,15 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
     else:
-        if reference.startswith('L'):
-            ref_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', reference_url)
-            sec_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', secondary_url)
-            urlflag = 0
-            sensor = 'L'
-        else:
-            ref_loc = reference_url
-            sec_loc = secondary_url
-            urlflag = 1
-            sensor = 'S2'
+        ref_loc = io.download_s3_files_requester_pays(os.getcwd(), bucket, reference_url)
+        sec_loc = io.download_s3_files_requester_pays(os.getcwd(), bucket, secondary_url)
 
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -r {ref_loc} -s {sec_loc} {geogrid_parameters} -urlflag {urlflag}'
+            cmd = f'testGeogridOptical.py -r {ref_loc} -s {sec_loc} {geogrid_parameters} -urlflag 0'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -r {ref_loc} -s {sec_loc} {autorift_parameters} -nc {sensor} -fo 1 -urlflag' \
-                  f' {urlflag}'
+            cmd = f'testautoRIFT.py -r {ref_loc} -s {sec_loc} {autorift_parameters} -nc {sensor} -fo 1 -urlflag 0'
             execute(cmd, logfile=f, uselogging=True)
 
     netcdf_files = glob.glob('*.nc')
