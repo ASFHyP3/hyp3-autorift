@@ -89,6 +89,9 @@ def test_get_datetime():
     granule = 'LE07_L2SP_233095_20200102_20200822_02_T2'
     assert process.get_datetime(granule) == datetime(year=2020, month=1, day=2)
 
+    granule = 'LC08_L1TP_009011_20200703_20200913_02_T1'
+    assert process.get_datetime(granule) == datetime(year=2020, month=7, day=3)
+
     with pytest.raises(ValueError):
         process.get_datetime('AB_adsflafjladsf')
 
@@ -150,3 +153,12 @@ def test_get_product_name():
     }
     name = process.get_product_name(**payload)
     assert match(r'LE77_20200306T000000_20190115T000000_B7-416_VEL40_A_[0-9A-F]{4}$', name)
+
+    payload = {
+        'reference_name': 'LC08_L1TP_009011_20200703_20200913_02_T1',
+        'secondary_name': 'LC08_L1TP_009011_20200820_20200905_02_T1',
+        'band': 'B8',
+        'pixel_spacing': 40,
+    }
+    name = process.get_product_name(**payload)
+    assert match(r'LC88_20200703T000000_20200820T000000_B8-048_VEL40_A_[0-9A-F]{4}$', name)
