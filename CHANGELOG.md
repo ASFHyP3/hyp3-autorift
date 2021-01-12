@@ -9,7 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.3...v0.4.0)
 
 ### Added
-* Added support for processing Landsat Collection 2 scene pairs
+* Added support for processing Landsat-8 Collection 2 scene pairs
 * Example documentation for submitting autoRIFT jobs via the [HyP3 SDK](docs/sdk_example.ipynb)
   or [HyP3 API](docs/api_example.md)
 

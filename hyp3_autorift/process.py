@@ -107,10 +107,10 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     """Process a Sentinel-1, Sentinel-2, or Landsat image pair
 
     Args:
-        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat Collection 2 scene
-        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat Collection 2 scene
+        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
+        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
-        band: Band to process for Sentinel-2 or Landsat Collection 2 scenes
+        band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
 
     orbits = None
@@ -264,13 +264,13 @@ def main():
         description=__doc__,
     )
     parser.add_argument('reference', type=os.path.abspath,
-                        help='Reference Sentinel-1, Sentinel-2, or Landsat Collection 2 scene')
+                        help='Reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
     parser.add_argument('secondary', type=os.path.abspath,
-                        help='Secondary Sentinel-1, Sentinel-2, or Landsat Collection 2 scene')
+                        help='Secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
     parser.add_argument('-p', '--polarization', default='hh',
                         help='Polarization of the Sentinel-1 scenes')
     parser.add_argument('-b', '--band', default='B08',
-                        help='Band to process for Sentinel-2 or Landsat Collection 2 scenes')
+                        help='Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes')
     args = parser.parse_args()
 
     process(**args.__dict__)
