@@ -4,6 +4,8 @@ import argparse
 import logging
 import os
 import textwrap
+from pathlib import Path
+from typing import Union
 
 import boto3
 from boto3.s3.transfer import TransferConfig
@@ -21,11 +23,10 @@ _s3_client_unsigned = boto3.client('s3', config=Config(signature_version=UNSIGNE
 _s3_client = boto3.client('s3')
 
 
-def download_s3_files_requester_pays(target_dir, bucket, key):
+def download_s3_files_requester_pays(target_path: Union[str, Path], bucket: str, key: str) -> Path:
     response = _s3_client.get_object(Bucket=bucket, Key=key, RequestPayer='requester')
-    filename = os.path.join(target_dir, os.path.basename(key))
-    with open(filename, 'wb') as f:
-        f.write(response['Body'].read())
+    filename = Path(target_path)
+    filename.write_bytes(response['Body'].read())
     return filename
 
 

@@ -1,5 +1,5 @@
 """
-Package for processing with autoRIFT ICSE
+Package for processing with autoRIFT
 """
 
 import argparse
@@ -114,12 +114,11 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
     """
 
     orbits = None
-    reference_url = None
-    secondary_url = None
+    ref_loc = None
+    sec_loc = None
     reference_state_vec = None
     secondary_state_vec = None
     sensor = None
-    bucket = None
 
     if reference.startswith('S1'):
         for scene in [reference, secondary]:
@@ -144,12 +143,16 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         reference_url = reference_metadata['assets'][band]['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         reference_url = reference_url.replace('s3://sentinel-s2-l1c/', '')
+        ref_loc = Path.cwd() / f'{reference}_{Path(reference_url).name}'
+        io.download_s3_files_requester_pays(ref_loc, bucket, reference_url)
 
         secondary_metadata = get_s2_metadata(secondary)
         secondary = secondary_metadata['properties']['sentinel:product_id']
         secondary_url = secondary_metadata['assets'][band]['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         secondary_url = secondary_url.replace('s3://sentinel-s2-l1c/', '')
+        sec_loc = Path.cwd() / f'{secondary}_{Path(secondary_url).name}'
+        io.download_s3_files_requester_pays(sec_loc, bucket, secondary_url)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -165,11 +168,15 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         reference_url = reference_metadata['assets'][f'{band}.TIF']['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         reference_url = reference_url.replace('https://landsatlook.usgs.gov/data/', '')
+        ref_loc = Path.cwd() / Path(reference_url).name
+        io.download_s3_files_requester_pays(ref_loc, bucket, reference_url)
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_url = secondary_metadata['assets'][f'{band}.TIF']['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         secondary_url = secondary_url.replace('https://landsatlook.usgs.gov/data/', '')
+        sec_loc = Path.cwd() / Path(secondary_url).name
+        io.download_s3_files_requester_pays(sec_loc, bucket, secondary_url)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -221,15 +228,13 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             execute(cmd, logfile=f, uselogging=True)
 
     else:
-        ref_loc = io.download_s3_files_requester_pays(os.getcwd(), bucket, reference_url)
-        sec_loc = io.download_s3_files_requester_pays(os.getcwd(), bucket, secondary_url)
-
         with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -r {ref_loc} -s {sec_loc} {geogrid_parameters} -urlflag 0'
+            cmd = f'testGeogridOptical.py -r {ref_loc.name} -s {sec_loc.name} {geogrid_parameters} -urlflag 0'
             execute(cmd, logfile=f, uselogging=True)
 
         with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -r {ref_loc} -s {sec_loc} {autorift_parameters} -nc {sensor} -fo 1 -urlflag 0'
+            cmd = f'testautoRIFT.py -r {ref_loc.name} -s {sec_loc.name} {autorift_parameters} -nc {sensor} -fo 1 ' \
+                  f'-urlflag 0'
             execute(cmd, logfile=f, uselogging=True)
 
     netcdf_files = glob.glob('*.nc')
