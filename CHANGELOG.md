@@ -6,16 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.2...v0.3.3)
+## [0.4.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.3...v0.4.0)
+
+### Added
+* Added support for processing Landsat Collection 2 scene pairs
+* Example documentation for submitting autoRIFT jobs via the [HyP3 SDK](docs/sdk_example.ipynb)
+  or [HyP3 API](docs/api_example.md)
+
+### Changed
+* Sentinel-2 support now targets level-1c products instead of level-2a products to
+  remove baked in slope correction
 
 ### Fixed
 * 1/2 pixel offset in netCDF file due to gdal and netCDF using different pixel reference points. 
-
-## [0.3.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.1...v0.3.2)
-
-### Added
-* Example documentation for submitting autoRIFT jobs via the [HyP3 SDK](docs/sdk_example.ipynb)
-  or [HyP3 API](docs/api_example.md)
 
 ## [0.3.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.0...v0.3.1)
 
