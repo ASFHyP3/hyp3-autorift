@@ -24,10 +24,10 @@ def test_get_s3_keys_for_dem():
     assert sorted(io._get_s3_keys_for_dem('Prefix', 'GRE240m')) == sorted(expected)
 
 
-def test_download_s3_files(tmp_path, s3_stub):
+def test_download_s3_files(tmp_path, s3_unsigned_stub):
     keys = ['foo', 'bar']
     for key in keys:
-        s3_stub.add_response(
+        s3_unsigned_stub.add_response(
             'head_object',
             expected_params={
                 'Bucket': 'myBucket',
@@ -37,7 +37,7 @@ def test_download_s3_files(tmp_path, s3_stub):
                 'ContentLength': 3,
             },
         )
-        s3_stub.add_response(
+        s3_unsigned_stub.add_response(
             'get_object',
             expected_params={
                 'Bucket': 'myBucket',
