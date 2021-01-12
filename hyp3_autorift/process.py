@@ -26,7 +26,7 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
-S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l2a-cogs/items'
+S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 
 
@@ -137,6 +137,7 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         reference_metadata = get_s2_metadata(reference)
         reference = reference_metadata['properties']['sentinel:product_id']
         reference_url = reference_metadata['assets'][band]['href']
+        reference_url = reference_url.replace()
 
         secondary_metadata = get_s2_metadata(secondary)
         secondary = secondary_metadata['properties']['sentinel:product_id']
@@ -151,9 +152,16 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
             band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
         reference_url = reference_metadata['assets'][f'{band}.TIF']['href']
+        # FIXME: This is only because autoRIFT can't handle /vsis3/
+        reference_url = reference_url.replace(
+                'https://landsatlook.usgs.gov/data/', ''
+        )
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_url = secondary_metadata['assets'][f'{band}.TIF']['href']
+        secondary_url = secondary_url.replace(
+            'https://landsatlook.usgs.gov/data/', ''
+        )
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -210,10 +218,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
 
     else:
         if reference.startswith('L'):
-            ref_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', reference_url.replace(
-                'https://landsatlook.usgs.gov/data/', ''))
-            sec_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', secondary_url.replace(
-                'https://landsatlook.usgs.gov/data/', ''))
+            ref_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', reference_url)
+            sec_loc = io.download_s3_files_requester_pays(os.getcwd(), 'usgs-landsat', secondary_url)
             urlflag = 0
             sensor = 'L'
         else:
