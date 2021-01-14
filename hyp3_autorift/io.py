@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import shutil
 import textwrap
 from pathlib import Path
 from typing import Union
@@ -11,13 +12,12 @@ import boto3
 from boto3.s3.transfer import TransferConfig
 from botocore import UNSIGNED
 from botocore.config import Config
-from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
 
 ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
-AUTORIFT_PREFIX = 'isce_autoRIFT'
+AUTORIFT_PREFIX = 'autorift_parameters/v001'
 
 _s3_client_unsigned = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 _s3_client = boto3.client('s3')
@@ -59,20 +59,24 @@ def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
         'yMinChipSize',
         'xMaxChipSize',
         'yMaxChipSize',
-        'masks',
+        # FIXME: Was renamed from masks to sp by JPL; change hasn't been propagated to autoRIFT
+        #        keep last so we can easily rename the file after downloading
+        'sp',
     ]
     keys = [f'{prefix}/{dem}_{tag}.tif' for tag in tags]
     return keys
 
 
 def fetch_jpl_tifs(dem='GRE240m', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
+    # FIXME: gdalwarp  needed subset instead?
     log.info(f"Downloading {dem} tifs from JPL's AWS bucket")
 
     for logger in ('botocore', 's3transfer'):
         logging.getLogger(logger).setLevel(logging.WARNING)
 
     keys = _get_s3_keys_for_dem(prefix, dem)
-    _download_s3_files(target_dir, bucket, keys)
+    tifs = _download_s3_files(target_dir, bucket, keys)
+    shutil.move(tifs[-1], tifs[-1].replace('_sp.tif', '_masks.tif'))
 
 
 def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):
@@ -114,6 +118,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
 
 
 def save_topsinsar_mat():
+    from isce.applications.topsApp import TopsInSAR
     insar = TopsInSAR(name="topsApp")
     insar.configure()
 
