@@ -3,16 +3,10 @@
 import logging
 import os
 
-import isce  # noqa: F401
-import isceobj
 import numpy as np
-from contrib.demUtils import createDemStitcher
-from contrib.geo_autoRIFT.geogrid import Geogrid
 from hyp3lib import DemError
-from isceobj.Orbit.Orbit import Orbit
-from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
-from osgeo import osr
+from osgeo import ogr
 
 from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
 
@@ -32,6 +26,9 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         lat_limits: list containing the [minimum, maximum] latitudes
         lat_limits: list containing the [minimum, maximum] longitudes
     """
+    from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid
+    from isce.components.isceobj.Orbit.Orbit import Orbit
+    from isce.components.isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
     frames = []
     for swath in range(1, 4):
         rdr = Sentinel1()
@@ -89,59 +86,37 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
+def polygon_from_bbox(lat_limits, lon_limits):
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(lon_limits[0], lat_limits[0])
+    ring.AddPoint(lon_limits[1], lat_limits[0])
+    ring.AddPoint(lon_limits[1], lat_limits[1])
+    ring.AddPoint(lon_limits[0], lat_limits[1])
+    ring.AddPoint(lon_limits[0], lat_limits[0])
+    polygon = ogr.Geometry(ogr.wkbPolygon)
+    polygon.AddGeometry(ring)
+    return polygon
 
-    dems = ['GRE240m', 'ANT240m']
-    bounding_dem = None
-    for dem in dems:
-        dem_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}_h.tif'
-        log.info(f'Checking DEM: {dem_file}')
-        dem_ds = gdal.Open(dem_file, gdal.GA_ReadOnly)
-        dem_sr = dem_ds.GetSpatialRef()
-        log.debug(f'DEM projection: {dem_sr}')
 
-        latlon = osr.SpatialReference()
-        latlon.ImportFromEPSG(4326)
+def find_jpl_dem(lat_limits, lon_limits):
+    shape_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
 
-        trans = osr.CoordinateTransformation(latlon, dem_sr)
+    centroid = polygon_from_bbox(lat_limits, lon_limits).Centroid()
+    for feature in shapes.GetLayer(0):
+        if feature.geometry().Contains(centroid):
+            return f'{feature["name"]}_0240m'
 
-        # NOTE: This is probably unnecessary and just the lower-left and upper-right could be used,
-        #       but this does cover the case of skewed bounding boxes
-        all_xyz = []
-        for lat in lat_limits:
-            for lon in lon_limits:
-                for zed in z_limits:
-                    xyz = trans.TransformPoint(lat, lon, zed)
-                    all_xyz.append(xyz)
-
-        x, y, _ = zip(*all_xyz)
-
-        x_limits = (min(x), max(x))
-        y_limits = (min(y), max(y))
-
-        log.info(f'Image X limits: {x_limits}')
-        log.info(f'Image Y limits: {y_limits}')
-
-        dem_geo_trans = dem_ds.GetGeoTransform()
-        dem_x_limits = (dem_geo_trans[0], dem_geo_trans[0] + dem_ds.RasterXSize * dem_geo_trans[1])
-        dem_y_limits = (dem_geo_trans[3] + dem_ds.RasterYSize * dem_geo_trans[5], dem_geo_trans[3])
-
-        log.info(f'DEM X limits: {dem_x_limits}')
-        log.info(f'DEM Y limits: {dem_y_limits}')
-
-        if x_limits[0] > dem_x_limits[0] and x_limits[1] < dem_x_limits[1] \
-           and y_limits[0] > dem_y_limits[0] and y_limits[1] < dem_y_limits[1]:
-            bounding_dem = dem
-            break
-
-    if bounding_dem is None:
-        raise DemError('Existing DEMs do not (fully) cover the image data')
-
-    log.info(f'Bounding DEM is: {bounding_dem}')
-    return bounding_dem
+    raise DemError('Could not determine appropriate DEM for:\n'
+                   f'    lat (min, max): {lat_limits}'
+                   f'    lon (min, max): {lon_limits}'
+                   f'    using: {shape_file}')
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
+    from isce.components.contrib.demUtils import createDemStitcher
+    from isce.components.isceobj import createDemImage
 
     if isce_dem is None:
         seamstress = createDemStitcher()
@@ -163,7 +138,7 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
     isce_ds = gdal.Open(isce_dem, gdal.GA_ReadOnly)
     isce_trans = isce_ds.GetGeoTransform()
 
-    img = isceobj.createDemImage()
+    img = createDemImage()
     img.width = isce_ds.RasterXSize
     img.length = isce_ds.RasterYSize
     img.bands = 1
