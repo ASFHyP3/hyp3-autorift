@@ -103,9 +103,9 @@ def find_jpl_dem(lat_limits, lon_limits):
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
 
-    extent = polygon_from_bbox(lat_limits, lon_limits)
+    centroid = polygon_from_bbox(lat_limits, lon_limits).Centroid()
     for feature in shapes.GetLayer(0):
-        if feature.geometry().Contains(extent.Centroid()):
+        if feature.geometry().Contains(centroid):
             return f'{feature["name"]}_0240m'
 
     raise DemError('Could not determine appropriate DEM for:\n'

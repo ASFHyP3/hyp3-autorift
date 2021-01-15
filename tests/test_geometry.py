@@ -1,3 +1,6 @@
+import pytest
+from hyp3lib import DemError
+
 from hyp3_autorift import geometry
 
 
@@ -32,3 +35,23 @@ def test_find_jpl_dem():
     lat_limits = (-56, -57)
     lon_limits = (40, 41)
     assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'SPS_0240m'
+
+    with pytest.raises(DemError):
+        lat_limits = (-90, -91)
+        lon_limits = (40, 41)
+        geometry.find_jpl_dem(lat_limits, lon_limits)
+
+    with pytest.raises(DemError):
+        lat_limits = (90, 91)
+        lon_limits = (40, 41)
+        geometry.find_jpl_dem(lat_limits, lon_limits)
+
+    with pytest.raises(DemError):
+        lat_limits = (55, 56)
+        lon_limits = (180, 181)
+        geometry.find_jpl_dem(lat_limits, lon_limits)
+
+    with pytest.raises(DemError):
+        lat_limits = (55, 56)
+        lon_limits = (-180, -181)
+        geometry.find_jpl_dem(lat_limits, lon_limits)
