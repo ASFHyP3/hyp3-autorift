@@ -36,22 +36,22 @@ def test_find_jpl_dem():
     lon_limits = (40, 41)
     assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'SPS_0240m'
 
+    lat_limits = (-90, -91)
+    lon_limits = (40, 41)
     with pytest.raises(DemError):
-        lat_limits = (-90, -91)
-        lon_limits = (40, 41)
         geometry.find_jpl_dem(lat_limits, lon_limits)
 
+    lat_limits = (90, 91)
+    lon_limits = (40, 41)
     with pytest.raises(DemError):
-        lat_limits = (90, 91)
-        lon_limits = (40, 41)
         geometry.find_jpl_dem(lat_limits, lon_limits)
 
+    lat_limits = (55, 56)
+    lon_limits = (180, 181)
     with pytest.raises(DemError):
-        lat_limits = (55, 56)
-        lon_limits = (180, 181)
         geometry.find_jpl_dem(lat_limits, lon_limits)
 
+    lat_limits = (55, 56)
+    lon_limits = (-180, -181)
     with pytest.raises(DemError):
-        lat_limits = (55, 56)
-        lon_limits = (-180, -181)
         geometry.find_jpl_dem(lat_limits, lon_limits)
