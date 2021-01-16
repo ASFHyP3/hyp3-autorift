@@ -3,8 +3,14 @@
 import logging
 import os
 
+import isce  # noqa: F401
+import isceobj
 import numpy as np
+from contrib.demUtils import createDemStitcher
+from contrib.geo_autoRIFT.geogrid import Geogrid
 from hyp3lib import DemError
+from isceobj.Orbit.Orbit import Orbit
+from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import ogr
 
@@ -26,9 +32,6 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         lat_limits: list containing the [minimum, maximum] latitudes
         lat_limits: list containing the [minimum, maximum] longitudes
     """
-    from isce.components.contrib.geo_autoRIFT.geogrid import Geogrid
-    from isce.components.isceobj.Orbit.Orbit import Orbit
-    from isce.components.isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
     frames = []
     for swath in range(1, 4):
         rdr = Sentinel1()
@@ -115,9 +118,6 @@ def find_jpl_dem(lat_limits, lon_limits):
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
-    from isce.components.contrib.demUtils import createDemStitcher
-    from isce.components.isceobj import createDemImage
-
     if isce_dem is None:
         seamstress = createDemStitcher()
         isce_dem = seamstress.defaultName([*lat_limits, *lon_limits])
@@ -138,7 +138,7 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
     isce_ds = gdal.Open(isce_dem, gdal.GA_ReadOnly)
     isce_trans = isce_ds.GetGeoTransform()
 
-    img = createDemImage()
+    img = isceobj.createDemImage()
     img.width = isce_ds.RasterXSize
     img.length = isce_ds.RasterYSize
     img.bands = 1

@@ -12,6 +12,7 @@ import boto3
 from boto3.s3.transfer import TransferConfig
 from botocore import UNSIGNED
 from botocore.config import Config
+from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
@@ -118,7 +119,6 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
 
 
 def save_topsinsar_mat():
-    from isce.applications.topsApp import TopsInSAR
     insar = TopsInSAR(name="topsApp")
     insar.configure()
 
