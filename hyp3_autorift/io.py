@@ -5,12 +5,12 @@ import logging
 import os
 import textwrap
 from pathlib import Path
-from typing import Union, List
+from typing import List, Union
 
 import boto3
+from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
 from osgeo import ogr
-from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
 log = logging.getLogger(__name__)
