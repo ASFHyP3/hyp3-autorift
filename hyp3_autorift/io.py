@@ -28,7 +28,6 @@ def download_s3_file_requester_pays(target_path: Union[str, Path], bucket: str, 
     return filename
 
 
-# FIXME: get keys from shapefile...
 def _get_s3_keys_for_dem(prefix: str = AUTORIFT_PREFIX, dem: str = 'GRE240m') -> List[str]:
     tags = [
         'h',
@@ -45,8 +44,6 @@ def _get_s3_keys_for_dem(prefix: str = AUTORIFT_PREFIX, dem: str = 'GRE240m') ->
         'yMinChipSize',
         'xMaxChipSize',
         'yMaxChipSize',
-        # FIXME: Was renamed from masks to sp by JPL; change hasn't been propagated to autoRIFT
-        #        keep last so we can easily rename the file after downloading
         'sp',
     ]
     keys = [f'{prefix}/{dem}_{tag}.tif' for tag in tags]

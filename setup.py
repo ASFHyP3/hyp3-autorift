@@ -62,7 +62,6 @@ setup(
         'testGeogrid_ISCE.py = hyp3_autorift.vend.testGeogrid_ISCE:main',
         'testautoRIFT.py = hyp3_autorift.vend.testautoRIFT:main',
         'testGeogridOptical.py = hyp3_autorift.vend.testGeogridOptical:main',
-        # FIXME: Only needed for testautoRIFT.py and testautoRIFT_ISCE.py
         'topsinsar_filename.py = hyp3_autorift.io:topsinsar_mat',
         ]
     },
