@@ -12,46 +12,36 @@ def test_polygon_from_bbox():
 
 
 def test_find_jpl_dem():
-    lat_limits = (55, 56)
-    lon_limits = (40, 41)
-    assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'NPS_0240m'
+    polygon = geometry.polygon_from_bbox(lat_limits=(55, 56), lon_limits=(40, 41))
+    assert geometry.find_jpl_dem(polygon) == 'NPS_0240m'
 
-    lat_limits = (54, 55)
-    lon_limits = (40, 41)
-    assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'N37_0240m'
+    polygon = geometry.polygon_from_bbox(lat_limits=(54, 55), lon_limits=(40, 41))
+    assert geometry.find_jpl_dem(polygon) == 'N37_0240m'
 
-    lat_limits = (54, 55)
-    lon_limits = (-40, -41)
-    assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'N24_0240m'
+    polygon = geometry.polygon_from_bbox(lat_limits=(54, 55), lon_limits=(-40, -41))
+    assert geometry.find_jpl_dem(polygon) == 'N24_0240m'
 
-    lat_limits = (-54, -55)
-    lon_limits = (-40, -41)
-    assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'S24_0240m'
+    polygon = geometry.polygon_from_bbox(lat_limits=(-54, -55), lon_limits=(-40, -41))
+    assert geometry.find_jpl_dem(polygon) == 'S24_0240m'
 
-    lat_limits = (-55, -56)
-    lon_limits = (40, 41)
-    assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'S37_0240m'
+    polygon = geometry.polygon_from_bbox(lat_limits=(-55, -56), lon_limits=(40, 41))
+    assert geometry.find_jpl_dem(polygon) == 'S37_0240m'
 
-    lat_limits = (-56, -57)
-    lon_limits = (40, 41)
-    assert geometry.find_jpl_dem(lat_limits, lon_limits) == 'SPS_0240m'
+    polygon = geometry.polygon_from_bbox(lat_limits=(-56, -57), lon_limits=(40, 41))
+    assert geometry.find_jpl_dem(polygon) == 'SPS_0240m'
 
-    lat_limits = (-90, -91)
-    lon_limits = (40, 41)
+    polygon = geometry.polygon_from_bbox(lat_limits=(-90, -91), lon_limits=(40, 41))
     with pytest.raises(DemError):
-        geometry.find_jpl_dem(lat_limits, lon_limits)
+        geometry.find_jpl_dem(polygon)
 
-    lat_limits = (90, 91)
-    lon_limits = (40, 41)
+    polygon = geometry.polygon_from_bbox(lat_limits=(90, 91), lon_limits=(40, 41))
     with pytest.raises(DemError):
-        geometry.find_jpl_dem(lat_limits, lon_limits)
+        geometry.find_jpl_dem(polygon)
 
-    lat_limits = (55, 56)
-    lon_limits = (180, 181)
+    polygon = geometry.polygon_from_bbox(lat_limits=(55, 56), lon_limits=(180, 181))
     with pytest.raises(DemError):
-        geometry.find_jpl_dem(lat_limits, lon_limits)
+        geometry.find_jpl_dem(polygon)
 
-    lat_limits = (55, 56)
-    lon_limits = (-180, -181)
+    polygon = geometry.polygon_from_bbox(lat_limits=(55, 56), lon_limits=(-180, -181))
     with pytest.raises(DemError):
-        geometry.find_jpl_dem(lat_limits, lon_limits)
+        geometry.find_jpl_dem(polygon)

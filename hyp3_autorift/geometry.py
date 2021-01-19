@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import Tuple
 
 import isce  # noqa: F401
 import isceobj
@@ -89,7 +90,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def polygon_from_bbox(lat_limits, lon_limits):
+def polygon_from_bbox(lat_limits: Tuple[float, float], lon_limits: Tuple[float, float]) -> ogr.Geometry:
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lon_limits[0], lat_limits[0])
     ring.AddPoint(lon_limits[1], lat_limits[0])
@@ -101,19 +102,18 @@ def polygon_from_bbox(lat_limits, lon_limits):
     return polygon
 
 
-def find_jpl_dem(lat_limits, lon_limits):
+def find_jpl_dem(polygon: ogr.Geometry) -> str:
     shape_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
 
-    centroid = polygon_from_bbox(lat_limits, lon_limits).Centroid()
+    centroid = polygon.Centroid()
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
             return f'{feature["name"]}_0240m'
 
     raise DemError('Could not determine appropriate DEM for:\n'
-                   f'    lat (min, max): {lat_limits}'
-                   f'    lon (min, max): {lon_limits}'
+                   f'    centroid: {centroid}'
                    f'    using: {shape_file}')
 
 

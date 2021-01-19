@@ -3,15 +3,13 @@
 import argparse
 import logging
 import os
-import shutil
 import textwrap
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 
 import boto3
-from boto3.s3.transfer import TransferConfig
-from botocore import UNSIGNED
-from botocore.config import Config
+from osgeo import gdal
+from osgeo import ogr
 from isce.applications.topsApp import TopsInSAR
 from scipy.io import savemat
 
@@ -20,7 +18,6 @@ log = logging.getLogger(__name__)
 ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
 AUTORIFT_PREFIX = 'autorift_parameters/v001'
 
-_s3_client_unsigned = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 _s3_client = boto3.client('s3')
 
 
@@ -31,20 +28,8 @@ def download_s3_file_requester_pays(target_path: Union[str, Path], bucket: str, 
     return filename
 
 
-def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
-    transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
-    file_list = []
-    for key in keys:
-        filename = os.path.join(target_dir, os.path.basename(key))
-        if os.path.exists(filename):
-            continue
-        file_list.append(filename)
-        log.info(f'Downloading s3://{bucket}/{key} to {filename}')
-        _s3_client_unsigned.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
-    return file_list
-
-
-def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
+# FIXME: get keys from shapefile...
+def _get_s3_keys_for_dem(prefix: str = AUTORIFT_PREFIX, dem: str = 'GRE240m') -> List[str]:
     tags = [
         'h',
         'StableSurface',
@@ -68,16 +53,28 @@ def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
     return keys
 
 
-def fetch_jpl_tifs(dem='GRE240m', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
-    # FIXME: gdalwarp  needed subset instead?
-    log.info(f"Downloading {dem} tifs from JPL's AWS bucket")
+def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, dem: str = 'NPS_0240m', target_dir: str = 'DEM',
+                    bucket: str = ITS_LIVE_BUCKET, prefix: str = AUTORIFT_PREFIX):
+    log.info(f'Subsetting {dem} tifs from s3://{bucket}')
 
-    for logger in ('botocore', 's3transfer'):
-        logging.getLogger(logger).setLevel(logging.WARNING)
+    min_x, max_x, min_y, max_y = polygon.Buffer(buffer).GetEnvelope()
+    output_bounds = (min_x, min_y, max_x, max_y)
 
-    keys = _get_s3_keys_for_dem(prefix, dem)
-    tifs = _download_s3_files(target_dir, bucket, keys)
-    shutil.move(tifs[-1], tifs[-1].replace('_sp.tif', '_masks.tif'))
+    for key in _get_s3_keys_for_dem(prefix, dem):
+        in_file = f'/vsicurl/http://{bucket}.s3.amazonaws.com/{key}'
+        out_file = os.path.join(target_dir, os.path.basename(key))
+
+        # FIXME: shouldn't need to do after next autoRIFT upgrade
+        if out_file.endswith('_sp.tif'):
+            out_file = out_file.replace('_sp.tif', '_masks.tif')
+
+        gdal.Warp(
+            out_file, in_file, outputBounds=output_bounds, multithread=True,
+            # FIXME: hard coded x-y resolution; required for targetAlignedPixels
+            #        could pull this out of a gdal.info call to any one of the tifs
+            #        or out of the dem name...
+            xRes=240, yRes=240, targetAlignedPixels=True,
+        )
 
 
 def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):

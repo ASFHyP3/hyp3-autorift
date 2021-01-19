@@ -196,10 +196,11 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    dem = geometry.find_jpl_dem(lat_limits, lon_limits)
+    scene_poly = geometry.polygon_from_bbox(lat_limits, lon_limits)
+    dem = geometry.find_jpl_dem(scene_poly)
     dem_dir = os.path.join(os.getcwd(), 'DEM')
     mkdir_p(dem_dir)
-    io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
+    io.subset_jpl_tifs(scene_poly, dem=dem, target_dir=dem_dir)
     dem_prefix = os.path.join(dem_dir, dem)
 
     geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
