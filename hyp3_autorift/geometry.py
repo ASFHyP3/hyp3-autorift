@@ -9,13 +9,10 @@ import isceobj
 import numpy as np
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
-from hyp3lib import DemError
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import ogr
-
-from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
 
 log = logging.getLogger(__name__)
 
@@ -100,21 +97,6 @@ def polygon_from_bbox(lat_limits: Tuple[float, float], lon_limits: Tuple[float, 
     polygon = ogr.Geometry(ogr.wkbPolygon)
     polygon.AddGeometry(ring)
     return polygon
-
-
-def find_jpl_dem(polygon: ogr.Geometry) -> str:
-    shape_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
-
-    centroid = polygon.Centroid()
-    for feature in shapes.GetLayer(0):
-        if feature.geometry().Contains(centroid):
-            return f'{feature["name"]}_0240m'
-
-    raise DemError('Could not determine appropriate DEM for:\n'
-                   f'    centroid: {centroid}'
-                   f'    using: {shape_file}')
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
