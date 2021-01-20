@@ -5,7 +5,7 @@ import logging
 import os
 import textwrap
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 import boto3
 from hyp3lib import DemError
@@ -96,8 +96,7 @@ def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Uni
         subset_tifs[key] = out_path
 
         gdal.Warp(
-            out_path, tif, outputBounds=output_bounds,
-            xRes=240, yRes=240, targetAlignedPixels=True,
+            out_path, tif, outputBounds=output_bounds, xRes=240, yRes=240, targetAlignedPixels=True, multithread=True,
         )
 
     return subset_tifs
