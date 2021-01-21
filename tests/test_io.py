@@ -1,6 +1,9 @@
 from io import BytesIO
 
-from hyp3_autorift import io
+import pytest
+from hyp3lib import DemError
+
+from hyp3_autorift import geometry, io
 
 
 def test_download_s3_file_requester_pays(tmp_path, s3_stub):
@@ -21,52 +24,43 @@ def test_download_s3_file_requester_pays(tmp_path, s3_stub):
     assert tmp_path / 'foobar.txt' == file
 
 
-def test_get_s3_keys_for_dem():
-    expected = [
-        'Prefix/GRE240m_h.tif',
-        'Prefix/GRE240m_StableSurface.tif',
-        'Prefix/GRE240m_dhdx.tif',
-        'Prefix/GRE240m_dhdy.tif',
-        'Prefix/GRE240m_dhdxs.tif',
-        'Prefix/GRE240m_dhdys.tif',
-        'Prefix/GRE240m_vx0.tif',
-        'Prefix/GRE240m_vy0.tif',
-        'Prefix/GRE240m_vxSearchRange.tif',
-        'Prefix/GRE240m_vySearchRange.tif',
-        'Prefix/GRE240m_xMinChipSize.tif',
-        'Prefix/GRE240m_yMinChipSize.tif',
-        'Prefix/GRE240m_xMaxChipSize.tif',
-        'Prefix/GRE240m_yMaxChipSize.tif',
-        'Prefix/GRE240m_sp.tif',
-    ]
-    assert sorted(io._get_s3_keys_for_dem('Prefix', 'GRE240m')) == sorted(expected)
+def test_find_jpl_dem():
+    polygon = geometry.polygon_from_bbox(lat_limits=(55, 56), lon_limits=(40, 41))
+    dem_info = io.find_jpl_dem(polygon)
+    assert dem_info['name'] == 'NPS_0240m'
 
+    polygon = geometry.polygon_from_bbox(lat_limits=(54, 55), lon_limits=(40, 41))
+    dem_info = io.find_jpl_dem(polygon)
+    assert dem_info['name'] == 'N37_0240m'
 
-def test_download_s3_files(tmp_path, s3_unsigned_stub):
-    keys = ['foo', 'bar']
-    for key in keys:
-        s3_unsigned_stub.add_response(
-            'head_object',
-            expected_params={
-                'Bucket': 'myBucket',
-                'Key': key,
-            },
-            service_response={
-                'ContentLength': 3,
-            },
-        )
-        s3_unsigned_stub.add_response(
-            'get_object',
-            expected_params={
-                'Bucket': 'myBucket',
-                'Key': key,
-            },
-            service_response={
-                'Body': BytesIO(b'123'),
-            },
-        )
-    downloaded_files = io._download_s3_files(tmp_path, 'myBucket', keys)
-    for key, downloaded_file in zip(keys, downloaded_files):
-        assert (tmp_path / key).exists()
-        assert (tmp_path / key).read_text() == '123'
-        assert str(tmp_path / key) == downloaded_file
+    polygon = geometry.polygon_from_bbox(lat_limits=(54, 55), lon_limits=(-40, -41))
+    dem_info = io.find_jpl_dem(polygon)
+    assert dem_info['name'] == 'N24_0240m'
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(-54, -55), lon_limits=(-40, -41))
+    dem_info = io.find_jpl_dem(polygon)
+    assert dem_info['name'] == 'S24_0240m'
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(-55, -56), lon_limits=(40, 41))
+    dem_info = io.find_jpl_dem(polygon)
+    assert dem_info['name'] == 'S37_0240m'
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(-56, -57), lon_limits=(40, 41))
+    dem_info = io.find_jpl_dem(polygon)
+    assert dem_info['name'] == 'SPS_0240m'
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(-90, -91), lon_limits=(40, 41))
+    with pytest.raises(DemError):
+        io.find_jpl_dem(polygon)
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(90, 91), lon_limits=(40, 41))
+    with pytest.raises(DemError):
+        io.find_jpl_dem(polygon)
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(55, 56), lon_limits=(180, 181))
+    with pytest.raises(DemError):
+        io.find_jpl_dem(polygon)
+
+    polygon = geometry.polygon_from_bbox(lat_limits=(55, 56), lon_limits=(-180, -181))
+    with pytest.raises(DemError):
+        io.find_jpl_dem(polygon)

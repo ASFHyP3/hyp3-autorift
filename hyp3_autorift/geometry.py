@@ -2,19 +2,18 @@
 
 import logging
 import os
+from typing import Tuple
 
 import isce  # noqa: F401
 import isceobj
 import numpy as np
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
-from hyp3lib import DemError
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import ogr
-
-from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
+from osgeo import osr
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +88,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def polygon_from_bbox(lat_limits, lon_limits):
+def polygon_from_bbox(lat_limits: Tuple[float, float], lon_limits: Tuple[float, float]) -> ogr.Geometry:
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lon_limits[0], lat_limits[0])
     ring.AddPoint(lon_limits[1], lat_limits[0])
@@ -101,20 +100,24 @@ def polygon_from_bbox(lat_limits, lon_limits):
     return polygon
 
 
-def find_jpl_dem(lat_limits, lon_limits):
-    shape_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
+def poly_bounds_in_proj(polygon: ogr.Geometry, in_epsg: int, out_epsg: int):
+    in_srs = osr.SpatialReference()
+    in_srs.ImportFromEPSG(in_epsg)
 
-    centroid = polygon_from_bbox(lat_limits, lon_limits).Centroid()
-    for feature in shapes.GetLayer(0):
-        if feature.geometry().Contains(centroid):
-            return f'{feature["name"]}_0240m'
+    out_srs = osr.SpatialReference()
+    out_srs.ImportFromEPSG(out_epsg)
 
-    raise DemError('Could not determine appropriate DEM for:\n'
-                   f'    lat (min, max): {lat_limits}'
-                   f'    lon (min, max): {lon_limits}'
-                   f'    using: {shape_file}')
+    transformation = osr.CoordinateTransformation(in_srs, out_srs)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    for point in polygon.GetBoundary().GetPoints():
+        try:
+            lon, lat = point
+        except ValueError:
+            # buffered polygons only have (X, Y) while unbuffered have (X, Y, Z)
+            lon, lat, _ = point
+        ring.AddPoint(*transformation.TransformPoint(lat, lon))
+
+    return ring.GetEnvelope()
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):

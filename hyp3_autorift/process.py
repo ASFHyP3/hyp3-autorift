@@ -196,25 +196,22 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    dem = geometry.find_jpl_dem(lat_limits, lon_limits)
-    dem_dir = os.path.join(os.getcwd(), 'DEM')
-    mkdir_p(dem_dir)
-    io.fetch_jpl_tifs(dem=dem, target_dir=dem_dir)
-    dem_prefix = os.path.join(dem_dir, dem)
+    scene_poly = geometry.polygon_from_bbox(lat_limits, lon_limits)
+    tifs = io.subset_jpl_tifs(scene_poly, target_dir=Path.cwd())
 
-    geogrid_parameters = f'-d {dem_prefix}_h.tif -ssm {dem_prefix}_StableSurface.tif ' \
-                         f'-sx {dem_prefix}_dhdx.tif -sy {dem_prefix}_dhdy.tif ' \
-                         f'-vx {dem_prefix}_vx0.tif -vy {dem_prefix}_vy0.tif ' \
-                         f'-srx {dem_prefix}_vxSearchRange.tif -sry {dem_prefix}_vySearchRange.tif ' \
-                         f'-csminx {dem_prefix}_xMinChipSize.tif -csminy {dem_prefix}_yMinChipSize.tif ' \
-                         f'-csmaxx {dem_prefix}_xMaxChipSize.tif -csmaxy {dem_prefix}_yMaxChipSize.tif'
+    geogrid_parameters = f'-d {tifs["h"]} -ssm {tifs["StableSurface"]} ' \
+                         f'-sx {tifs["dhdx"]} -sy {tifs["dhdy"]} ' \
+                         f'-vx {tifs["vx0"]} -vy {tifs["vy0"]} ' \
+                         f'-srx {tifs["vxSearchRange"]} -sry {tifs["vySearchRange"]} ' \
+                         f'-csminx {tifs["xMinChipSize"]} -csminy {tifs["yMinChipSize"]} ' \
+                         f'-csmaxx {tifs["xMaxChipSize"]} -csmaxy {tifs["yMaxChipSize"]}'
     autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif ' \
                           '-csmin window_chip_size_min.tif -csmax window_chip_size_max.tif ' \
                           '-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif ' \
                           '-ssm window_stable_surface_mask.tif'
 
     if platform == 'S1':
-        isce_dem = geometry.prep_isce_dem(f'{dem_prefix}_h.tif', lat_limits, lon_limits)
+        isce_dem = geometry.prep_isce_dem(tifs["h"], lat_limits, lon_limits)
 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
