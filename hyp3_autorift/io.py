@@ -77,12 +77,12 @@ def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Uni
     out_srs.ImportFromEPSG(dem_info['epsg'])
 
     transformation = osr.CoordinateTransformation(in_srs, out_srs)
-    transformed_poly = ogr.Geometry(wkb=polygon.ExportToWkb())
-    transformed_poly = transformed_poly.Buffer(buffer)
-    transformed_poly.Transform(transformation)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    for lon, lat in polygon.Buffer(buffer).GetBoundary().GetPoints():
+        ring.AddPoint(*transformation.TransformPoint(lat, lon))
 
-    lon_min, lon_max, lat_min, lat_max = transformed_poly.GetEnvelope()
-    output_bounds = (lon_min, lat_min, lon_max, lat_max)
+    min_x, max_x, min_y, max_y = ring.GetEnvelope()
+    output_bounds = (min_x, min_y, max_x, max_y)
     log.debug(f'Subset bounds: {output_bounds}')
 
     subset_tifs = {}
