@@ -13,6 +13,7 @@ from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 
 log = logging.getLogger(__name__)
 
@@ -97,6 +98,26 @@ def polygon_from_bbox(lat_limits: Tuple[float, float], lon_limits: Tuple[float, 
     polygon = ogr.Geometry(ogr.wkbPolygon)
     polygon.AddGeometry(ring)
     return polygon
+
+
+def poly_bounds_in_proj(polygon: ogr.Geometry, in_epsg: int, out_epsg: int):
+    in_srs = osr.SpatialReference()
+    in_srs.ImportFromEPSG(in_epsg)
+
+    out_srs = osr.SpatialReference()
+    out_srs.ImportFromEPSG(out_epsg)
+
+    transformation = osr.CoordinateTransformation(in_srs, out_srs)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    for point in polygon.GetBoundary().GetPoints():
+        try:
+            lon, lat = point
+        except ValueError:
+            # buffered polygons only have (X, Y) while unbuffered have (X, Y, Z)
+            lon, lat, _ = point
+        ring.AddPoint(*transformation.TransformPoint(lat, lon))
+
+    return ring.GetEnvelope()
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):

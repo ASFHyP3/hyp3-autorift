@@ -12,8 +12,9 @@ from hyp3lib import DemError
 from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
 from scipy.io import savemat
+
+from hyp3_autorift.geometry import poly_bounds_in_proj
 
 log = logging.getLogger(__name__)
 
@@ -70,18 +71,7 @@ def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Uni
     dem_info = find_jpl_dem(polygon)
     log.info(f'Subsetting {dem_info["name"]} tifs from s3://{ITS_LIVE_BUCKET}/{AUTORIFT_PREFIX}/')
 
-    in_srs = osr.SpatialReference()
-    in_srs.ImportFromEPSG(4326)
-
-    out_srs = osr.SpatialReference()
-    out_srs.ImportFromEPSG(dem_info['epsg'])
-
-    transformation = osr.CoordinateTransformation(in_srs, out_srs)
-    ring = ogr.Geometry(ogr.wkbLinearRing)
-    for lon, lat in polygon.Buffer(buffer).GetBoundary().GetPoints():
-        ring.AddPoint(*transformation.TransformPoint(lat, lon))
-
-    min_x, max_x, min_y, max_y = ring.GetEnvelope()
+    min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), in_epsg=4326, out_epsg=dem_info['epsg'])
     output_bounds = (min_x, min_y, max_x, max_y)
     log.debug(f'Subset bounds: {output_bounds}')
 
