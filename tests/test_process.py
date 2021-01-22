@@ -3,8 +3,53 @@ from re import match
 
 import pytest
 import responses
+from requests import HTTPError
 
 from hyp3_autorift import process
+
+
+def test_get_platform():
+    assert process.get_platform('S1B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81') == 'S1'
+    assert process.get_platform('S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2') == 'S1'
+    assert process.get_platform('S2B_22WEB_20200913_0_L2A') == 'S2'
+    assert process.get_platform('S2A_11UNA_20201203_0_L2A') == 'S2'
+    assert process.get_platform('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == 'S2'
+    assert process.get_platform('S2A_MSIL2A_20201203T190751_N0214_R013_T11UNA_20201203T195322') == 'S2'
+    assert process.get_platform('LE07_L2SP_233095_20200102_20200822_02_T2') == 'L'
+    assert process.get_platform('LC08_L1TP_009011_20200703_20200913_02_T1') == 'L'
+
+    with pytest.raises(NotImplementedError):
+        process.get_platform('S3B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81')
+
+    with pytest.raises(NotImplementedError):
+        process.get_platform('foobar')
+
+
+def test_get_bucket():
+    assert process.get_bucket('S1') is None
+    assert process.get_bucket('S2') == 'sentinel-s2-l1c'
+    assert process.get_bucket('S3') is None
+    assert process.get_bucket('L') == 'usgs-landsat'
+    assert process.get_bucket('FOO') is None
+
+
+@responses.activate
+def test_get_lc2_metadata_not_found():
+    responses.add(
+        responses.GET, f'{process.LC2_SEARCH_URL}/foo',
+        body='{"message": "Item not found"}', status=404,
+    )
+    with pytest.raises(HTTPError):
+        process.get_lc2_metadata('foo')
+
+
+@responses.activate
+def test_get_lc2_metadata():
+    responses.add(
+        responses.GET, f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200703_20200913_02_T1',
+        body='{"foo": "bar"}', status=200,
+    )
+    assert process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1') == {'foo': 'bar'}
 
 
 @responses.activate
@@ -69,6 +114,9 @@ def test_get_datetime():
     granule = 'LE07_L2SP_233095_20200102_20200822_02_T2'
     assert process.get_datetime(granule) == datetime(year=2020, month=1, day=2)
 
+    granule = 'LC08_L1TP_009011_20200703_20200913_02_T1'
+    assert process.get_datetime(granule) == datetime(year=2020, month=7, day=3)
+
     with pytest.raises(ValueError):
         process.get_datetime('AB_adsflafjladsf')
 
@@ -130,3 +178,12 @@ def test_get_product_name():
     }
     name = process.get_product_name(**payload)
     assert match(r'LE77_20200306T000000_20190115T000000_B7-416_VEL40_A_[0-9A-F]{4}$', name)
+
+    payload = {
+        'reference_name': 'LC08_L1TP_009011_20200703_20200913_02_T1',
+        'secondary_name': 'LC08_L1TP_009011_20200820_20200905_02_T1',
+        'band': 'B8',
+        'pixel_spacing': 40,
+    }
+    name = process.get_product_name(**payload)
+    assert match(r'LC88_20200703T000000_20200820T000000_B8-048_VEL40_A_[0-9A-F]{4}$', name)

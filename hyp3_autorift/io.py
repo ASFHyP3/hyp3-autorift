@@ -4,59 +4,92 @@ import argparse
 import logging
 import os
 import textwrap
+from pathlib import Path
+from typing import Union
 
 import boto3
-from boto3.s3.transfer import TransferConfig
-from botocore import UNSIGNED
-from botocore.config import Config
+from hyp3lib import DemError
 from isce.applications.topsApp import TopsInSAR
+from osgeo import gdal
+from osgeo import ogr
 from scipy.io import savemat
 
+from hyp3_autorift.geometry import poly_bounds_in_proj
+
 log = logging.getLogger(__name__)
-s3_client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
 ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
-AUTORIFT_PREFIX = 'isce_autoRIFT'
+AUTORIFT_PREFIX = 'autorift_parameters/v001'
+
+_s3_client = boto3.client('s3')
 
 
-def _download_s3_files(target_dir, bucket, keys, chunk_size=50*1024*1024):
-    transfer_config = TransferConfig(multipart_threshold=chunk_size, multipart_chunksize=chunk_size)
-    for key in keys:
-        filename = os.path.join(target_dir, os.path.basename(key))
-        log.info(f'Downloading s3://{bucket}/{key} to {filename}')
-        s3_client.download_file(Bucket=bucket, Key=key, Filename=filename, Config=transfer_config)
+def download_s3_file_requester_pays(target_path: Union[str, Path], bucket: str, key: str) -> Path:
+    response = _s3_client.get_object(Bucket=bucket, Key=key, RequestPayer='requester')
+    filename = Path(target_path)
+    filename.write_bytes(response['Body'].read())
+    return filename
 
 
-def _get_s3_keys_for_dem(prefix=AUTORIFT_PREFIX, dem='GRE240m'):
-    tags = [
-        'h',
-        'StableSurface',
-        'dhdx',
-        'dhdy',
-        'dhdxs',
-        'dhdys',
-        'vx0',
-        'vy0',
-        'vxSearchRange',
-        'vySearchRange',
-        'xMinChipSize',
-        'yMinChipSize',
-        'xMaxChipSize',
-        'yMaxChipSize',
-        'masks',
-    ]
-    keys = [f'{prefix}/{dem}_{tag}.tif' for tag in tags]
-    return keys
+def find_jpl_dem(polygon: ogr.Geometry) -> dict:
+    shape_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
+
+    centroid = polygon.Centroid()
+    for feature in shapes.GetLayer(0):
+        if feature.geometry().Contains(centroid):
+            dem_info = {
+                'name': f'{feature["name"]}_0240m',
+                'epsg': feature['epsg'],
+                'tifs': {
+                    'h': f"/vsicurl/{feature['h']}",
+                    'StableSurface': f"/vsicurl/{feature['StableSurfa']}",
+                    'dhdx': f"/vsicurl/{feature['dhdx']}",
+                    'dhdy': f"/vsicurl/{feature['dhdy']}",
+                    'dhdxs': f"/vsicurl/{feature['dhdxs']}",
+                    'dhdys': f"/vsicurl/{feature['dhdys']}",
+                    'vx0': f"/vsicurl/{feature['vx0']}",
+                    'vy0': f"/vsicurl/{feature['vy0']}",
+                    'vxSearchRange': f"/vsicurl/{feature['vxSearchRan']}",
+                    'vySearchRange': f"/vsicurl/{feature['vySearchRan']}",
+                    'xMinChipSize': f"/vsicurl/{feature['xMinChipSiz']}",
+                    'yMinChipSize': f"/vsicurl/{feature['yMinChipSiz']}",
+                    'xMaxChipSize': f"/vsicurl/{feature['xMaxChipSiz']}",
+                    'yMaxChipSize': f"/vsicurl/{feature['yMaxChipSiz']}",
+                    'sp': f"/vsicurl/{feature['sp']}",
+                },
+            }
+            return dem_info
+
+    raise DemError('Could not determine appropriate DEM for:\n'
+                   f'    centroid: {centroid}'
+                   f'    using: {shape_file}')
 
 
-def fetch_jpl_tifs(dem='GRE240m', target_dir='DEM', bucket=ITS_LIVE_BUCKET, prefix=AUTORIFT_PREFIX):
-    log.info(f"Downloading {dem} tifs from JPL's AWS bucket")
+def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Union[str, Path] = '.'):
+    dem_info = find_jpl_dem(polygon)
+    log.info(f'Subsetting {dem_info["name"]} tifs: {dem_info["tifs"]["h"].replace("_h.tif", "_*")}')
 
-    for logger in ('botocore', 's3transfer'):
-        logging.getLogger(logger).setLevel(logging.WARNING)
+    min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), in_epsg=4326, out_epsg=dem_info['epsg'])
+    output_bounds = (min_x, min_y, max_x, max_y)
+    log.debug(f'Subset bounds: {output_bounds}')
 
-    keys = _get_s3_keys_for_dem(prefix, dem)
-    _download_s3_files(target_dir, bucket, keys)
+    subset_tifs = {}
+    for key, tif in dem_info['tifs'].items():
+        out_path = os.path.join(target_dir, os.path.basename(tif))
+
+        # FIXME: shouldn't need to do after next autoRIFT upgrade
+        if out_path.endswith('_sp.tif'):
+            out_path = out_path.replace('_sp.tif', '_masks.tif')
+
+        subset_tifs[key] = out_path
+
+        gdal.Warp(
+            out_path, tif, outputBounds=output_bounds, xRes=240, yRes=240, targetAlignedPixels=True, multithread=True,
+        )
+
+    return subset_tifs
 
 
 def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):

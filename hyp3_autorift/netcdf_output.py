@@ -146,7 +146,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
                  '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581\n' \
                  '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
                  '* autoRIFT: https://doi.org/10.5281/zenodo.4025445'
-    tran = [tran[0], tran[1], 0.0, tran[3], 0.0, tran[5]]
+    tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
 
     clobber = True  # overwrite existing output nc file
 

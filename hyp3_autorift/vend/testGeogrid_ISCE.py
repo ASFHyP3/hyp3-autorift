@@ -199,7 +199,7 @@ def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
     info.XSize = trans[1]
     info.YSize = trans[5]
 
-    if re.findall("L8",DS.GetDescription()).__len__() > 0:
+    if re.findall("LC08",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
     elif re.findall("S2",DS.GetDescription()).__len__() > 0:
@@ -219,7 +219,7 @@ def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
 
     info1 = Dummy()
 
-    if re.findall("L8",DS1.GetDescription()).__len__() > 0:
+    if re.findall("LC08",DS1.GetDescription()).__len__() > 0:
         nameString1 = os.path.basename(DS1.GetDescription())
         info1.time = nameString1.split('_')[3]
     elif re.findall("S2",DS1.GetDescription()).__len__() > 0:

@@ -2,19 +2,18 @@
 
 import logging
 import os
+from typing import Tuple
 
 import isce  # noqa: F401
 import isceobj
 import numpy as np
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
-from hyp3lib import DemError
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
-
-from hyp3_autorift.io import AUTORIFT_PREFIX, ITS_LIVE_BUCKET
 
 log = logging.getLogger(__name__)
 
@@ -89,60 +88,39 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def find_jpl_dem(lat_limits, lon_limits, z_limits=(-200, 4000)):
+def polygon_from_bbox(lat_limits: Tuple[float, float], lon_limits: Tuple[float, float]) -> ogr.Geometry:
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(lon_limits[0], lat_limits[0])
+    ring.AddPoint(lon_limits[1], lat_limits[0])
+    ring.AddPoint(lon_limits[1], lat_limits[1])
+    ring.AddPoint(lon_limits[0], lat_limits[1])
+    ring.AddPoint(lon_limits[0], lat_limits[0])
+    polygon = ogr.Geometry(ogr.wkbPolygon)
+    polygon.AddGeometry(ring)
+    return polygon
 
-    dems = ['GRE240m', 'ANT240m']
-    bounding_dem = None
-    for dem in dems:
-        dem_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/{dem}_h.tif'
-        log.info(f'Checking DEM: {dem_file}')
-        dem_ds = gdal.Open(dem_file, gdal.GA_ReadOnly)
-        dem_sr = dem_ds.GetSpatialRef()
-        log.debug(f'DEM projection: {dem_sr}')
 
-        latlon = osr.SpatialReference()
-        latlon.ImportFromEPSG(4326)
+def poly_bounds_in_proj(polygon: ogr.Geometry, in_epsg: int, out_epsg: int):
+    in_srs = osr.SpatialReference()
+    in_srs.ImportFromEPSG(in_epsg)
 
-        trans = osr.CoordinateTransformation(latlon, dem_sr)
+    out_srs = osr.SpatialReference()
+    out_srs.ImportFromEPSG(out_epsg)
 
-        # NOTE: This is probably unnecessary and just the lower-left and upper-right could be used,
-        #       but this does cover the case of skewed bounding boxes
-        all_xyz = []
-        for lat in lat_limits:
-            for lon in lon_limits:
-                for zed in z_limits:
-                    xyz = trans.TransformPoint(lat, lon, zed)
-                    all_xyz.append(xyz)
+    transformation = osr.CoordinateTransformation(in_srs, out_srs)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    for point in polygon.GetBoundary().GetPoints():
+        try:
+            lon, lat = point
+        except ValueError:
+            # buffered polygons only have (X, Y) while unbuffered have (X, Y, Z)
+            lon, lat, _ = point
+        ring.AddPoint(*transformation.TransformPoint(lat, lon))
 
-        x, y, _ = zip(*all_xyz)
-
-        x_limits = (min(x), max(x))
-        y_limits = (min(y), max(y))
-
-        log.info(f'Image X limits: {x_limits}')
-        log.info(f'Image Y limits: {y_limits}')
-
-        dem_geo_trans = dem_ds.GetGeoTransform()
-        dem_x_limits = (dem_geo_trans[0], dem_geo_trans[0] + dem_ds.RasterXSize * dem_geo_trans[1])
-        dem_y_limits = (dem_geo_trans[3] + dem_ds.RasterYSize * dem_geo_trans[5], dem_geo_trans[3])
-
-        log.info(f'DEM X limits: {dem_x_limits}')
-        log.info(f'DEM Y limits: {dem_y_limits}')
-
-        if x_limits[0] > dem_x_limits[0] and x_limits[1] < dem_x_limits[1] \
-           and y_limits[0] > dem_y_limits[0] and y_limits[1] < dem_y_limits[1]:
-            bounding_dem = dem
-            break
-
-    if bounding_dem is None:
-        raise DemError('Existing DEMs do not (fully) cover the image data')
-
-    log.info(f'Bounding DEM is: {bounding_dem}')
-    return bounding_dem
+    return ring.GetEnvelope()
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
-
     if isce_dem is None:
         seamstress = createDemStitcher()
         isce_dem = seamstress.defaultName([*lat_limits, *lon_limits])
