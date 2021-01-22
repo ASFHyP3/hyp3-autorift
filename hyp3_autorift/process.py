@@ -206,7 +206,7 @@ def process(reference: str, secondary: str, band: str = 'B08') -> Path:
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    scene_poly = geometry.polygon_from_bbox(lat_limits, lon_limits)
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     tifs = io.subset_jpl_tifs(scene_poly, target_dir=Path.cwd())
 
     geogrid_parameters = f'-d {tifs["h"]} -ssm {tifs["StableSurface"]} ' \
