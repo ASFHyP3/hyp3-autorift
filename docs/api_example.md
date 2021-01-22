@@ -46,7 +46,7 @@ definitions. A minimal job list for a single Sentinel-1 autoRIFT job would look 
 
 The job list may contain up to 200 job definitions.
 
-### Sentinel-1, Sentinel-2, and (soon!) Landsat-8
+### Sentinel-1, Sentinel-2, and Landsat-8
 
 For each supported satellite mission, the granule (scene) pairs to process are
 provided by ID:

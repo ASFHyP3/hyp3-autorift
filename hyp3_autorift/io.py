@@ -69,7 +69,7 @@ def find_jpl_dem(polygon: ogr.Geometry) -> dict:
 
 def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Union[str, Path] = '.'):
     dem_info = find_jpl_dem(polygon)
-    log.info(f'Subsetting {dem_info["name"]} tifs from s3://{ITS_LIVE_BUCKET}/{AUTORIFT_PREFIX}/')
+    log.info(f'Subsetting {dem_info["name"]} tifs: {dem_info["tifs"]["h"].replace("_h.tif", "_*")}')
 
     min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), in_epsg=4326, out_epsg=dem_info['epsg'])
     output_bounds = (min_x, min_y, max_x, max_y)

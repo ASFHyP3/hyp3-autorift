@@ -160,14 +160,14 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         reference_url = reference_metadata['assets'][band]['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
         reference_url = reference_url.replace(f's3://{bucket}/', '')
-        reference_path = Path.cwd() / f'{reference}_{Path(reference_url).name}'
+        reference_path = Path.cwd() / f'{reference}_{Path(reference_url).name}'  # file names are just band.jp2
         io.download_s3_file_requester_pays(reference_path, bucket, reference_url)
 
         secondary_metadata = get_s2_metadata(secondary)
         secondary = secondary_metadata['properties']['sentinel:product_id']
         secondary_url = secondary_metadata['assets'][band]['href']
         # FIXME: This is only because autoRIFT can't handle /vsis3/
-        secondary_url = secondary_url.replace(f's3://{bucket}/', '')
+        secondary_url = secondary_url.replace(f's3://{bucket}/', '')  # file names are just band.jp2
         secondary_path = Path.cwd() / f'{secondary}_{Path(secondary_url).name}'
         io.download_s3_file_requester_pays(secondary_path, bucket, secondary_url)
 

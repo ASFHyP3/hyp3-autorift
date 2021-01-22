@@ -37,7 +37,7 @@ def test_get_bucket():
 def test_get_lc2_metadata_not_found():
     responses.add(
         responses.GET, f'{process.LC2_SEARCH_URL}/foo',
-        body='{"message": "Item not found"}', status=400,
+        body='{"message": "Item not found"}', status=404,
     )
     with pytest.raises(HTTPError):
         process.get_lc2_metadata('foo')
