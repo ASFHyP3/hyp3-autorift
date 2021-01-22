@@ -8,6 +8,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.3...v0.4.0)
 
+**HyP3 v1 is no longer supported as of this release.**
+
 ### Added
 * Added support for global processing (previously only Greenland and Antarctica) 
   by pointing at the new autoRIFT parameter files provided by JPL
@@ -18,9 +20,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * Sentinel-2 support now targets level-1c products instead of level-2a products to
   remove baked in slope correction
+* `hyp3_autorift` entrypoint point now kicks off HyP3 v2 processing (options have changed! see `--help`)
 
 ### Fixed
-* 1/2 pixel offset in netCDF file due to gdal and netCDF using different pixel reference points. 
+* 1/2 pixel offset in netCDF file due to gdal and netCDF using different pixel reference points
+
+### Removed
+* The `autorift` entrypoint and HyP3 v1 support has been removed
+* The `hyp3_autorift_v2` entrypoint has been removed (now just `hyp3_autorift`)
 
 ## [0.3.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.0...v0.3.1)
 
