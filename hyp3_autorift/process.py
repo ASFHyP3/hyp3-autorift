@@ -121,7 +121,7 @@ def get_bucket(platform: str) -> Optional[str]:
     return
 
 
-def get_s1_copol(granule_name):
+def get_s1_primary_polarization(granule_name):
     polarization = granule_name[14:16]
     if polarization in ['SV', 'DV']:
         return 'vv'
@@ -154,8 +154,6 @@ def process(reference: str, secondary: str, band: str = 'B08') -> Path:
             scene_url = get_download_url(scene)
             download_file(scene_url, chunk_size=5242880)
 
-        polarization = get_s1_copol(reference)
-
         orbits = Path('Orbits').resolve()
         mkdir_p(orbits)
         reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits)
@@ -163,6 +161,7 @@ def process(reference: str, secondary: str, band: str = 'B08') -> Path:
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
+        polarization = get_s1_primary_polarization(reference)
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
 
     elif platform == 'S2':

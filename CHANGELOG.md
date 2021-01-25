@@ -10,14 +10,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * `hyp3_autorift` will determine the polarization of Sentinel-1 scenes based on
-  reference scene to allow for HH and VV processing.
+  reference scene to allow for VV in addition to HH processing.
 
 ### Removed
 * `autorift_proc_pair` entrypoint no longer accepts a `-p`/`--polarization` option
 * `hyp3_autorift.process.process` no longer accepts a `polarization=` keyword argument
 
 ### Fixed
-* Short (23 char) Element 84 Sentinel-2 scene IDs will now process
+* ValueError exception when processing scenes with short (23 char) Element 84 Sentinel-2 IDs
 
 ## [0.4.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.3.3...v0.4.0)
 
