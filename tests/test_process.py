@@ -11,6 +11,7 @@ from hyp3_autorift import process
 def test_get_platform():
     assert process.get_platform('S1B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81') == 'S1'
     assert process.get_platform('S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2') == 'S1'
+    assert process.get_platform('S2A_1UCR_20210124_0_L1C') == 'S2'
     assert process.get_platform('S2B_22WEB_20200913_0_L2A') == 'S2'
     assert process.get_platform('S2A_11UNA_20201203_0_L2A') == 'S2'
     assert process.get_platform('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == 'S2'
@@ -98,6 +99,9 @@ def test_get_datetime():
 
     granule = 'S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2'
     assert process.get_datetime(granule) == datetime(year=2018, month=6, day=5, hour=23, minute=31, second=48)
+
+    granule = 'S2A_1UCR_20210124_0_L1C'
+    assert process.get_datetime(granule) == datetime(year=2021, month=1, day=24)
 
     granule = 'S2B_22WEB_20200913_0_L2A'
     assert process.get_datetime(granule) == datetime(year=2020, month=9, day=13)
@@ -187,3 +191,18 @@ def test_get_product_name():
     }
     name = process.get_product_name(**payload)
     assert match(r'LC88_20200703T000000_20200820T000000_B8-048_VEL40_A_[0-9A-F]{4}$', name)
+
+
+def test_get_copol():
+    assert process.get_s1_copol('S1B_WV_SLC__1SSV_20200923T184541_20200923T185150_023506_02CA71_AABB') == 'vv'
+    assert process.get_s1_copol('S1B_IW_GRDH_1SDV_20200924T092954_20200924T093026_023515_02CABC_6C62') == 'vv'
+    assert process.get_s1_copol('S1B_IW_GRDH_1SSH_20200924T112903_20200924T112932_023516_02CAC7_D003') == 'hh'
+    assert process.get_s1_copol('S1B_IW_OCN__2SDH_20200924T090450_20200924T090519_023515_02CAB8_917B') == 'hh'
+    with pytest.raises(ValueError):
+        process.get_s1_copol('S1A_EW_GRDM_1SHH_20150513T080355_20150513T080455_005900_007994_35D2')
+    with pytest.raises(ValueError):
+        process.get_s1_copol('S1A_EW_GRDM_1SHV_20150509T230833_20150509T230912_005851_00787D_3BE5')
+    with pytest.raises(ValueError):
+        process.get_s1_copol('S1A_IW_SLC__1SVH_20150706T015744_20150706T015814_006684_008EF7_9B69')
+    with pytest.raises(ValueError):
+        process.get_s1_copol('S1A_IW_GRDH_1SVV_20150706T015720_20150706T015749_006684_008EF7_54BA')
