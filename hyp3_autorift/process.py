@@ -72,7 +72,7 @@ def get_datetime(scene_name):
     if scene_name.startswith('S2') and len(scene_name) > 24:  # ESA
         return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S2'):  # COG
-        return datetime.strptime(scene_name[10:18], '%Y%m%d')
+        return datetime.strptime(scene_name.split('_')[2], '%Y%m%d')
     if scene_name.startswith('L'):
         return datetime.strptime(scene_name[17:25], '%Y%m%d')
 
@@ -121,17 +121,26 @@ def get_bucket(platform: str) -> Optional[str]:
     return
 
 
-def process(reference: str, secondary: str, polarization: str = 'hh', band: str = 'B08') -> Path:
+def get_s1_primary_polarization(granule_name):
+    polarization = granule_name[14:16]
+    if polarization in ['SV', 'DV']:
+        return 'vv'
+    if polarization in ['SH', 'DH']:
+        return 'hh'
+    raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
+
+
+def process(reference: str, secondary: str, band: str = 'B08') -> Path:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
-        polarization: Polarization to process for Sentinel-1 scenes, one of 'hh', 'hv', 'vv', or 'vh'
         band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
 
     orbits = None
+    polarization = None
     reference_path = None
     secondary_path = None
     reference_state_vec = None
@@ -152,7 +161,8 @@ def process(reference: str, secondary: str, polarization: str = 'hh', band: str 
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
-        lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', orbits=orbits)
+        polarization = get_s1_primary_polarization(reference)
+        lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
 
     elif platform == 'S2':
         reference_metadata = get_s2_metadata(reference)
@@ -276,8 +286,6 @@ def main():
                         help='Reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
     parser.add_argument('secondary', type=os.path.abspath,
                         help='Secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
-    parser.add_argument('-p', '--polarization', default='hh',
-                        help='Polarization of the Sentinel-1 scenes')
     parser.add_argument('-b', '--band', default='B08',
                         help='Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes')
     args = parser.parse_args()
