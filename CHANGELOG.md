@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.4.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.1...v0.4.2)
+
+### Fixed
+* A *partial* fix was implemented to correct out of index errors when processing
+  optical scenes (typically seen with Landsat-8 pairs) due to calculating different
+  overlapping subset sizes when co-registering the images. Currently, only the
+  smallest subset size is used, so the bounding box may be 1px too small in x
+  and/or y, but there shouldn't be any pixel offsets. Full fix will need to be
+  implemented upstream in [autoRIFT](https://github.com/leiyangleon/autoRIFT).
+
 ## [0.4.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.0...v0.4.1)
 
 ### Changed
