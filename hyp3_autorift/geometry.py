@@ -88,36 +88,49 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     return lat_limits, lon_limits
 
 
-def polygon_from_bbox(lat_limits: Tuple[float, float], lon_limits: Tuple[float, float]) -> ogr.Geometry:
+def polygon_from_bbox(x_limits: Tuple[float, float], y_limits: Tuple[float, float],
+                      epsg_code: int = 4326) -> ogr.Geometry:
     ring = ogr.Geometry(ogr.wkbLinearRing)
-    ring.AddPoint(lon_limits[0], lat_limits[0])
-    ring.AddPoint(lon_limits[1], lat_limits[0])
-    ring.AddPoint(lon_limits[1], lat_limits[1])
-    ring.AddPoint(lon_limits[0], lat_limits[1])
-    ring.AddPoint(lon_limits[0], lat_limits[0])
+    ring.AddPoint_2D(x_limits[0], y_limits[1])
+    ring.AddPoint_2D(x_limits[1], y_limits[1])
+    ring.AddPoint_2D(x_limits[1], y_limits[0])
+    ring.AddPoint_2D(x_limits[0], y_limits[0])
+    ring.AddPoint_2D(x_limits[0], y_limits[1])
     polygon = ogr.Geometry(ogr.wkbPolygon)
     polygon.AddGeometry(ring)
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(epsg_code)
+    polygon.AssignSpatialReference(srs)
+
     return polygon
 
 
-def poly_bounds_in_proj(polygon: ogr.Geometry, in_epsg: int, out_epsg: int):
-    in_srs = osr.SpatialReference()
-    in_srs.ImportFromEPSG(in_epsg)
+def poly_bounds_in_proj(polygon: ogr.Geometry, out_epsg: int):
+    in_srs = polygon.GetSpatialReference()
+    if in_srs is None:
+        log.warning('Polygon does not have an assigned spatial reference; assuming EPSG:4326.')
+        in_srs = osr.SpatialReference()
+        in_srs.ImportFromEPSG(4326)
 
     out_srs = osr.SpatialReference()
     out_srs.ImportFromEPSG(out_epsg)
 
     transformation = osr.CoordinateTransformation(in_srs, out_srs)
-    ring = ogr.Geometry(ogr.wkbLinearRing)
-    for point in polygon.GetBoundary().GetPoints():
-        try:
-            lon, lat = point
-        except ValueError:
-            # buffered polygons only have (X, Y) while unbuffered have (X, Y, Z)
-            lon, lat, _ = point
-        ring.AddPoint(*transformation.TransformPoint(lat, lon))
+    out_poly = ogr.Geometry(wkb=polygon.ExportToWkb())
+    out_poly.Transform(transformation)
 
-    return ring.GetEnvelope()
+    return out_poly.GetEnvelope()
+
+
+def flip_point_coordinates(point: ogr.Geometry):
+    if not point.GetGeometryName() == 'POINT':
+        raise ValueError('Can only flip POINT geometries')
+
+    flipped = ogr.Geometry(ogr.wkbPoint)
+    flipped.AddPoint_2D(point.GetY(), point.GetX())
+
+    return flipped
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
