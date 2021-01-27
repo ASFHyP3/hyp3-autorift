@@ -1,4 +1,7 @@
+import json
+
 import numpy as np
+from osgeo import ogr
 
 from hyp3_autorift import geometry
 
@@ -6,8 +9,18 @@ from hyp3_autorift import geometry
 def test_polygon_from_bbox():
     lat_limits = (1, 2)
     lon_limits = (3, 4)
-    assert geometry.polygon_from_bbox(lat_limits, lon_limits).ExportToWkt() \
-           == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
+
+    polygon = geometry.polygon_from_bbox(lat_limits, lon_limits)
+    assert polygon.ExportToWkt() == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
+    srs = polygon.GetSpatialReference()
+    assert srs.GetAttrValue('AUTHORITY', 0) == 'EPSG'
+    assert srs.GetAttrValue('AUTHORITY', 1) == '4326'
+
+    polygon = geometry.polygon_from_bbox(lat_limits, lon_limits, epsg_code=3413)
+    assert polygon.ExportToWkt() == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
+    srs = polygon.GetSpatialReference()
+    assert srs.GetAttrValue('AUTHORITY', 0) == 'EPSG'
+    assert srs.GetAttrValue('AUTHORITY', 1) == '3413'
 
 
 def test_pol_bounds_in_proj():
@@ -42,3 +55,13 @@ def test_pol_bounds_in_proj():
         geometry.poly_bounds_in_proj(polygon, out_epsg=32737),
         (602485.1663686256, 706472.0593133729, 7455081.895663038, 7566835.5713464115)
     )
+
+
+def test_flip_point_coordinates():
+    point = ogr.Geometry(ogr.wkbPoint)
+    point.AddPoint_2D(0, 1)
+    assert str(geometry.flip_point_coordinates(point)) == 'POINT (1 0)'
+
+    point = ogr.Geometry(ogr.wkbPoint)
+    point.AddPoint(2, 3, 4)
+    assert str(geometry.flip_point_coordinates(point)) == 'POINT (3 2)'
