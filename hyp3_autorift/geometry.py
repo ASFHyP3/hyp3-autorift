@@ -124,8 +124,8 @@ def poly_bounds_in_proj(polygon: ogr.Geometry, out_epsg: int):
 
 
 def flip_point_coordinates(point: ogr.Geometry):
-    if point.GetGeometryName() != 'POINT' and len(point.GetPoint()) != 2:
-        raise ValueError('Can only flip 2D POINT geometries')
+    if not point.GetGeometryName() == 'POINT':
+        raise ValueError('Can only flip POINT geometries')
 
     flipped = ogr.Geometry(ogr.wkbPoint)
     flipped.AddPoint_2D(point.GetY(), point.GetX())
