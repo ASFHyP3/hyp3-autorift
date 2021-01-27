@@ -11,13 +11,13 @@ def test_polygon_from_bbox():
     lon_limits = (3, 4)
 
     polygon = geometry.polygon_from_bbox(lat_limits, lon_limits)
-    assert polygon.ExportToWkt() == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
+    assert str(polygon) == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
     srs = polygon.GetSpatialReference()
     assert srs.GetAttrValue('AUTHORITY', 0) == 'EPSG'
     assert srs.GetAttrValue('AUTHORITY', 1) == '4326'
 
     polygon = geometry.polygon_from_bbox(lat_limits, lon_limits, epsg_code=3413)
-    assert polygon.ExportToWkt() == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
+    assert str(polygon) == 'POLYGON ((1 4,2 4,2 3,1 3,1 4))'
     srs = polygon.GetSpatialReference()
     assert srs.GetAttrValue('AUTHORITY', 0) == 'EPSG'
     assert srs.GetAttrValue('AUTHORITY', 1) == '3413'
