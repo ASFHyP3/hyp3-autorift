@@ -126,6 +126,9 @@ def coregisterLoadMetadata(indir_r, indir_s, urlflag):
 
     x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_r, indir_s, urlflag)
 
+    xsize1 = min((xsize1, xsize2))
+    ysize1 = min((ysize1, ysize2))
+
     if urlflag is 1:
         DS = gdal.Open('/vsicurl/%s' % (indir_r))
     else:

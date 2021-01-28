@@ -24,6 +24,12 @@ language.
 
 ## `testGeogrid_ISCE.py` and `testGeogridOptical.py`
 
+---
+*Note: A patch from autoRIFT was applied to these files to prevent out of index
+errors when coregistering optical scenes, which will be included in the next autoRIFT
+release. See `PRE109-PATCH-2.diff` for the changes applied.*
+---
+
 These modules are required for the expected workflow provided to ASF, but are
 not provided in the autoRIFT v1.0.8 release and instead resides in the "sister"
 Geogrid package (https://github.com/leiyangleon/Geogrid). Geogrid and autoRIFT

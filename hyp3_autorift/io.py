@@ -14,7 +14,7 @@ from osgeo import gdal
 from osgeo import ogr
 from scipy.io import savemat
 
-from hyp3_autorift.geometry import poly_bounds_in_proj
+from hyp3_autorift.geometry import flip_point_coordinates, poly_bounds_in_proj
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def find_jpl_dem(polygon: ogr.Geometry) -> dict:
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
 
-    centroid = polygon.Centroid()
+    centroid = flip_point_coordinates(polygon.Centroid())
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
             dem_info = {
@@ -71,7 +71,7 @@ def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Uni
     dem_info = find_jpl_dem(polygon)
     log.info(f'Subsetting {dem_info["name"]} tifs: {dem_info["tifs"]["h"].replace("_h.tif", "_*")}')
 
-    min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), in_epsg=4326, out_epsg=dem_info['epsg'])
+    min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), out_epsg=dem_info['epsg'])
     output_bounds = (min_x, min_y, max_x, max_y)
     log.debug(f'Subset bounds: {output_bounds}')
 
