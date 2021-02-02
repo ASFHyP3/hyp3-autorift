@@ -40,8 +40,10 @@ jobs:
       - name: Safety analysis of conda environment
         shell: bash -l {0}
         run: |
-          python -m pip freeze | safety check --full-report --stdin
-          conda list --export | awk -F '=' '/^[^#]/ {print $1 "==" $2}' | safety check --full-report --stdin
+          # Ignore Saftey vulnerability #39465, python <= 3.9.1, because python 3.6 is system python in Ubuntu 18.04
+          # Ignore Saftey vulnerability #39462, tornado <= 6.1, because there isn't a new release available
+          python -m pip freeze | safety check --full-report -i 39465 -i 39462 --stdin
+          conda list --export | awk -F '=' '/^[^#]/ {print $1 "==" $2}' | safety check --full-report -i 39465 -i 39462 --stdin
 
 
   package:
