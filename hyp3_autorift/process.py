@@ -30,9 +30,8 @@ log = logging.getLogger(__name__)
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 
-ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
-AUTORIFT_PREFIX = 'autorift_parameters/v001'
-PARAMETER_FILE = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
+DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
+                         'autorift_parameters/v001/autorift_parameters.shp'
 
 
 def get_lc2_metadata(scene_name):
@@ -134,7 +133,7 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def process(reference: str, secondary: str, parameter_file: str = PARAMETER_FILE, band: str = 'B08') -> Path:
+def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE, band: str = 'B08') -> Path:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:

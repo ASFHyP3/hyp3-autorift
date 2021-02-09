@@ -7,7 +7,7 @@ from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import write_credentials_to_netrc_file
 from hyp3lib.image import create_thumbnail
 
-from hyp3_autorift.process import PARAMETER_FILE, get_datetime, process
+from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_datetime, process
 
 
 def main():
@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--password', help='NASA Earthdata Login password for fetching Sentinel-1 scenes')
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--parameter-file', default=PARAMETER_FILE,
+    parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location.'
                              'Path to shapefile must be understood by GDAL')
     parser.add_argument('granules', type=str.split, nargs='+',

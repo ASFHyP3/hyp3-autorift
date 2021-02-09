@@ -4,7 +4,7 @@ import pytest
 from hyp3lib import DemError
 
 from hyp3_autorift import geometry, io
-from hyp3_autorift.process import PARAMETER_FILE
+from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 
 
 def test_download_s3_file_requester_pays(tmp_path, s3_stub):
@@ -29,59 +29,59 @@ def test_find_jpl_dem():
     lat_limits = (55, 56)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_dem(polygon, PARAMETER_FILE)
+    dem_info = io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
     assert dem_info['name'] == 'NPS_0240m'
 
     lat_limits = (54, 55)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_dem(polygon, PARAMETER_FILE)
+    dem_info = io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
     assert dem_info['name'] == 'N37_0240m'
 
     lat_limits = (54, 55)
     lon_limits = (-40, -41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_dem(polygon, PARAMETER_FILE)
+    dem_info = io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
     assert dem_info['name'] == 'N24_0240m'
 
     lat_limits = (-54, -55)
     lon_limits = (-40, -41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_dem(polygon, PARAMETER_FILE)
+    dem_info = io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
     assert dem_info['name'] == 'S24_0240m'
 
     lat_limits = (-55, -56)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_dem(polygon, PARAMETER_FILE)
+    dem_info = io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
     assert dem_info['name'] == 'S37_0240m'
 
     lat_limits = (-56, -57)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_dem(polygon, PARAMETER_FILE)
+    dem_info = io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
     assert dem_info['name'] == 'SPS_0240m'
 
     lat_limits = (-90, -91)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     with pytest.raises(DemError):
-        io.find_jpl_dem(polygon, PARAMETER_FILE)
+        io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
 
     lat_limits = (90, 91)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     with pytest.raises(DemError):
-        io.find_jpl_dem(polygon, PARAMETER_FILE)
+        io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
 
     lat_limits = (55, 56)
     lon_limits = (180, 181)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     with pytest.raises(DemError):
-        io.find_jpl_dem(polygon, PARAMETER_FILE)
+        io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
 
     lat_limits = (55, 56)
     lon_limits = (-180, -181)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     with pytest.raises(DemError):
-        io.find_jpl_dem(polygon, PARAMETER_FILE)
+        io.find_jpl_dem(polygon, DEFAULT_PARAMETER_FILE)
