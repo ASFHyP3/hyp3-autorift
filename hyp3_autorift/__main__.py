@@ -32,7 +32,7 @@ def main():
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
-    product_file = process(g1, g2, parameter_file=args.parametr_file)
+    product_file = process(g1, g2, parameter_file=args.parameter_file)
 
     browse_file = product_file.with_suffix('.png')
 
