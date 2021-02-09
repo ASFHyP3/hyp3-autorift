@@ -30,6 +30,10 @@ log = logging.getLogger(__name__)
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 
+ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
+AUTORIFT_PREFIX = 'autorift_parameters/v001'
+PARAMETER_FILE = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
+
 
 def get_lc2_metadata(scene_name):
     response = requests.get(f'{LC2_SEARCH_URL}/{scene_name}')
@@ -130,12 +134,13 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def process(reference: str, secondary: str, band: str = 'B08') -> Path:
+def process(reference: str, secondary: str, parameter_file: str = PARAMETER_FILE, band: str = 'B08') -> Path:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
+        parameter_file: Shapefile for determining the correct search parameters by geographic location
         band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
 
@@ -207,7 +212,7 @@ def process(reference: str, secondary: str, band: str = 'B08') -> Path:
         lon_limits = (bbox[0], bbox[2])
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    tifs = io.subset_jpl_tifs(scene_poly, target_dir=Path.cwd())
+    tifs = io.subset_jpl_tifs(scene_poly, parameter_file, target_dir=Path.cwd())
 
     geogrid_parameters = f'-d {tifs["h"]} -ssm {tifs["StableSurface"]} ' \
                          f'-sx {tifs["dhdx"]} -sy {tifs["dhdy"]} ' \
