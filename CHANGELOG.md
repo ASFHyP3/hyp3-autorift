@@ -9,7 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.2...v0.4.3)
 
 ### Added
-* Ability to specify shapefile used tp determine the correct search parameters by geographic location
+* Ability to specify shapefile used to determine the correct search parameters by geographic location
   * a `--parameter-file` option has been added to `hyp3_autorift`
   * a `parameter_file` keyword argument has been added to `hyp3_autorift.process.process`
 
