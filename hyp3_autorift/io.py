@@ -18,9 +18,6 @@ from hyp3_autorift.geometry import flip_point_coordinates, poly_bounds_in_proj
 
 log = logging.getLogger(__name__)
 
-ITS_LIVE_BUCKET = 'its-live-data.jpl.nasa.gov'
-AUTORIFT_PREFIX = 'autorift_parameters/v001'
-
 _s3_client = boto3.client('s3')
 
 
@@ -31,10 +28,9 @@ def download_s3_file_requester_pays(target_path: Union[str, Path], bucket: str, 
     return filename
 
 
-def find_jpl_dem(polygon: ogr.Geometry) -> dict:
-    shape_file = f'/vsicurl/http://{ITS_LIVE_BUCKET}.s3.amazonaws.com/{AUTORIFT_PREFIX}/autorift_parameters.shp'
+def find_jpl_dem(polygon: ogr.Geometry, parameter_file: str) -> dict:
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    shapes = driver.Open(shape_file, gdal.GA_ReadOnly)
+    shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
     centroid = flip_point_coordinates(polygon.Centroid())
     for feature in shapes.GetLayer(0):
@@ -64,11 +60,12 @@ def find_jpl_dem(polygon: ogr.Geometry) -> dict:
 
     raise DemError('Could not determine appropriate DEM for:\n'
                    f'    centroid: {centroid}'
-                   f'    using: {shape_file}')
+                   f'    using: {parameter_file}')
 
 
-def subset_jpl_tifs(polygon: ogr.Geometry, buffer: float = 0.15, target_dir: Union[str, Path] = '.'):
-    dem_info = find_jpl_dem(polygon)
+def subset_jpl_tifs(polygon: ogr.Geometry, parameter_file: str, buffer: float = 0.15,
+                    target_dir: Union[str, Path] = '.'):
+    dem_info = find_jpl_dem(polygon, parameter_file)
     log.info(f'Subsetting {dem_info["name"]} tifs: {dem_info["tifs"]["h"].replace("_h.tif", "_*")}')
 
     min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), out_epsg=dem_info['epsg'])
