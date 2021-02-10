@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location.'
                              'Path to shapefile must be understood by GDAL')
+    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD', 'ASF'],
+                        help='Naming scheme to use for product files')
     parser.add_argument('granules', type=str.split, nargs='+',
                         help='Granule pair to process')
     args = parser.parse_args()
@@ -32,7 +34,7 @@ def main():
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
-    product_file = process(g1, g2, parameter_file=args.parameter_file)
+    product_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
 
     browse_file = product_file.with_suffix('.png')
 

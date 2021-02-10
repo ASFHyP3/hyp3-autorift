@@ -133,13 +133,15 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE, band: str = 'B08') -> Path:
+def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
+            naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Path:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
+        naming_scheme: Naming scheme to use for product files
         band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
 
@@ -266,11 +268,17 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     if len(netcdf_files) > 1:
         log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
-    product_name = get_product_name(
-        reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
-    )
-    product_file = Path(f'{product_name}.nc').resolve()
-    shutil.move(netcdf_files[0], str(product_file))
+    if naming_scheme == 'ITS_LIVE_PROD':
+        product_file = Path(netcdf_files[0]).resolve()
+    elif naming_scheme == 'ASF':
+        product_name = get_product_name(
+            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
+        )
+        product_file = Path(f'{product_name}.nc').resolve()
+        shutil.move(netcdf_files[0], str(product_file))
+    else:
+        product_file = Path(netcdf_files[0].replace('.nc', '_IL_ASF_OD.nc')).resolve()
+        shutil.move(netcdf_files[0], str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']

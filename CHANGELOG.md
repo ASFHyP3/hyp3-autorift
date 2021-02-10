@@ -12,7 +12,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Ability to specify shapefile used to determine the correct search parameters by geographic location
   * a `--parameter-file` option has been added to `hyp3_autorift`
   * a `parameter_file` keyword argument has been added to `hyp3_autorift.process.process`
-
+* Ability to specify a preferred product naming scheme
+  * a `--naming-scheme` option has been added to `hyp3_autorift`
+  * a `naming_scheme` keyword argument has been added to `hyp3_autorift.process.process`
 
 ## [0.4.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.1...v0.4.2)
 
