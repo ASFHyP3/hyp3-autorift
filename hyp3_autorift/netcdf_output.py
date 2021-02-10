@@ -132,10 +132,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
 
     isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-    autorift_version = '1.0.8'
-    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version' \
-             f' {hyp3_autorift.__version__} running autoRIFT version {autorift_version} as distributed with ISCE ' \
-             f'version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
+    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version ' \
+             f'{hyp3_autorift.__version__} running autoRIFT version {IMG_INFO_DICT["autoRIFT_software_version"]} as ' \
+             f'distributed with ISCE version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
              f'{IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
     references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnstock, M., Ligtenberg, S., van den Broeke, M.,\n' \
@@ -157,6 +156,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     nc_outfile.setncattr('Conventions', 'CF-1.6')
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
+    nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('motion_detection_method', detection_method)
     nc_outfile.setncattr('motion_coordinates', coordinates)
@@ -173,6 +173,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     var = nc_outfile.createVariable(varname, datatype, dimensions, fill_value=FillValue)
 
     for key in IMG_INFO_DICT:
+        if key == 'autoRIFT_software_version':
+            continue
         var.setncattr(key, IMG_INFO_DICT[key])
 
     # set dimensions
