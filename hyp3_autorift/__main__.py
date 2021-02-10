@@ -34,9 +34,7 @@ def main():
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
-    product_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
-
-    browse_file = product_file.with_suffix('.png')
+    product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)

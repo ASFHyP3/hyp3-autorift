@@ -10,7 +10,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import requests
@@ -134,7 +134,7 @@ def get_s1_primary_polarization(granule_name):
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
-            naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Path:
+            naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
@@ -269,23 +269,25 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
     if naming_scheme == 'ITS_LIVE_PROD':
-        product_file = Path(netcdf_files[0]).resolve()
+        product_file = Path(netcdf_files[0])
     elif naming_scheme == 'ASF':
         product_name = get_product_name(
             reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
         )
-        product_file = Path(f'{product_name}.nc').resolve()
+        product_file = Path(f'{product_name}.nc')
         shutil.move(netcdf_files[0], str(product_file))
     else:
-        product_file = Path(netcdf_files[0].replace('.nc', '_IL_ASF_OD.nc')).resolve()
+        product_file = Path(netcdf_files[0].replace('.nc', '_IL_ASF_OD.nc'))
         shutil.move(netcdf_files[0], str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
         data = np.ma.masked_values(velocity, -32767.).filled(0)
-    image.make_browse(product_file.with_suffix('.png'), data)
 
-    return product_file
+    browse_file = product_file.with_suffix('.png')
+    image.make_browse(browse_file, data)
+
+    return product_file, browse_file
 
 
 def main():
