@@ -10,7 +10,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import requests
@@ -29,6 +29,9 @@ log = logging.getLogger(__name__)
 
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
+
+DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
+                         'autorift_parameters/v001/autorift_parameters.shp'
 
 
 def get_lc2_metadata(scene_name):
@@ -130,12 +133,15 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def process(reference: str, secondary: str, band: str = 'B08') -> Path:
+def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
+            naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
         reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
+        parameter_file: Shapefile for determining the correct search parameters by geographic location
+        naming_scheme: Naming scheme to use for product files
         band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
 
@@ -207,7 +213,7 @@ def process(reference: str, secondary: str, band: str = 'B08') -> Path:
         lon_limits = (bbox[0], bbox[2])
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    tifs = io.subset_jpl_tifs(scene_poly, target_dir=Path.cwd())
+    tifs = io.subset_jpl_tifs(scene_poly, parameter_file, target_dir=Path.cwd())
 
     geogrid_parameters = f'-d {tifs["h"]} -ssm {tifs["StableSurface"]} ' \
                          f'-sx {tifs["dhdx"]} -sy {tifs["dhdy"]} ' \
@@ -262,18 +268,26 @@ def process(reference: str, secondary: str, band: str = 'B08') -> Path:
     if len(netcdf_files) > 1:
         log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
-    product_name = get_product_name(
-        reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
-    )
-    product_file = Path(f'{product_name}.nc').resolve()
-    shutil.move(netcdf_files[0], str(product_file))
+    if naming_scheme == 'ITS_LIVE_PROD':
+        product_file = Path(netcdf_files[0])
+    elif naming_scheme == 'ASF':
+        product_name = get_product_name(
+            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
+        )
+        product_file = Path(f'{product_name}.nc')
+        shutil.move(netcdf_files[0], str(product_file))
+    else:
+        product_file = Path(netcdf_files[0].replace('.nc', '_IL_ASF_OD.nc'))
+        shutil.move(netcdf_files[0], str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
         data = np.ma.masked_values(velocity, -32767.).filled(0)
-    image.make_browse(product_file.with_suffix('.png'), data)
 
-    return product_file
+    browse_file = product_file.with_suffix('.png')
+    image.make_browse(browse_file, data)
+
+    return product_file, browse_file
 
 
 def main():

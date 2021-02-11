@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.2...v0.4.3)
+
+### Added
+* Ability to specify shapefile used to determine the correct search parameters by geographic location
+  * a `--parameter-file` option has been added to `hyp3_autorift`
+  * a `parameter_file` keyword argument has been added to `hyp3_autorift.process.process`
+* Ability to specify a preferred product naming scheme
+  * a `--naming-scheme` option has been added to `hyp3_autorift`
+  * a `naming_scheme` keyword argument has been added to `hyp3_autorift.process.process`
 
 ## [0.4.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.1...v0.4.2)
 

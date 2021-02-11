@@ -40,8 +40,10 @@ jobs:
       - name: Safety analysis of conda environment
         shell: bash -l {0}
         run: |
-          python -m pip freeze | safety check --full-report --stdin
-          conda list --export | awk -F '=' '/^[^#]/ {print $1 "==" $2}' | safety check --full-report --stdin
+          # Ignore Saftey vulnerability #39465, python <= 3.9.1, because python 3.6 is system python in Ubuntu 18.04
+          # Ignore Saftey vulnerability #39462, tornado <= 6.1, because there isn't a new release available
+          python -m pip freeze | safety check --full-report -i 39465 -i 39462 --stdin
+          conda list --export | awk -F '=' '/^[^#]/ {print $1 "==" $2}' | safety check --full-report -i 39465 -i 39462 --stdin
 
 
   package:
@@ -176,6 +178,15 @@ jobs:
           docker tag ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_} \
               ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:latest
           docker push ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:latest
+
+      - name: Publish on github container registry
+        if: github.ref == 'refs/heads/master'
+        run: |
+          echo "${{ secrets.TOOLS_BOT_PAK }}" | docker login ghcr.io -u tools-bot --password-stdin
+          export SDIST_VERSION=${{ needs.package.outputs.SDIST_VERSION }}
+          docker tag ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_} \
+              ghcr.io/${GITHUB_REPOSITORY,,}:${SDIST_VERSION/+/_}
+          docker push ghcr.io/${GITHUB_REPOSITORY,,}:${SDIST_VERSION/+/_}
 
       - name: Logout of Amazon ECR
         if: always()
