@@ -22,6 +22,7 @@ _s3_client = boto3.client('s3')
 
 
 def download_s3_file_requester_pays(target_path: Union[str, Path], bucket: str, key: str) -> Path:
+    log.info(f'Downloading s3://{bucket}/{key}')
     response = _s3_client.get_object(Bucket=bucket, Key=key, RequestPayer='requester')
     filename = Path(target_path)
     filename.write_bytes(response['Body'].read())
