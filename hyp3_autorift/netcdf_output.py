@@ -578,3 +578,5 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
 
     nc_outfile.sync()  # flush data to disk
     nc_outfile.close()
+
+    return out_nc_filename
