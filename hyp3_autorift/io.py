@@ -43,6 +43,9 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                     'csminy': f"/vsicurl/{feature['yMinChipSiz']}",
                     'csmaxx': f"/vsicurl/{feature['xMaxChipSiz']}",
                     'csmaxy': f"/vsicurl/{feature['yMaxChipSiz']}",
+                    'sp': f"/vsicurl/{feature['sp']}",
+                    'dhdxs': f"/vsicurl/{feature['dhdxs']}",
+                    'dhdys': f"/vsicurl/{feature['dhdys']}",
                 },
                 'autorift': {
                     'grid_location': 'window_location.tif',

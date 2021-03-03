@@ -9,38 +9,38 @@ def test_find_jpl_parameter_info():
     lat_limits = (55, 56)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
-    assert dem_info['name'] == 'NPS'
+    parameter_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
+    assert parameter_info['name'] == 'NPS'
 
     lat_limits = (54, 55)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
-    assert dem_info['name'] == 'N37'
+    parameter_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
+    assert parameter_info['name'] == 'N37'
 
     lat_limits = (54, 55)
     lon_limits = (-40, -41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
-    assert dem_info['name'] == 'N24'
+    parameter_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
+    assert parameter_info['name'] == 'N24'
 
     lat_limits = (-54, -55)
     lon_limits = (-40, -41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
-    assert dem_info['name'] == 'S24'
+    parameter_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
+    assert parameter_info['name'] == 'S24'
 
     lat_limits = (-55, -56)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
-    assert dem_info['name'] == 'S37'
+    parameter_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
+    assert parameter_info['name'] == 'S37'
 
     lat_limits = (-56, -57)
     lon_limits = (40, 41)
     polygon = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    dem_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
-    assert dem_info['name'] == 'SPS'
+    parameter_info = io.find_jpl_parameter_info(polygon, DEFAULT_PARAMETER_FILE)
+    assert parameter_info['name'] == 'SPS'
 
     lat_limits = (-90, -91)
     lon_limits = (40, 41)

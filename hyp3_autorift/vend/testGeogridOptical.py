@@ -166,7 +166,7 @@ def coregisterLoadMetadata(indir_m, indir_s):
     return info, info1
 
 
-def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
+def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, **kwargs):
     '''
     Wire and run geogrid.
     '''
@@ -216,6 +216,24 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
 
     obj.runGeogrid()
 
+    run_info = {
+        'chipsizex0': obj.chipSizeX0,
+        'vxname': vx,
+        'vyname': vy,
+        'sxname': srx,
+        'syname': sry,
+        'maskname': kwargs.get('sp'),
+        'xoff': obj.pOff,
+        'yoff': obj.lOff,
+        'xcount': obj.pCount,
+        'ycount': obj.lCount,
+        'dt': obj.repeatTime,
+        'epsg': kwargs.get('epsg'),
+        'XPixelSize': obj.X_res,
+        'YPixelSize': obj.Y_res,
+    }
+
+    return run_info
 
 def main():
     '''

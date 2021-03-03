@@ -3,10 +3,10 @@ Package for processing with autoRIFT
 """
 
 import argparse
-import glob
 import logging
 import os
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -133,6 +133,18 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
+def subprocess_with_log(command, file_name, check=True):
+    with open(file_name, 'w') as f:
+        log.info(f'Running command: {command}')
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        log.info(result.stdout)
+        log.debug(result.stderr)
+        f.writelines(result.stdout + result.stderr)
+    if check and result.returncode != 0:
+        raise subprocess.SubprocessError(result.stderr)
+    return result
+
+
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -144,9 +156,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         naming_scheme: Naming scheme to use for product files
         band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
-    for key in ['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_DEFAULT_REGION']:
-        gdal.SetConfigOption(key, os.environ[key])
-
     orbits = None
     polarization = None
     reference_path = None
@@ -225,24 +234,31 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
                 cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
                 execute(cmd, logfile=f, uselogging=True)
 
-        from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
-        meta_r = loadMetadata(reference_path)
-        meta_s = loadMetadata(secondary_path)
-        runGeogrid(meta_r, meta_s, **parameter_info['geogrid'])
+        # from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
+        # meta_r = loadMetadata(reference_path)
+        # meta_s = loadMetadata(secondary_path)
+        # geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+        geogrid_info = None
+        geogrid_parameters = ' '.join([f'--{key} {value}' for key, value in parameter_info['geogrid'].items()
+                                       if key not in ('sp', 'dhdxs', 'dhdys')])
+        cmd = f'testGeogrid_ISCE.py -r reference -s secondary {geogrid_parameters}'
+        subprocess_with_log(cmd, 'testGeogrid.txt')
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform, optical_flag=False, **parameter_info['autorift']
+            reference_path, secondary_path, nc_sensor=platform, optical_flag=False,
+            geogrid_run_info=geogrid_info, **parameter_info['autorift']
         )
 
     else:
         from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
         meta_r, meta_s = coregisterLoadMetadata(reference_path, secondary_path)
-        runGeogrid(meta_r, meta_s, **parameter_info['geogrid'])
+        geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
         from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform, optical_flag=True, **parameter_info['autorift']
+            reference_path, secondary_path, nc_sensor=platform, optical_flag=True,
+            geogrid_run_info=geogrid_info, **parameter_info['autorift']
         )
 
     if netcdf_file is None:

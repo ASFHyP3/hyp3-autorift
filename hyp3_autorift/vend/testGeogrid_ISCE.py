@@ -227,7 +227,7 @@ def coregisterLoadMetadataOptical(indir_m, indir_s):
     return info, info1
 
 
-def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
+def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, **kwargs):
     '''
     Wire and run geogrid.
     '''
@@ -274,9 +274,30 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.getIncidenceAngle()
     obj.geogrid()
 
+    run_info = {
+        'chipsizex0': obj.chipsizex0,
+        'vxname': vx,
+        'vyname': vy,
+        'sxname': srx,
+        'syname': sry,
+        'maskname': kwargs.get('sp'),
+        'xoff': None,  # FIXME: Get from C object (is calculated) or another source
+        'yoff': None,  # FIXME: Get from C object (is calculated) or another source
+        'xcount': None,  # FIXME: Get from C object (is calculated) or another source
+        'ycount': None,  # FIXME: Get from C object (is calculated) or another source
+        'dt': obj.repeatTime,
+        'epsg': kwargs.get('epsg'),
+        'XPixelSize': None,  # FIXME: Get from C object (is calculated) or another source
+        'YPixelSize': None,  # FIXME: Get from C object (is calculated) or another source
+        'pixsizex': None,  # FIXME: Get from C object (is calculated) or another source
+        'rangePixelSize': None,  # FIXME: Get from C object (is calculated) or another source
+        'azimuthPixelSize': None,  # FIXME: Get from C object (is calculated) or another source
+    }
+
+    return run_info
 
 
-def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
+def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, **kwargs):
     '''
     Wire and run geogrid.
     '''
@@ -326,7 +347,24 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
 
     obj.runGeogrid()
 
+    run_info = {
+        'chipsizex0': obj.chipSizeX0,
+        'vxname': vx,
+        'vyname': vy,
+        'sxname': srx,
+        'syname': sry,
+        'maskname': kwargs.get('sp'),
+        'xoff': obj.pOff,
+        'yoff': obj.lOff,
+        'xcount': obj.pCount,
+        'ycount': obj.lCount,
+        'dt': obj.repeatTime,
+        'epsg': kwargs.get('epsg'),
+        'XPixelSize': obj.X_res,
+        'YPixelSize': obj.Y_res,
+    }
 
+    return run_info
 
 def main():
     '''
