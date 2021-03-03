@@ -98,7 +98,7 @@ def loadMetadata(indir):
     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
-    elif re.findall("s2-l1c",DS.GetDescription()).__len__() > 0:
+    elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
         info.time = DS.GetDescription().split('_')[2]
     else:
         raise Exception('Optical data NOT supported yet!')
@@ -141,7 +141,7 @@ def coregisterLoadMetadata(indir_m, indir_s):
     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
-    elif re.findall("s2-l1c",DS.GetDescription()).__len__() > 0:
+    elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
         info.time = DS.GetDescription().split('_')[2]
     else:
         raise Exception('Optical data NOT supported yet!')
@@ -158,7 +158,7 @@ def coregisterLoadMetadata(indir_m, indir_s):
     if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
         nameString1 = os.path.basename(DS1.GetDescription())
         info1.time = nameString1.split('_')[3]
-    elif re.findall("s2-l1c",DS1.GetDescription()).__len__() > 0:
+    elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
         info1.time = DS1.GetDescription().split('_')[2]
     else:
         raise Exception('Optical data NOT supported yet!')
@@ -173,6 +173,9 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
 
     from geogrid import GeogridOptical
 #    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
+
+    from osgeo import gdal
+    dem_info = gdal.Info(dem, format='json')
 
     obj = GeogridOptical()
 
@@ -190,7 +193,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.numberOfLines = info.numberOfLines
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
-    obj.chipSizeX0 = 240
+    obj.chipSizeX0 = dem_info['geoTransform'][1]
 
     obj.dat1name = info.filename
     obj.demname = dem
