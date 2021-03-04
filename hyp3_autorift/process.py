@@ -241,7 +241,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         geogrid_info = None
         geogrid_parameters = ' '.join([f'--{key} {value}' for key, value in parameter_info['geogrid'].items()
                                        if key not in ('sp', 'dhdxs', 'dhdys')])
-        cmd = f'testGeogrid_ISCE.py -r reference -s secondary {geogrid_parameters}'
+        cmd = f'testGeogrid_ISCE.py -m reference -s secondary {geogrid_parameters}'
         subprocess_with_log(cmd, 'testGeogrid.txt')
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
