@@ -384,7 +384,7 @@ def main():
 
 def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag,
-                            geogrid_run_info=None):
+                            geogrid_run_info=None, **kwargs):
 
     import numpy as np
     import time
@@ -772,7 +772,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
     #                out_nc_filename = 'Jakobshavn_opt.nc'
                     PPP = roi_valid_percentage * 100
-                    out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
+                    out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
                                       f"_G{geogrid_run_info['chipsizex0']:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
 
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
@@ -817,8 +817,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     master_path = indir_m
                     slave_path = indir_s
 
-                    master_split = master_path.split('_')
-                    slave_split = slave_path.split('_')
+                    master_split = kwargs['reference_metadata']['id'].split('_')
+                    slave_split = kwargs['secondary_metadata']['id'].split('_')
 
                     import os
 

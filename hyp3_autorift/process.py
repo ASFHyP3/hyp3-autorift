@@ -160,6 +160,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     polarization = None
     reference_path = None
     secondary_path = None
+    reference_metadata = None
+    secondary_metadata = None
     reference_state_vec = None
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
@@ -185,11 +187,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
 
         reference_metadata = get_s2_metadata(reference)
-        reference = reference_metadata['properties']['sentinel:product_id']
         reference_path = reference_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
 
         secondary_metadata = get_s2_metadata(secondary)
-        secondary = secondary_metadata['properties']['sentinel:product_id']
         secondary_path = secondary_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
 
         bbox = reference_metadata['bbox']
@@ -252,13 +252,18 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
     else:
         from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
-        meta_r, meta_s = coregisterLoadMetadata(reference_path, secondary_path)
+        meta_r, meta_s = coregisterLoadMetadata(
+            reference_path, secondary_path,
+            reference_metadata=reference_metadata,
+            secondary_metadata=secondary_metadata,
+        )
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
         from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform, optical_flag=True,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift']
+            reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
+            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
         )
 
     if netcdf_file is None:

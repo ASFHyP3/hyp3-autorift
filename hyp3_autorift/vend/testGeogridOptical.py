@@ -75,7 +75,7 @@ class Dummy(object):
 
 
 
-def loadMetadata(indir):
+def loadMetadata(indir, **kwargs):
     '''
     Input file.
     '''
@@ -98,6 +98,9 @@ def loadMetadata(indir):
     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
+    elif 'sentinel-s2-l1c' in indir:
+        s2_name = kwargs['reference_metadata']['id']
+        info.time = s2_name.split('_')[2]
     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
         info.time = DS.GetDescription().split('_')[2]
     else:
@@ -112,10 +115,10 @@ def loadMetadata(indir):
     return info
 
 
-def coregisterLoadMetadata(indir_m, indir_s):
+def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
     '''
-        Input file.
-        '''
+    Input file.
+    '''
     import os
     import numpy as np
 
@@ -141,6 +144,9 @@ def coregisterLoadMetadata(indir_m, indir_s):
     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
+    elif 'sentinel-s2-l1c' in indir_m:
+        s2_name = kwargs['reference_metadata']['id']
+        info.time = s2_name.split('_')[2]
     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
         info.time = DS.GetDescription().split('_')[2]
     else:
@@ -158,6 +164,9 @@ def coregisterLoadMetadata(indir_m, indir_s):
     if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
         nameString1 = os.path.basename(DS1.GetDescription())
         info1.time = nameString1.split('_')[3]
+    elif 'sentinel-s2-l1c' in indir_s:
+        s2_name = kwargs['secondary_metadata']['id']
+        info1.time = s2_name.split('_')[2]
     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
         info1.time = DS1.GetDescription().split('_')[2]
     else:
