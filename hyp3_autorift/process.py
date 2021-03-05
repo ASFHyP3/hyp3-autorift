@@ -222,9 +222,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
-        with open('topsApp.txt', 'w') as f:
-            cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
-            execute(cmd, logfile=f, uselogging=True)
+        cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
+        subprocess_with_log(cmd, 'topsApp.txt')
 
         reference_path = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
         secondary_path = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
@@ -246,7 +245,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform, optical_flag=False,
+            reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False,
             geogrid_run_info=geogrid_info, **parameter_info['autorift']
         )
 
