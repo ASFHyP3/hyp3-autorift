@@ -272,7 +272,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         product_file = Path(netcdf_file)
     elif naming_scheme == 'ASF':
         product_name = get_product_name(
-            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
+            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
+            band=band, pixel_spacing=parameter_info['xsize'],
         )
         product_file = Path(f'{product_name}.nc')
         shutil.move(netcdf_file, str(product_file))
