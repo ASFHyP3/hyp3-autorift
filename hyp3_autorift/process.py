@@ -18,8 +18,8 @@ from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
-from osgeo import gdal
 from netCDF4 import Dataset
+from osgeo import gdal
 
 from hyp3_autorift import geometry
 from hyp3_autorift import image
