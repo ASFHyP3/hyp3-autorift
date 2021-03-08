@@ -142,46 +142,6 @@ def loadMetadata(indir):
     return info
 
 
-def loadMetadataOptical(indir, **kwargs):
-    '''
-    Input file.
-    '''
-    import os
-    import numpy as np
-
-    from osgeo import gdal, osr
-    import struct
-    import re
-
-    DS = gdal.Open(indir, gdal.GA_ReadOnly)
-    trans = DS.GetGeoTransform()
-
-    info = Dummy()
-    info.startingX = trans[0]
-    info.startingY = trans[3]
-    info.XSize = trans[1]
-    info.YSize = trans[5]
-
-    if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
-        nameString = os.path.basename(DS.GetDescription())
-        info.time = nameString.split('_')[3]
-    elif 'sentinel-s2-l1c' in indir:
-        s2_name = kwargs['reference_metadata']['id']
-        info.time = s2_name.split('_')[2]
-    elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-        info.time = DS.GetDescription().split('_')[2]
-    else:
-        raise Exception('Optical data NOT supported yet!')
-
-    info.numberOfLines = DS.RasterYSize
-    info.numberOfSamples = DS.RasterXSize
-
-    info.filename = indir
-
-
-    return info
-
-
 def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
     '''
     Input file.
@@ -297,20 +257,17 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
         'chipsizex0': obj.chipSizeX0,
         'vxname': vx,
         'vyname': vy,
-        'sxname': srx,
-        'syname': sry,
+        'sxname': kwargs.get('dhdxs'),
+        'syname': kwargs.get('dhdys'),
         'maskname': kwargs.get('sp'),
-        'xoff': None,  # FIXME: Get from C object (is calculated) or another source
-        'yoff': None,  # FIXME: Get from C object (is calculated) or another source
-        'xcount': None,  # FIXME: Get from C object (is calculated) or another source
-        'ycount': None,  # FIXME: Get from C object (is calculated) or another source
+        'xoff': obj.pOff,
+        'yoff': obj.lOff,
+        'xcount': obj.pCount,
+        'ycount': obj.lCount,
         'dt': obj.repeatTime,
         'epsg': kwargs.get('epsg'),
-        'XPixelSize': None,  # FIXME: Get from C object (is calculated) or another source
-        'YPixelSize': None,  # FIXME: Get from C object (is calculated) or another source
-        'pixsizex': None,  # FIXME: Get from C object (is calculated) or another source
-        'rangePixelSize': None,  # FIXME: Get from C object (is calculated) or another source
-        'azimuthPixelSize': None,  # FIXME: Get from C object (is calculated) or another source
+        'XPixelSize': obj.X_res,
+        'YPixelSize': obj.Y_res,
     }
 
     return run_info
@@ -374,8 +331,8 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
         'chipsizex0': obj.chipSizeX0,
         'vxname': vx,
         'vyname': vy,
-        'sxname': srx,
-        'syname': sry,
+        'sxname': kwargs.get('dhdxs'),
+        'syname': kwargs.get('dhdys'),
         'maskname': kwargs.get('sp'),
         'xoff': obj.pOff,
         'yoff': obj.lOff,

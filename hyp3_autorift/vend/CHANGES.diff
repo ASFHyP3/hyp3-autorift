@@ -120,25 +120,6 @@
                      coordinates = 'map'
 --- testGeogridOptical.py	2021-03-03 21:19:48.880579205 -0900
 +++ testGeogridOptical.py	2021-03-03 21:23:51.375378093 -0900
-@@ -75,7 +75,7 @@
- 
- 
- 
--def loadMetadata(indir):
-+def loadMetadata(indir, **kwargs):
-     '''
-     Input file.
-     '''
-@@ -98,6 +98,9 @@
-     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
-         nameString = os.path.basename(DS.GetDescription())
-         info.time = nameString.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir:
-+        s2_name = kwargs['reference_metadata']['id']
-+        info.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-         info.time = DS.GetDescription().split('_')[2]
-     else:
 @@ -112,7 +115,7 @@
      return info
  
@@ -170,25 +151,6 @@
      else:
 --- testGeogrid_ISCE.py	2021-03-03 21:19:48.876579217 -0900
 +++ testGeogrid_ISCE.py	2021-03-03 21:23:51.387378976 -0900
-@@ -142,7 +142,7 @@
-     return info
- 
- 
--def loadMetadataOptical(indir):
-+def loadMetadataOptical(indir, **kwargs):
-     '''
-     Input file.
-     '''
-@@ -165,6 +165,9 @@
-     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
-         nameString = os.path.basename(DS.GetDescription())
-         info.time = nameString.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir:
-+        s2_name = kwargs['reference_metadata']['id']
-+        info.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-         info.time = DS.GetDescription().split('_')[2]
-     else:
 @@ -179,7 +182,7 @@
      return info
  

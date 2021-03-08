@@ -24,8 +24,8 @@ dependencies:
   # For running
   - gdal>=3
   - hyp3lib=1.6.2
-  - isce2=2.4.3.dev3
-  - autorift=1.1.1.dev3
+  - isce2=2.5.1.dev4
+  - autorift=1.1.1.dev4
   - boto3
   - matplotlib-base
   - netCDF4

@@ -138,8 +138,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
              f'{IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
     references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnstock, M., Ligtenberg, S., van den Broeke, M.,\n' \
-                 '  and Nilsson, J.: Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
-                 '  the last 7 years, The Cryosphere, 12, 521–547, https://doi.org/10.5194/tc-12-521-2018, 2018.\n' \
+                 '  and Nilsson, J., 2018. Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
+                 '  the last 7 years. The Cryosphere, 12, p.521. https://doi.org/10.5194/tc-12-521-2018\n' \
+                 '* Lei, Y., Gardner, A. and Agram, P., 2021. Autonomous Repeat Image Feature Tracking (autoRIFT)\n' \
+                 '  and Its Application for Tracking Ice Displacement. Remote Sensing, 13(4), p.749.\n' \
+                 '  https://doi.org/10.3390/rs13040749\n' \
                  '\n' \
                  'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
                  '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581\n' \

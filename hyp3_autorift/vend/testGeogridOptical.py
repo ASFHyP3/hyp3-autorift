@@ -72,49 +72,6 @@ class Dummy(object):
     pass
 
 
-
-
-
-def loadMetadata(indir, **kwargs):
-    '''
-    Input file.
-    '''
-    import os
-    import numpy as np
-
-    from osgeo import gdal, osr
-    import struct
-    import re
-
-    DS = gdal.Open(indir, gdal.GA_ReadOnly)
-    trans = DS.GetGeoTransform()
-
-    info = Dummy()
-    info.startingX = trans[0]
-    info.startingY = trans[3]
-    info.XSize = trans[1]
-    info.YSize = trans[5]
-
-    if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
-        nameString = os.path.basename(DS.GetDescription())
-        info.time = nameString.split('_')[3]
-    elif 'sentinel-s2-l1c' in indir:
-        s2_name = kwargs['reference_metadata']['id']
-        info.time = s2_name.split('_')[2]
-    elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-        info.time = DS.GetDescription().split('_')[2]
-    else:
-        raise Exception('Optical data NOT supported yet!')
-
-    info.numberOfLines = DS.RasterYSize
-    info.numberOfSamples = DS.RasterXSize
-
-    info.filename = indir
-
-
-    return info
-
-
 def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
     '''
     Input file.
@@ -232,8 +189,8 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
         'chipsizex0': obj.chipSizeX0,
         'vxname': vx,
         'vyname': vy,
-        'sxname': srx,
-        'syname': sry,
+        'sxname': kwargs.get('dhdxs'),
+        'syname': kwargs.get('dhdys'),
         'maskname': kwargs.get('sp'),
         'xoff': obj.pOff,
         'yoff': obj.lOff,
