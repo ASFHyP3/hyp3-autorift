@@ -14,7 +14,6 @@ from typing import Optional, Tuple
 
 import numpy as np
 import requests
-from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
@@ -26,6 +25,8 @@ from hyp3_autorift import image
 from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
+
+gdal.UseExceptions()
 
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
@@ -183,6 +184,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
 
     elif platform == 'S2':
+        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
 
@@ -197,6 +199,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lon_limits = (bbox[0], bbox[2])
 
     elif platform == 'L':
+        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
 
         if band == 'B08':
@@ -228,20 +231,13 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         reference_path = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
         secondary_path = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
-        with open('createImages.txt', 'w') as f:
-            for slc in [reference_path, secondary_path]:
-                cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
-                execute(cmd, logfile=f, uselogging=True)
+        for slc in [reference_path, secondary_path]:
+            gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
 
-        # from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
-        # meta_r = loadMetadata(reference_path)
-        # meta_s = loadMetadata(secondary_path)
-        # geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
-        geogrid_info = None
-        geogrid_parameters = ' '.join([f'--{key} {value}' for key, value in parameter_info['geogrid'].items()
-                                       if key not in ('sp', 'dhdxs', 'dhdys')])
-        cmd = f'testGeogrid_ISCE.py -m reference -s secondary {geogrid_parameters}'
-        subprocess_with_log(cmd, 'testGeogrid.txt')
+        from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
+        meta_r = loadMetadata(reference_path)
+        meta_s = loadMetadata(secondary_path)
+        geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
