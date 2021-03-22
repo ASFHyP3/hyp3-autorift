@@ -3,3 +3,4 @@
 Dockerfile
 .*install_autoRIFT_ISCE_conda.sh$
 .*single_scene.*_full.py$
+.*hyp3_autorift/vend/README.md$
