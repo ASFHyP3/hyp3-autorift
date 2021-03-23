@@ -217,8 +217,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
 
         from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
-        meta_r = loadMetadata(reference_path)
-        meta_s = loadMetadata(secondary_path)
+        meta_r = loadMetadata('reference')
+        meta_s = loadMetadata('secondary')
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
