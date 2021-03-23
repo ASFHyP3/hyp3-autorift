@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This is a substantially modified copy of the testGeogrid_ISCE.py script
-# as described in the README.md in this directory. See the LICENSE file in this
-# directory for the original terms and conditions, and CHANGES.diff for a detailed
-# description of the changes. Notice, all changes are released under the terms
-# and conditions of hyp3-autorift's LICENSE.
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 #
@@ -31,30 +26,19 @@
 #
 # Authors: Piyush Agram, Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-import argparse
-import os
-import re
-from datetime import date
 
-import numpy as np
-import isce
-from contrib.geo_autoRIFT.geogrid import Geogrid
-from contrib.geo_autoRIFT.geogrid import GeogridOptical
-from isceobj.Orbit.Orbit import Orbit
-from iscesys.Component.ProductManager import ProductManager as PM
-from osgeo import gdal
 
 def cmdLineParse():
     '''
     Command line parser.
     '''
+    import argparse
+
     parser = argparse.ArgumentParser(description='Output geo grid')
-    parser.add_argument('-r', '--input_r', dest='indir_r', type=str, required=True,
-            help='Input folder with ISCE swath files for reference image or reference image file name (in GeoTIFF '
-                 'format and Cartesian coordinates)')
+    parser.add_argument('-m', '--input_m', dest='indir_m', type=str, required=True,
+            help='Input folder with ISCE swath files for master image or master image file name (in GeoTIFF format and Cartesian coordinates)')
     parser.add_argument('-s', '--input_s', dest='indir_s', type=str, required=True,
-            help='Input folder with ISCE swath files for secondary image or secondary image file name (in GeoTIFF '
-                 'format and Cartesian coordinates)')
+            help='Input folder with ISCE swath files for slave image or slave image file name (in GeoTIFF format and Cartesian coordinates)')
 #    parser.add_argument('-o', '--output', dest='outfile', type=str, default='geogrid.csv',
 #            help='Output grid mapping')
     parser.add_argument('-d', '--dem', dest='demfile', type=str, required=True,
@@ -83,8 +67,6 @@ def cmdLineParse():
             help='Input stable surface mask')
     parser.add_argument('-fo', '--flag_optical', dest='optical_flag', type=bool, required=False, default=0,
             help='flag for reading optical data (e.g. Landsat): use 1 for on and 0 (default) for off')
-    parser.add_argument('-urlflag', '--urlflag', dest='urlflag', type=int, required=False,
-            help='flag for reading and coregistering optical data (GeoTIFF images, e.g. Landsat): use 1 for url read and 0 for local machine read; if not specified (i.e. None; default), will just read from local machine without coregistration')
 
     return parser.parse_args()
 
@@ -96,6 +78,8 @@ def loadProduct(xmlname):
     '''
     Load the product using Product Manager.
     '''
+    import isce
+    from iscesys.Component.ProductManager import ProductManager as PM
 
     pm = PM()
     pm.configure()
@@ -106,6 +90,9 @@ def loadProduct(xmlname):
 
 
 def getMergedOrbit(product):
+    import isce
+    from isceobj.Orbit.Orbit import Orbit
+
     ###Create merged orbit
     orb = Orbit()
     orb.configure()
@@ -130,6 +117,8 @@ def loadMetadata(indir):
     '''
     Input file.
     '''
+    import os
+    import numpy as np
 
     frames = []
     for swath in range(1,4):
@@ -153,45 +142,26 @@ def loadMetadata(indir):
     return info
 
 
-def loadMetadataOptical(indir):
+def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
     '''
-        Input file.
-        '''
-
-    DS = gdal.Open(indir, gdal.GA_ReadOnly)
-    trans = DS.GetGeoTransform()
-
-    info = Dummy()
-    info.startingX = trans[0]
-    info.startingY = trans[3]
-    info.XSize = trans[1]
-    info.YSize = trans[5]
-
-    nameString = os.path.basename(DS.GetDescription())
-    info.time = nameString.split('_')[3]
-
-    info.numberOfLines = DS.RasterYSize
-    info.numberOfSamples = DS.RasterXSize
-
-    info.filename = indir
-
-
-    return info
-
-
-def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
+    Input file.
     '''
-        Input file.
-        '''
+    import os
+    import numpy as np
+
+    from osgeo import gdal, osr
+    import struct
+    import re
+
+    import isce
+    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
+#    from geogrid import GeogridOptical
 
     obj = GeogridOptical()
 
-    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_r, indir_s, urlflag)
+    x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(indir_m, indir_s)
 
-    if urlflag is 1:
-        DS = gdal.Open('/vsicurl/%s' % (indir_r))
-    else:
-        DS = gdal.Open(indir_r, gdal.GA_ReadOnly)
+    DS = gdal.Open(indir_m, gdal.GA_ReadOnly)
 
     info = Dummy()
     info.startingX = trans[0]
@@ -199,10 +169,13 @@ def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
     info.XSize = trans[1]
     info.YSize = trans[5]
 
-    if re.findall("LC08",DS.GetDescription()).__len__() > 0:
+    if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
-    elif re.findall("S2",DS.GetDescription()).__len__() > 0:
+    elif 'sentinel-s2-l1c' in indir_m:
+        s2_name = kwargs['reference_metadata']['id']
+        info.time = s2_name.split('_')[2]
+    elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
         info.time = DS.GetDescription().split('_')[2]
     else:
         raise Exception('Optical data NOT supported yet!')
@@ -210,19 +183,19 @@ def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
     info.numberOfLines = ysize1
     info.numberOfSamples = xsize1
 
-    info.filename = indir_r
+    info.filename = indir_m
 
-    if urlflag is 1:
-        DS1 = gdal.Open('/vsicurl/%s' %(indir_s))
-    else:
-        DS1 = gdal.Open(indir_s, gdal.GA_ReadOnly)
+    DS1 = gdal.Open(indir_s, gdal.GA_ReadOnly)
 
     info1 = Dummy()
 
-    if re.findall("LC08",DS1.GetDescription()).__len__() > 0:
+    if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
         nameString1 = os.path.basename(DS1.GetDescription())
         info1.time = nameString1.split('_')[3]
-    elif re.findall("S2",DS1.GetDescription()).__len__() > 0:
+    elif 'sentinel-s2-l1c' in indir_s:
+        s2_name = kwargs['secondary_metadata']['id']
+        info1.time = s2_name.split('_')[2]
+    elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
         info1.time = DS1.GetDescription().split('_')[2]
     else:
         raise Exception('Optical data NOT supported yet!')
@@ -230,10 +203,17 @@ def coregisterLoadMetadataOptical(indir_r, indir_s, urlflag):
     return info, info1
 
 
-def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm):
+def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, **kwargs):
     '''
     Wire and run geogrid.
     '''
+
+    import isce
+    from components.contrib.geo_autoRIFT.geogrid import Geogrid
+#     from geogrid import Geogrid
+
+    from osgeo import gdal
+    dem_info = gdal.Info(dem, format='json')
 
     obj = Geogrid()
     obj.configure()
@@ -247,7 +227,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.numberOfLines = info.numberOfLines
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
-    obj.chipSizeX0 = 240
+    obj.chipSizeX0 = dem_info['geoTransform'][1]
     obj.orbit = info.orbit
     obj.demname = dem
     obj.dhdxname = dhdx
@@ -273,12 +253,37 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.getIncidenceAngle()
     obj.geogrid()
 
+    run_info = {
+        'chipsizex0': obj.chipSizeX0,
+        'vxname': vx,
+        'vyname': vy,
+        'sxname': kwargs.get('dhdxs'),
+        'syname': kwargs.get('dhdys'),
+        'maskname': kwargs.get('sp'),
+        'xoff': obj.pOff,
+        'yoff': obj.lOff,
+        'xcount': obj.pCount,
+        'ycount': obj.lCount,
+        'dt': obj.repeatTime,
+        'epsg': kwargs.get('epsg'),
+        'XPixelSize': obj.X_res,
+        'YPixelSize': obj.Y_res,
+    }
+
+    return run_info
 
 
-def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, urlflag):
+def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, **kwargs):
     '''
     Wire and run geogrid.
     '''
+
+    import isce
+    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
+#    from geogrid import GeogridOptical
+
+    from osgeo import gdal
+    dem_info = gdal.Info(dem, format='json')
 
     obj = GeogridOptical()
 
@@ -286,6 +291,8 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.startingY = info.startingY
     obj.XSize = info.XSize
     obj.YSize = info.YSize
+    from datetime import date
+    import numpy as np
     d0 = date(np.int(info.time[0:4]),np.int(info.time[4:6]),np.int(info.time[6:8]))
     d1 = date(np.int(info1.time[0:4]),np.int(info1.time[4:6]),np.int(info1.time[6:8]))
     date_dt_base = d1 - d0
@@ -294,9 +301,8 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.numberOfLines = info.numberOfLines
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
-    obj.chipSizeX0 = 240
+    obj.chipSizeX0 = dem_info['geoTransform'][1]
 
-    obj.urlflag = urlflag
     obj.dat1name = info.filename
     obj.demname = dem
     obj.dhdxname = dhdx
@@ -321,6 +327,24 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
 
     obj.runGeogrid()
 
+    run_info = {
+        'chipsizex0': obj.chipSizeX0,
+        'vxname': vx,
+        'vyname': vy,
+        'sxname': kwargs.get('dhdxs'),
+        'syname': kwargs.get('dhdys'),
+        'maskname': kwargs.get('sp'),
+        'xoff': obj.pOff,
+        'yoff': obj.lOff,
+        'xcount': obj.pCount,
+        'ycount': obj.lCount,
+        'dt': obj.repeatTime,
+        'epsg': kwargs.get('epsg'),
+        'XPixelSize': obj.X_res,
+        'YPixelSize': obj.Y_res,
+    }
+
+    return run_info
 
 def main():
     '''
@@ -330,19 +354,12 @@ def main():
     inps = cmdLineParse()
 
     if inps.optical_flag == 1:
-        if inps.urlflag is not None:
-            metadata_r, metadata_s = coregisterLoadMetadataOptical(inps.indir_r, inps.indir_s, inps.urlflag)
-        else:
-            metadata_r = loadMetadataOptical(inps.indir_r)
-            metadata_s = loadMetadataOptical(inps.indir_s)
-        runGeogridOptical(metadata_r, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile,
-                          inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile,
-                          inps.csmaxyfile, inps.ssmfile, inps.urlflag)
+        metadata_m, metadata_s = coregisterLoadMetadataOptical(inps.indir_m, inps.indir_s)
+        runGeogridOptical(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
     else:
-        metadata_r = loadMetadata(inps.indir_r)
+        metadata_m = loadMetadata(inps.indir_m)
         metadata_s = loadMetadata(inps.indir_s)
-        runGeogrid(metadata_r, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile,
-                   inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
+        runGeogrid(metadata_m, metadata_s, inps.demfile, inps.dhdxfile, inps.dhdyfile, inps.vxfile, inps.vyfile, inps.srxfile, inps.sryfile, inps.csminxfile, inps.csminyfile, inps.csmaxxfile, inps.csmaxyfile, inps.ssmfile)
 
 
 if __name__ == '__main__':

@@ -132,15 +132,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
 
     isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-    autorift_version = '1.0.8'
-    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version' \
-             f' {hyp3_autorift.__version__} running autoRIFT version {autorift_version} as distributed with ISCE ' \
-             f'version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
+    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version ' \
+             f'{hyp3_autorift.__version__} running autoRIFT version {IMG_INFO_DICT["autoRIFT_software_version"]} as ' \
+             f'distributed with ISCE version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
              f'{IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
     references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnstock, M., Ligtenberg, S., van den Broeke, M.,\n' \
-                 '  and Nilsson, J.: Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
-                 '  the last 7 years, The Cryosphere, 12, 521–547, https://doi.org/10.5194/tc-12-521-2018, 2018.\n' \
+                 '  and Nilsson, J., 2018. Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
+                 '  the last 7 years. The Cryosphere, 12, p.521. https://doi.org/10.5194/tc-12-521-2018\n' \
+                 '* Lei, Y., Gardner, A. and Agram, P., 2021. Autonomous Repeat Image Feature Tracking (autoRIFT)\n' \
+                 '  and Its Application for Tracking Ice Displacement. Remote Sensing, 13(4), p.749.\n' \
+                 '  https://doi.org/10.3390/rs13040749\n' \
                  '\n' \
                  'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
                  '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581\n' \
@@ -157,6 +159,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     nc_outfile.setncattr('Conventions', 'CF-1.6')
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
+    nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('motion_detection_method', detection_method)
     nc_outfile.setncattr('motion_coordinates', coordinates)
@@ -173,6 +176,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
     var = nc_outfile.createVariable(varname, datatype, dimensions, fill_value=FillValue)
 
     for key in IMG_INFO_DICT:
+        if key == 'autoRIFT_software_version':
+            continue
         var.setncattr(key, IMG_INFO_DICT[key])
 
     # set dimensions
@@ -578,3 +583,5 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SX, 
 
     nc_outfile.sync()  # flush data to disk
     nc_outfile.close()
+
+    return out_nc_filename

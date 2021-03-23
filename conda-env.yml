@@ -1,6 +1,7 @@
 name: hyp3-autorift
 channels:
   - conda-forge
+  - hyp3
   - nodefaults
 dependencies:
   - boto3
@@ -23,8 +24,8 @@ dependencies:
   # For running
   - gdal>=3
   - hyp3lib=1.6.7
-  - isce2=2.4.2
-  - autorift=1.0.8
+  - isce2=2.5.1.dev4
+  - autorift=1.1.1.dev4
   - boto3
   - matplotlib-base
   - netCDF4

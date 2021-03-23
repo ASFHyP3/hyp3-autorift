@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.5...v0.5.0)
+
+### Changed
+* `hyp3_autorift` will directly access Landsat-8 and Sentinel-2 data in the cloud
+  instead of downloading the scenes locally
+* Upgraded ISCE2 to 2.5.1 and autoRIFT to the latest version (see [vendored README](hyp3_autorift/vend/README.md))
+
+### Fixed
+* Sentinel-2 L1C metadata is generated correctly
+* Landsat-8 scene names are no longer truncated in the `ITS_LIVE` naming schemes
+
 ## [0.4.5](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.4...v0.4.5)
 
 ### Changed
