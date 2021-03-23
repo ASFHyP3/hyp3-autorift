@@ -199,11 +199,11 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
         reference_path = reference_metadata['assets'][f'{band}.TIF']['href']
-        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/usgs-landsat/')
+        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', '/vsis3/usgs-landsat/')
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = secondary_metadata['assets'][f'{band}.TIF']['href']
-        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/usgs-landsat/')
+        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', '/vsis3/usgs-landsat/')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
