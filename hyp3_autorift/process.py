@@ -6,7 +6,6 @@ import argparse
 import logging
 import os
 import shutil
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -126,18 +125,6 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def subprocess_with_log(command, file_name, check=True):
-    with open(file_name, 'w') as f:
-        log.info(f'Running command: {command}')
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        log.info(result.stdout)
-        log.debug(result.stderr)
-        f.writelines(result.stdout + result.stderr)
-    if check and result.returncode != 0:
-        raise subprocess.SubprocessError(result.stderr)
-    return result
-
-
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -217,8 +204,11 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
-        cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
-        subprocess_with_log(cmd, 'topsApp.txt')
+        import isce  # noqa
+        from topsApp import TopsInSAR
+        insar = TopsInSAR(name='topsApp', cmdline=['topsApp.xml', '--end=mergebursts'])
+        insar.configure()
+        insar.run()
 
         reference_path = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
         secondary_path = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
