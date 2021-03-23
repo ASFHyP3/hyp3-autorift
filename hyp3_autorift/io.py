@@ -66,9 +66,9 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                        f'    centroid: {centroid}'
                        f'    using: {parameter_file}')
 
-    dem_transform = gdal.Info(parameter_info['geogrid']['dem'], format='json')['geoTransform']
-    parameter_info['xsize'] = abs(dem_transform[1])
-    parameter_info['ysize'] = abs(dem_transform[-1])
+    dem_geotransform = gdal.Info(parameter_info['geogrid']['dem'], format='json')['geoTransform']
+    parameter_info['xsize'] = abs(dem_geotransform[1])
+    parameter_info['ysize'] = abs(dem_geotransform[5])
 
     return parameter_info
 

@@ -10,7 +10,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 import requests
@@ -117,14 +117,6 @@ def get_platform(scene: str) -> str:
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
-def get_bucket(platform: str) -> Optional[str]:
-    if platform == 'S2':
-        return 'sentinel-s2-l1c'
-    elif platform == 'L':
-        return 'usgs-landsat'
-    return
-
-
 def get_s1_primary_polarization(granule_name):
     polarization = granule_name[14:16]
     if polarization in ['SV', 'DV']:
@@ -201,17 +193,17 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     elif platform == 'L':
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
+        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
 
         if band == 'B08':
             band = 'B8'
-        bucket = get_bucket(platform)
         reference_metadata = get_lc2_metadata(reference)
         reference_path = reference_metadata['assets'][f'{band}.TIF']['href']
-        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{bucket}/')
+        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/usgs-landsat/')
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = secondary_metadata['assets'][f'{band}.TIF']['href']
-        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{bucket}/')
+        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/usgs-landsat/')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])

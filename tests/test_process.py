@@ -26,14 +26,6 @@ def test_get_platform():
         process.get_platform('foobar')
 
 
-def test_get_bucket():
-    assert process.get_bucket('S1') is None
-    assert process.get_bucket('S2') == 'sentinel-s2-l1c'
-    assert process.get_bucket('S3') is None
-    assert process.get_bucket('L') == 'usgs-landsat'
-    assert process.get_bucket('FOO') is None
-
-
 @responses.activate
 def test_get_lc2_metadata_not_found():
     responses.add(
