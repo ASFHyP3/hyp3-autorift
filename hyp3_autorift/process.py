@@ -221,6 +221,10 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         meta_s = loadMetadata('secondary')
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
+        # NOTE: After Geogrid is run, all drivers are no longer registered.
+        #       I've got no idea why, or if there are other affects...
+        gdal.AllRegister()
+
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False,
