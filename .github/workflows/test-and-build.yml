@@ -170,10 +170,17 @@ jobs:
               ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:latest
           docker push ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:latest
 
+      - name: Login to GitHub Container Registry
+        if: github.ref == 'refs/heads/master'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: tools-bot
+          password: ${{ secrets.TOOLS_BOT_PAK }}
+
       - name: Publish on github container registry
         if: github.ref == 'refs/heads/master'
         run: |
-          echo "${{ secrets.TOOLS_BOT_PAK }}" | docker login ghcr.io -u tools-bot --password-stdin
           export SDIST_VERSION=${{ needs.package.outputs.SDIST_VERSION }}
           docker tag ${HYP3_REGISTRY}/${GITHUB_REPOSITORY##*/}:${SDIST_VERSION/+/_} \
               ghcr.io/${GITHUB_REPOSITORY,,}:${SDIST_VERSION/+/_}
