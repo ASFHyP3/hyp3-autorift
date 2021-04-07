@@ -50,7 +50,7 @@ def test_get_s2_metadata_not_found():
 
     responses.add(
         responses.GET, f'{process.S2_SEARCH_URL}/foo',
-        body='{"code": 404, "message": "Item not found"}', status=200,
+        body='Item not found', status=404,
     )
     responses.add(
         responses.POST, process.S2_SEARCH_URL,
@@ -75,7 +75,7 @@ def test_get_s2_metadata_cog_id():
 def test_get_s2_metadata_esa_id():
     responses.add(
         responses.GET, f'{process.S2_SEARCH_URL}/S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
-        body='{"code": 404, "message": "Item not found"}', status=200,
+        body='Item not found', status=404,
     )
     responses.add(
         responses.POST, process.S2_SEARCH_URL,
