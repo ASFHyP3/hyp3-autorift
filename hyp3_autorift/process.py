@@ -49,18 +49,18 @@ def get_s2_metadata(scene_name):
         if response.status_code != 404:
             raise
 
-        payload = {
-            'query': {
-                'sentinel:product_id': {
-                    'eq': scene_name,
-                }
+    payload = {
+        'query': {
+            'sentinel:product_id': {
+                'eq': scene_name,
             }
         }
-        response = requests.post(S2_SEARCH_URL, json=payload)
-        response.raise_for_status()
-        if not response.json().get('numberReturned'):
-            raise ValueError(f'Scene could not be found: {scene_name}')
-        return response.json()['features'][0]
+    }
+    response = requests.post(S2_SEARCH_URL, json=payload)
+    response.raise_for_status()
+    if not response.json().get('numberReturned'):
+        raise ValueError(f'Scene could not be found: {scene_name}')
+    return response.json()['features'][0]
 
 
 def least_precise_orbit_of(orbits):
