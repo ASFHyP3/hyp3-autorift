@@ -229,7 +229,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False,
+            reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift']
         )
 
@@ -244,7 +244,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform, optical_flag=True,
+            reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
             reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
         )
