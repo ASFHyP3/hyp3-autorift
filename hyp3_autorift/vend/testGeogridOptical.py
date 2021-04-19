@@ -2,6 +2,7 @@
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
+# Modifications Copyright 2021 Alaska Satellite Facility
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -154,12 +155,13 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     d0 = date(np.int(info.time[0:4]),np.int(info.time[4:6]),np.int(info.time[6:8]))
     d1 = date(np.int(info1.time[0:4]),np.int(info1.time[4:6]),np.int(info1.time[6:8]))
     date_dt_base = d1 - d0
-    obj.repeatTime = np.abs(date_dt_base.total_seconds())
+    obj.repeatTime = date_dt_base.total_seconds()
 #    obj.repeatTime = (info1.time - info.time) * 24.0 * 3600.0
     obj.numberOfLines = info.numberOfLines
     obj.numberOfSamples = info.numberOfSamples
     obj.nodata_out = -32767
-    obj.chipSizeX0 = dem_info['geoTransform'][1]
+    obj.chipSizeX0 = 240
+    obj.gridSpacingX = dem_info['geoTransform'][1]
 
     obj.dat1name = info.filename
     obj.demname = dem
@@ -182,11 +184,17 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.winssmname = "window_stable_surface_mask.tif"
     obj.winro2vxname = "window_rdr_off2vel_x_vec.tif"
     obj.winro2vyname = "window_rdr_off2vel_y_vec.tif"
+    ##dt-varying search range scale (srs) rountine parameters
+#    obj.srs_dt_unity = 32
+#    obj.srs_max_scale = 10
+#    obj.srs_max_search = 20000
+#    obj.srs_min_search = 0
 
     obj.runGeogrid()
 
     run_info = {
         'chipsizex0': obj.chipSizeX0,
+        'gridspacingx': obj.gridSpacingX,
         'vxname': vx,
         'vyname': vy,
         'sxname': kwargs.get('dhdxs'),
@@ -200,6 +208,8 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
         'epsg': kwargs.get('epsg'),
         'XPixelSize': obj.X_res,
         'YPixelSize': obj.Y_res,
+        'cen_lat': obj.cen_lat,
+        'cen_lon': obj.cen_lon,
     }
 
     return run_info

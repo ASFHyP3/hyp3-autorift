@@ -1,15 +1,23 @@
---- testautoRIFT.py	2021-03-03 21:19:48.888579182 -0900
-+++ testautoRIFT.py	2021-03-03 16:43:49.756820503 -0900
-@@ -385,7 +385,7 @@
- 
+--- testautoRIFT.py	2021-04-15 21:56:06.690237585 -0800
++++ testautoRIFT.py	2021-04-19 11:08:28.353300102 -0800
+@@ -2,6 +2,7 @@
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -393,7 +394,7 @@
+
  def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag,
+                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
 -                            geogrid_run_info=None):
 +                            geogrid_run_info=None, **kwargs):
- 
+
      import numpy as np
      import time
-@@ -692,14 +692,14 @@
+@@ -731,14 +732,14 @@
                      runCmd('topsinsar_filename.py')
      #                import scipy.io as sio
                      conts = sio.loadmat('topsinsar_filename.mat')
@@ -23,53 +31,61 @@
 +                    slave_dt = conts['secondary_dt'][0]
                      master_split = str.split(master_filename,'_')
                      slave_split = str.split(slave_filename,'_')
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -770,7 +770,7 @@
+@@ -814,7 +815,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -824,8 +824,8 @@
+@@ -873,8 +874,8 @@
                      master_path = indir_m
                      slave_path = indir_s
- 
+
 -                    master_split = master_path.split('_')
 -                    slave_split = slave_path.split('_')
 +                    master_split = kwargs['reference_metadata']['id'].split('_')
 +                    slave_split = kwargs['secondary_metadata']['id'].split('_')
- 
+
                      import os
- 
-@@ -839,7 +839,7 @@
+
+@@ -888,7 +889,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
---- testautoRIFT_ISCE.py	2021-03-03 21:19:48.860579263 -0900
-+++ testautoRIFT_ISCE.py	2021-03-03 16:43:49.772820478 -0900
-@@ -385,7 +385,7 @@
- 
+--- testautoRIFT_ISCE.py	2021-04-15 21:56:06.690237585 -0800
++++ testautoRIFT_ISCE.py	2021-04-19 11:08:28.349300092 -0800
+@@ -2,6 +2,7 @@
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -393,7 +394,7 @@
+
  def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag,
+                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
 -                            geogrid_run_info=None):
 +                            geogrid_run_info=None, **kwargs):
- 
+
      import numpy as np
      import time
-@@ -693,14 +693,14 @@
+@@ -733,14 +734,14 @@
                      runCmd('topsinsar_filename.py')
      #                import scipy.io as sio
                      conts = sio.loadmat('topsinsar_filename.mat')
@@ -83,53 +99,61 @@
 +                    slave_dt = conts['secondary_dt'][0]
                      master_split = str.split(master_filename,'_')
                      slave_split = str.split(slave_filename,'_')
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -771,7 +771,7 @@
+@@ -816,7 +817,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -825,8 +825,8 @@
+@@ -874,8 +875,8 @@
                      master_path = indir_m
                      slave_path = indir_s
- 
+
 -                    master_split = master_path.split('_')
 -                    slave_split = slave_path.split('_')
 +                    master_split = kwargs['reference_metadata']['id'].split('_')
 +                    slave_split = kwargs['secondary_metadata']['id'].split('_')
- 
+
                      import os
- 
-@@ -840,7 +840,7 @@
+
+@@ -889,7 +890,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
---- testGeogridOptical.py	2021-03-03 21:19:48.880579205 -0900
-+++ testGeogridOptical.py	2021-03-03 21:23:51.375378093 -0900
-@@ -112,7 +115,7 @@
+--- testGeogrid_ISCE.py	2021-04-15 21:56:06.690237585 -0800
++++ testGeogrid_ISCE.py	2021-04-19 11:08:28.341300071 -0800
+@@ -2,6 +2,7 @@
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -142,7 +143,7 @@
      return info
- 
- 
--def coregisterLoadMetadata(indir_m, indir_s):
-+def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
+
+
+-def coregisterLoadMetadataOptical(indir_m, indir_s):
++def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
      '''
      Input file.
      '''
-@@ -141,6 +144,9 @@
+@@ -172,6 +173,9 @@
      if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
          nameString = os.path.basename(DS.GetDescription())
          info.time = nameString.split('_')[3]
@@ -139,7 +163,7 @@
      elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
          info.time = DS.GetDescription().split('_')[2]
      else:
-@@ -158,6 +164,9 @@
+@@ -189,6 +193,9 @@
      if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
          nameString1 = os.path.basename(DS1.GetDescription())
          info1.time = nameString1.split('_')[3]
@@ -149,18 +173,26 @@
      elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
          info1.time = DS1.GetDescription().split('_')[2]
      else:
---- testGeogrid_ISCE.py	2021-03-03 21:19:48.876579217 -0900
-+++ testGeogrid_ISCE.py	2021-03-03 21:23:51.387378976 -0900
-@@ -179,7 +182,7 @@
-     return info
- 
- 
--def coregisterLoadMetadataOptical(indir_m, indir_s):
-+def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
+--- testGeogridOptical.py	2021-04-15 21:56:06.690237585 -0800
++++ testGeogridOptical.py	2021-04-19 11:08:28.329300040 -0800
+@@ -2,6 +2,7 @@
+
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -72,7 +73,7 @@
+     pass
+
+
+-def coregisterLoadMetadata(indir_m, indir_s):
++def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
      '''
      Input file.
      '''
-@@ -209,6 +212,9 @@
+@@ -101,6 +102,9 @@
      if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
          nameString = os.path.basename(DS.GetDescription())
          info.time = nameString.split('_')[3]
@@ -170,7 +202,7 @@
      elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
          info.time = DS.GetDescription().split('_')[2]
      else:
-@@ -226,6 +232,9 @@
+@@ -118,6 +122,9 @@
      if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
          nameString1 = os.path.basename(DS1.GetDescription())
          info1.time = nameString1.split('_')[3]
