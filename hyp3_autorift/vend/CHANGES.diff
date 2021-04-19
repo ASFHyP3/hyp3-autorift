@@ -1,15 +1,82 @@
---- testautoRIFT.py	2021-03-03 21:19:48.888579182 -0900
-+++ testautoRIFT.py	2021-03-03 16:43:49.756820503 -0900
-@@ -385,7 +385,7 @@
- 
+--- ../../../JPL/geo_autoRIFT/autoRIFT/testautoRIFT.py	2021-04-15 21:56:06.690237585 -0800
++++ hyp3_autorift/vend/testautoRIFT.py	2021-04-16 10:51:53.487168943 -0800
+@@ -223,7 +223,7 @@
+     if CSMINx0 is not None:
+         obj.ChipSizeMaxX = CSMAXx0
+         obj.ChipSizeMinX = CSMINx0
+-
++
+         if geogrid_run_info is None:
+             gridspacingx = float(str.split(subprocess.getoutput('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
+             chipsizex0 = float(str.split(subprocess.getoutput('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
+@@ -235,7 +235,7 @@
+             gridspacingx = geogrid_run_info['gridspacingx']
+             chipsizex0 = geogrid_run_info['chipsizex0']
+             pixsizex = geogrid_run_info['XPixelSize']
+-
++
+         obj.ChipSize0X = int(np.ceil(chipsizex0/pixsizex/4)*4)
+         obj.GridSpacingX = int(obj.ChipSize0X*gridspacingx/chipsizex0)
+
+@@ -393,7 +393,7 @@
+
  def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag,
+                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
 -                            geogrid_run_info=None):
 +                            geogrid_run_info=None, **kwargs):
- 
+
      import numpy as np
      import time
-@@ -692,14 +692,14 @@
+@@ -667,32 +667,32 @@
+                 V_temp = np.sqrt(VX**2 + VY**2)
+                 V_temp_threshold = np.percentile(V_temp[np.logical_not(np.isnan(V_temp))],25)
+                 SSM1 = (V_temp <= V_temp_threshold)
+-
++
+                 stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+-
++
+                 dx_mean_shift = 0.0
+                 dy_mean_shift = 0.0
+                 dx_mean_shift1 = 0.0
+                 dy_mean_shift1 = 0.0
+-
++
+                 if stable_count != 0:
+                     temp = DX.copy() - DXref.copy()
+                     temp[np.logical_not(SSM)] = np.nan
+                     dx_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
+-
++
+                     temp = DY.copy() - DYref.copy()
+                     temp[np.logical_not(SSM)] = np.nan
+                     dy_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
+-
++
+                 if stable_count1 != 0:
+                     temp = DX.copy() - DXref.copy()
+                     temp[np.logical_not(SSM1)] = np.nan
+                     dx_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
+-
++
+                     temp = DY.copy() - DYref.copy()
+                     temp[np.logical_not(SSM1)] = np.nan
+                     dy_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
+-
++
+                 if stable_count == 0:
+                     if stable_count1 == 0:
+                         stable_shift_applied = 0
+@@ -704,7 +704,7 @@
+                     stable_shift_applied = 1
+                     DX = DX - dx_mean_shift
+                     DY = DY - dy_mean_shift
+-
++
+
+                 VX = offset2vx_1 * DX + offset2vx_2 * DY
+                 VY = offset2vy_1 * DX + offset2vy_2 * DY
+@@ -731,14 +731,14 @@
                      runCmd('topsinsar_filename.py')
      #                import scipy.io as sio
                      conts = sio.loadmat('topsinsar_filename.mat')
@@ -23,160 +90,38 @@
 +                    slave_dt = conts['secondary_dt'][0]
                      master_split = str.split(master_filename,'_')
                      slave_split = str.split(slave_filename,'_')
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -770,7 +770,7 @@
+@@ -814,7 +814,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -824,8 +824,8 @@
+@@ -873,8 +873,8 @@
                      master_path = indir_m
                      slave_path = indir_s
- 
+
 -                    master_split = master_path.split('_')
 -                    slave_split = slave_path.split('_')
 +                    master_split = kwargs['reference_metadata']['id'].split('_')
 +                    slave_split = kwargs['secondary_metadata']['id'].split('_')
- 
+
                      import os
- 
-@@ -839,7 +839,7 @@
+
+@@ -888,7 +888,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
+
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
---- testautoRIFT_ISCE.py	2021-03-03 21:19:48.860579263 -0900
-+++ testautoRIFT_ISCE.py	2021-03-03 16:43:49.772820478 -0900
-@@ -385,7 +385,7 @@
- 
- def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag,
--                            geogrid_run_info=None):
-+                            geogrid_run_info=None, **kwargs):
- 
-     import numpy as np
-     import time
-@@ -693,14 +693,14 @@
-                     runCmd('topsinsar_filename.py')
-     #                import scipy.io as sio
-                     conts = sio.loadmat('topsinsar_filename.mat')
--                    master_filename = conts['master_filename'][0]
--                    slave_filename = conts['slave_filename'][0]
--                    master_dt = conts['master_dt'][0]
--                    slave_dt = conts['slave_dt'][0]
-+                    master_filename = conts['reference_filename'][0]
-+                    slave_filename = conts['secondary_filename'][0]
-+                    master_dt = conts['reference_dt'][0]
-+                    slave_dt = conts['secondary_dt'][0]
-                     master_split = str.split(master_filename,'_')
-                     slave_split = str.split(slave_filename,'_')
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.netcdf_output as no
-                     pair_type = 'radar'
-                     detection_method = 'feature'
-                     coordinates = 'radar'
-@@ -771,7 +771,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -825,8 +825,8 @@
-                     master_path = indir_m
-                     slave_path = indir_s
- 
--                    master_split = master_path.split('_')
--                    slave_split = slave_path.split('_')
-+                    master_split = kwargs['reference_metadata']['id'].split('_')
-+                    slave_split = kwargs['secondary_metadata']['id'].split('_')
- 
-                     import os
- 
-@@ -840,7 +840,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
---- testGeogridOptical.py	2021-03-03 21:19:48.880579205 -0900
-+++ testGeogridOptical.py	2021-03-03 21:23:51.375378093 -0900
-@@ -112,7 +115,7 @@
-     return info
- 
- 
--def coregisterLoadMetadata(indir_m, indir_s):
-+def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
-     '''
-     Input file.
-     '''
-@@ -141,6 +144,9 @@
-     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
-         nameString = os.path.basename(DS.GetDescription())
-         info.time = nameString.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_m:
-+        s2_name = kwargs['reference_metadata']['id']
-+        info.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-         info.time = DS.GetDescription().split('_')[2]
-     else:
-@@ -158,6 +164,9 @@
-     if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
-         nameString1 = os.path.basename(DS1.GetDescription())
-         info1.time = nameString1.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_s:
-+        s2_name = kwargs['secondary_metadata']['id']
-+        info1.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
-         info1.time = DS1.GetDescription().split('_')[2]
-     else:
---- testGeogrid_ISCE.py	2021-03-03 21:19:48.876579217 -0900
-+++ testGeogrid_ISCE.py	2021-03-03 21:23:51.387378976 -0900
-@@ -179,7 +182,7 @@
-     return info
- 
- 
--def coregisterLoadMetadataOptical(indir_m, indir_s):
-+def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
-     '''
-     Input file.
-     '''
-@@ -209,6 +212,9 @@
-     if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
-         nameString = os.path.basename(DS.GetDescription())
-         info.time = nameString.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_m:
-+        s2_name = kwargs['reference_metadata']['id']
-+        info.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-         info.time = DS.GetDescription().split('_')[2]
-     else:
-@@ -226,6 +232,9 @@
-     if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
-         nameString1 = os.path.basename(DS1.GetDescription())
-         info1.time = nameString1.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_s:
-+        s2_name = kwargs['secondary_metadata']['id']
-+        info1.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
-         info1.time = DS1.GetDescription().split('_')[2]
-     else:
