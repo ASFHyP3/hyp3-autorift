@@ -832,6 +832,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var[:] = np.round(np.clip(VP, -32768, 32767)).astype(np.int16)
         var.setncattr('missing_value',np.int16(NoDataValue))
 
+        vp_error = v_error_cal(vxp_error, vyp_error)
         varname='vp_error'
         datatype=np.dtype('int16')
         dimensions=('y','x')
@@ -842,6 +843,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('description','velocity magnitude error determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected v_error estimates are used')
         var.setncattr('units','m/y')
         VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
+        VP_error[VP==0] = vp_error
         VP_error[noDataMask] = NoDataValue
         var[:] = np.round(np.clip(VP_error, -32768, 32767)).astype(np.int16)
         var.setncattr('missing_value',np.int16(NoDataValue))

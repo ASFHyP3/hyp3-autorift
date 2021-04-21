@@ -11,10 +11,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * `hyp3_autorift` will directly access Landsat-8 and Sentinel-2 data in the cloud
   instead of downloading the scenes locally
-* Upgraded ISCE2 to 2.5.1 and autoRIFT to the latest version (see [vendored README](hyp3_autorift/vend/README.md))
+* Upgraded autoRIFT to [v1.2.0](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.2.0)
+  and [ISCE2 v2.5.1 built with autoRIFT v1.2.0](https://anaconda.org/hyp3/isce2)
 
 ### Fixed
 * Sentinel-2 L1C metadata is generated correctly
+* Sentinel-2 search by ESA granule id
 * Landsat-8 scene names are no longer truncated in the `ITS_LIVE` naming schemes
 
 ## [0.4.5](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.4...v0.4.5)
