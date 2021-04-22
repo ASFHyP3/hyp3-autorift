@@ -153,13 +153,16 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     author = 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech'
     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
 
-    isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-    source = f'ASF DAAC HyP3 {datetime.datetime.now().year} using the {hyp3_autorift.__name__} plugin version ' \
-             f'{hyp3_autorift.__version__} running autoRIFT version {IMG_INFO_DICT["autoRIFT_software_version"]} as ' \
-             f'distributed with ISCE version {isce_version.strip()}. Contains modified Copernicus Sentinel data ' \
-             f'{IMG_INFO_DICT["date_center"][0:4]}, processed by ESA.'
+    source = f'NASA MEaSUREs ITS_LIVE project. Processed by ASF DAAC HyP3 {datetime.datetime.now().year} using the ' \
+             f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
+             f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
+    if pair_type == 'radar':
+        isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
+        source += f' built with ISCE version {isce_version.strip()}. Contains modified Copernicus Sentinel data' \
+                  f' {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
+
     references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
-                 '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnstock, M., Ligtenberg, S., van den Broeke, M.,\n' \
+                 '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnestock, M., Ligtenberg, S., van den Broeke, M.,\n' \
                  '  and Nilsson, J., 2018. Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
                  '  the last 7 years. The Cryosphere, 12, p.521. https://doi.org/10.5194/tc-12-521-2018\n' \
                  '* Lei, Y., Gardner, A. and Agram, P., 2021. Autonomous Repeat Image Feature Tracking (autoRIFT)\n' \
@@ -170,6 +173,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                  '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581\n' \
                  '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
                  '* autoRIFT: https://doi.org/10.5281/zenodo.4025445'
+
     tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
 
     clobber = True  # overwrite existing output nc file
