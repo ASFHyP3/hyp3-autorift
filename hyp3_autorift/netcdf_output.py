@@ -161,7 +161,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         source += f' built with ISCE version {isce_version.strip()}. Contains modified Copernicus Sentinel data' \
                   f' {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
 
-    references = 'When using this data, please acknowledge the source (see global source attribute), and cite:\n' \
+    references = 'When using this data, please acknowledge the source (see global source attribute) and cite:\n' \
                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnestock, M., Ligtenberg, S., van den Broeke, M.,\n' \
                  '  and Nilsson, J., 2018. Increased West Antarctic and unchanged East Antarctic ice discharge over\n' \
                  '  the last 7 years. The Cryosphere, 12, p.521. https://doi.org/10.5194/tc-12-521-2018\n' \
