@@ -158,8 +158,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
              f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
     if pair_type == 'radar':
         isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-        source += f' built with ISCE version {isce_version.strip()}. Contains modified Copernicus Sentinel data' \
-                  f' {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
+        source += f' built with ISCE version {isce_version.strip()}'
+    if IMG_INFO_DICT['mission_img1'].startswith('S'):
+        source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
+    if IMG_INFO_DICT['mission_img1'].startswith('L'):
+        source += f'. Landsat-{IMG_INFO_DICT["satellite_img1"]:.0f} images courtesy of the U.S. Geological Survey'
 
     references = 'When using this data, please acknowledge the source (see global source attribute) and cite:\n' \
                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnestock, M., Ligtenberg, S., van den Broeke, M.,\n' \
@@ -170,9 +173,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                  '  https://doi.org/10.3390/rs13040749\n' \
                  '\n' \
                  'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
-                 '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581\n' \
+                 '* autoRIFT: https://doi.org/10.5281/zenodo.4025445\n' \
                  '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
-                 '* autoRIFT: https://doi.org/10.5281/zenodo.4025445'
+                 '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581'
 
     tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
 
