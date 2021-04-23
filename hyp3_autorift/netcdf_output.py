@@ -21,7 +21,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                      offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                      rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                      detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
-                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
+                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector, parameter_file):
     vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
     temp = vx_mean_shift
     temp[np.logical_not(SSM)] = np.nan
@@ -189,6 +189,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
+    nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('motion_detection_method', detection_method)
     nc_outfile.setncattr('motion_coordinates', coordinates)
