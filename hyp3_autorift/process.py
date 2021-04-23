@@ -31,7 +31,7 @@ S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
-                         'autorift_parameters/v001/autorift_parameters.shp'
+                         'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 
 def get_lc2_metadata(scene_name):
