@@ -37,6 +37,16 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
+@@ -777,7 +778,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                         rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+
+                 elif nc_sensor == "L":
 @@ -814,7 +815,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
@@ -46,6 +56,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
+@@ -855,7 +857,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+
+                 elif nc_sensor == "S2":
 @@ -873,8 +874,8 @@
                      master_path = indir_m
                      slave_path = indir_s
@@ -66,6 +86,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
+@@ -927,7 +930,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+
+                 elif nc_sensor is None:
 --- testautoRIFT_ISCE.py	2021-04-15 21:56:06.690237585 -0800
 +++ testautoRIFT_ISCE.py	2021-04-19 11:08:28.349300092 -0800
 @@ -2,6 +2,7 @@
@@ -105,6 +135,16 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
+@@ -779,7 +780,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                         rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+
+                 elif nc_sensor == "L":
 @@ -816,7 +817,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
@@ -114,6 +154,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
+@@ -856,7 +858,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+
+                 elif nc_sensor == "S2":
 @@ -874,8 +875,8 @@
                      master_path = indir_m
                      slave_path = indir_s
@@ -134,6 +184,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
+@@ -928,7 +931,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+
+                 elif nc_sensor is None:
 --- testGeogrid_ISCE.py	2021-04-15 21:56:06.690237585 -0800
 +++ testGeogrid_ISCE.py	2021-04-19 11:08:28.341300071 -0800
 @@ -2,6 +2,7 @@

@@ -246,7 +246,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
             reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
+            geogrid_run_info=geogrid_info, **parameter_info['autorift'], parameter_file=parameter_file,
         )
 
     if netcdf_file is None:
