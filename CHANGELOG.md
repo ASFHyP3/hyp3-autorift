@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.5.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.4.5...v0.5.0)
 
 ### Changed
+* autoRIFT products will now be generated with a 120 m pixel spacing instead of 240 m
 * `hyp3_autorift` will directly access Landsat-8 and Sentinel-2 data in the cloud
   instead of downloading the scenes locally
 * Upgraded autoRIFT to [v1.2.0](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.2.0)
