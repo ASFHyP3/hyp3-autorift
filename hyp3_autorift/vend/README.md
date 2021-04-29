@@ -3,41 +3,11 @@
 This directory contains modules needed for the HyP3 autoRIFT plugin that couldn't
 be easily incorporated from a package manager or installed appropriately.
 
-## `testautoRIFT_ISCE.py` and `testautoRIFT.py`
+## `testautoRIFT_ISCE.py`, `testautoRIFT.py`, `testGeogrid_ISCE.py`, and `testGeogridOptical.py`
 
----
-*Note: A patch from autoRIFT was applied to these files to prevent failures due
-to stable surface misclassification, which will be included in the next autoRIFT
-release. See `PRE109-PATCH.diff` for the changes applied.*
----
-
-
-These modules were provided in the autoRIFT 
-[v1.0.8 release](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.0.8),
-and are required for the expected workflow provided to ASF. However, in their 
-original form, they required too many unpackaged or distributed modules to be found
-in the global namespace and therefore could not be easily incorporated into this
-plugin. They also still contained oppressive references to master/slave which is no longer
-supported by ISCE 2.4+. Changes, as listed in `CHANGES.diff`, were done to
-facilitate better packaging and distribution of the plugin, and remove oppressive
-language.
-
-## `testGeogrid_ISCE.py` and `testGeogridOptical.py`
-
----
-*Note: A patch from autoRIFT was applied to these files to prevent out of index
-errors when coregistering optical scenes, which will be included in the next autoRIFT
-release. See `PRE109-PATCH-2.diff` for the changes applied.*
----
-
-These modules are required for the expected workflow provided to ASF, but are
-not provided in the autoRIFT v1.0.8 release and instead resides in the "sister"
-Geogrid package (https://github.com/leiyangleon/Geogrid). Geogrid and autoRIFT
-are exact duplicate packages and only differ in the README and test modules, so
-simply installing Geogrid was not an option, and furthermore, the Geogrid
-repository (no longer) has any tagged or released versions. Finally, Geogrid still
-contains oppressive references to master/slave which is no longer supported by
-ISCE 2.4+. These modules corresponds to the phantom Geogrid v1.0.8 release, which
-is commit `4c9cc59`. Changes, as listed in `CHANGES.diff`, were done to
-facilitate better packaging and distribution of the plugin, and remove oppressive
-language.
+These modules are required for the expected workflow provided to ASF, and are
+provided in autoRIFT, but not distributed as part of the package. These modules
+correspond to release [`v1.2.0`](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.2.0).
+Changes, as listed in `CHANGES.diff`, were done to facilitate better packaging 
+and distribution of these modules, to correctly handle Sentinel-2 Level 1C
+products, and to provide better netCDF metadata. 

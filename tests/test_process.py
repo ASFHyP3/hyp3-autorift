@@ -26,20 +26,9 @@ def test_get_platform():
         process.get_platform('foobar')
 
 
-def test_get_bucket():
-    assert process.get_bucket('S1') is None
-    assert process.get_bucket('S2') == 'sentinel-s2-l1c'
-    assert process.get_bucket('S3') is None
-    assert process.get_bucket('L') == 'usgs-landsat'
-    assert process.get_bucket('FOO') is None
-
-
 @responses.activate
 def test_get_lc2_metadata_not_found():
-    responses.add(
-        responses.GET, f'{process.LC2_SEARCH_URL}/foo',
-        body='{"message": "Item not found"}', status=404,
-    )
+    responses.add(responses.GET, f'{process.LC2_SEARCH_URL}/foo', status=404)
     with pytest.raises(HTTPError):
         process.get_lc2_metadata('foo')
 
@@ -56,10 +45,7 @@ def test_get_lc2_metadata():
 @responses.activate
 def test_get_s2_metadata_not_found():
 
-    responses.add(
-        responses.GET, f'{process.S2_SEARCH_URL}/foo',
-        body='{"code": 404, "message": "Item not found"}', status=200,
-    )
+    responses.add(responses.GET, f'{process.S2_SEARCH_URL}/foo', status=404)
     responses.add(
         responses.POST, process.S2_SEARCH_URL,
         body='{"numberReturned": 0}', status=200,
@@ -83,7 +69,7 @@ def test_get_s2_metadata_cog_id():
 def test_get_s2_metadata_esa_id():
     responses.add(
         responses.GET, f'{process.S2_SEARCH_URL}/S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
-        body='{"code": 404, "message": "Item not found"}', status=200,
+        status=404,
     )
     responses.add(
         responses.POST, process.S2_SEARCH_URL,

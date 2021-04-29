@@ -4,8 +4,6 @@ import argparse
 import logging
 import os
 import textwrap
-from pathlib import Path
-from typing import Union
 
 import boto3
 from hyp3lib import DemError
@@ -14,80 +12,65 @@ from osgeo import gdal
 from osgeo import ogr
 from scipy.io import savemat
 
-from hyp3_autorift.geometry import flip_point_coordinates, poly_bounds_in_proj
+from hyp3_autorift.geometry import flip_point_coordinates
 
 log = logging.getLogger(__name__)
 
 _s3_client = boto3.client('s3')
 
 
-def download_s3_file_requester_pays(target_path: Union[str, Path], bucket: str, key: str) -> Path:
-    log.info(f'Downloading s3://{bucket}/{key}')
-    response = _s3_client.get_object(Bucket=bucket, Key=key, RequestPayer='requester')
-    filename = Path(target_path)
-    filename.write_bytes(response['Body'].read())
-    return filename
-
-
-def find_jpl_dem(polygon: ogr.Geometry, parameter_file: str) -> dict:
+def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
+    parameter_info = None
     centroid = flip_point_coordinates(polygon.Centroid())
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
-            dem_info = {
-                'name': f'{feature["name"]}_0240m',
+            parameter_info = {
+                'name': f'{feature["name"]}',
                 'epsg': feature['epsg'],
-                'tifs': {
-                    'h': f"/vsicurl/{feature['h']}",
-                    'StableSurface': f"/vsicurl/{feature['StableSurfa']}",
+                'geogrid': {
+                    'dem': f"/vsicurl/{feature['h']}",
+                    'ssm': f"/vsicurl/{feature['StableSurfa']}",
                     'dhdx': f"/vsicurl/{feature['dhdx']}",
                     'dhdy': f"/vsicurl/{feature['dhdy']}",
+                    'vx': f"/vsicurl/{feature['vx0']}",
+                    'vy': f"/vsicurl/{feature['vy0']}",
+                    'srx': f"/vsicurl/{feature['vxSearchRan']}",
+                    'sry': f"/vsicurl/{feature['vySearchRan']}",
+                    'csminx': f"/vsicurl/{feature['xMinChipSiz']}",
+                    'csminy': f"/vsicurl/{feature['yMinChipSiz']}",
+                    'csmaxx': f"/vsicurl/{feature['xMaxChipSiz']}",
+                    'csmaxy': f"/vsicurl/{feature['yMaxChipSiz']}",
+                    'sp': f"/vsicurl/{feature['sp']}",
                     'dhdxs': f"/vsicurl/{feature['dhdxs']}",
                     'dhdys': f"/vsicurl/{feature['dhdys']}",
-                    'vx0': f"/vsicurl/{feature['vx0']}",
-                    'vy0': f"/vsicurl/{feature['vy0']}",
-                    'vxSearchRange': f"/vsicurl/{feature['vxSearchRan']}",
-                    'vySearchRange': f"/vsicurl/{feature['vySearchRan']}",
-                    'xMinChipSize': f"/vsicurl/{feature['xMinChipSiz']}",
-                    'yMinChipSize': f"/vsicurl/{feature['yMinChipSiz']}",
-                    'xMaxChipSize': f"/vsicurl/{feature['xMaxChipSiz']}",
-                    'yMaxChipSize': f"/vsicurl/{feature['yMaxChipSiz']}",
-                    'sp': f"/vsicurl/{feature['sp']}",
                 },
+                'autorift': {
+                    'grid_location': 'window_location.tif',
+                    'init_offset': 'window_offset.tif',
+                    'search_range': 'window_search_range.tif',
+                    'chip_size_min': 'window_chip_size_min.tif',
+                    'chip_size_max': 'window_chip_size_max.tif',
+                    'offset2vx': 'window_rdr_off2vel_x_vec.tif',
+                    'offset2vy': 'window_rdr_off2vel_y_vec.tif',
+                    'stable_surface_mask': 'window_stable_surface_mask.tif',
+                    'mpflag': 0,
+                }
             }
-            return dem_info
+            break
 
-    raise DemError('Could not determine appropriate DEM for:\n'
-                   f'    centroid: {centroid}'
-                   f'    using: {parameter_file}')
+    if parameter_info is None:
+        raise DemError('Could not determine appropriate DEM for:\n'
+                       f'    centroid: {centroid}'
+                       f'    using: {parameter_file}')
 
+    dem_geotransform = gdal.Info(parameter_info['geogrid']['dem'], format='json')['geoTransform']
+    parameter_info['xsize'] = abs(dem_geotransform[1])
+    parameter_info['ysize'] = abs(dem_geotransform[5])
 
-def subset_jpl_tifs(polygon: ogr.Geometry, parameter_file: str, buffer: float = 0.15,
-                    target_dir: Union[str, Path] = '.'):
-    dem_info = find_jpl_dem(polygon, parameter_file)
-    log.info(f'Subsetting {dem_info["name"]} tifs: {dem_info["tifs"]["h"].replace("_h.tif", "_*")}')
-
-    min_x, max_x, min_y, max_y = poly_bounds_in_proj(polygon.Buffer(buffer), out_epsg=dem_info['epsg'])
-    output_bounds = (min_x, min_y, max_x, max_y)
-    log.debug(f'Subset bounds: {output_bounds}')
-
-    subset_tifs = {}
-    for key, tif in dem_info['tifs'].items():
-        out_path = os.path.join(target_dir, os.path.basename(tif))
-
-        # FIXME: shouldn't need to do after next autoRIFT upgrade
-        if out_path.endswith('_sp.tif'):
-            out_path = out_path.replace('_sp.tif', '_masks.tif')
-
-        subset_tifs[key] = out_path
-
-        gdal.Warp(
-            out_path, tif, outputBounds=output_bounds, xRes=240, yRes=240, targetAlignedPixels=True, multithread=True,
-        )
-
-    return subset_tifs
+    return parameter_info
 
 
 def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):

@@ -3,23 +3,21 @@ Package for processing with autoRIFT
 """
 
 import argparse
-import glob
 import logging
 import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 import requests
-from hyp3lib.execute import execute
 from hyp3lib.fetch import download_file
-from hyp3lib.file_subroutines import mkdir_p
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
+from osgeo import gdal
 
 from hyp3_autorift import geometry
 from hyp3_autorift import image
@@ -27,11 +25,13 @@ from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
+gdal.UseExceptions()
+
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
-                         'autorift_parameters/v001/autorift_parameters.shp'
+                         'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 
 def get_lc2_metadata(scene_name):
@@ -42,10 +42,12 @@ def get_lc2_metadata(scene_name):
 
 def get_s2_metadata(scene_name):
     response = requests.get(f'{S2_SEARCH_URL}/{scene_name}')
-    response.raise_for_status()
-
-    if response.json().get('code') != 404:
+    try:
+        response.raise_for_status()
         return response.json()
+    except requests.exceptions.HTTPError:
+        if response.status_code != 404:
+            raise
 
     payload = {
         'query': {
@@ -116,14 +118,6 @@ def get_platform(scene: str) -> str:
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
-def get_bucket(platform: str) -> Optional[str]:
-    if platform == 'S2':
-        return 'sentinel-s2-l1c'
-    elif platform == 'L':
-        return 'usgs-landsat'
-    return
-
-
 def get_s1_primary_polarization(granule_name):
     polarization = granule_name[14:16]
     if polarization in ['SV', 'DV']:
@@ -144,24 +138,24 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         naming_scheme: Naming scheme to use for product files
         band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
-
     orbits = None
     polarization = None
     reference_path = None
     secondary_path = None
+    reference_metadata = None
+    secondary_metadata = None
     reference_state_vec = None
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
-    platform = get_platform(reference)
-    bucket = get_bucket(platform)
 
+    platform = get_platform(reference)
     if platform == 'S1':
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)
             download_file(scene_url, chunk_size=5242880)
 
         orbits = Path('Orbits').resolve()
-        mkdir_p(orbits)
+        orbits.mkdir(parents=True, exist_ok=True)
         reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits)
         log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
         secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
@@ -171,114 +165,107 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
 
     elif platform == 'S2':
+        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
+        gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
+        gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
+
         reference_metadata = get_s2_metadata(reference)
-        reference = reference_metadata['properties']['sentinel:product_id']
-        reference_url = reference_metadata['assets'][band]['href']
-        # FIXME: This is only because autoRIFT can't handle /vsis3/
-        reference_url = reference_url.replace(f's3://{bucket}/', '')
-        reference_path = Path.cwd() / f'{reference}_{Path(reference_url).name}'  # file names are just band.jp2
-        io.download_s3_file_requester_pays(reference_path, bucket, reference_url)
+        reference_path = reference_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
 
         secondary_metadata = get_s2_metadata(secondary)
-        secondary = secondary_metadata['properties']['sentinel:product_id']
-        secondary_url = secondary_metadata['assets'][band]['href']
-        # FIXME: This is only because autoRIFT can't handle /vsis3/
-        secondary_url = secondary_url.replace(f's3://{bucket}/', '')  # file names are just band.jp2
-        secondary_path = Path.cwd() / f'{secondary}_{Path(secondary_url).name}'
-        io.download_s3_file_requester_pays(secondary_path, bucket, secondary_url)
+        secondary_path = secondary_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
     elif platform == 'L':
+        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
+        gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
+        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+
         if band == 'B08':
             band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
-        reference_url = reference_metadata['assets'][f'{band}.TIF']['href']
-        # FIXME: This is only because autoRIFT can't handle /vsis3/
-        reference_url = reference_url.replace('https://landsatlook.usgs.gov/data/', '')
-        reference_path = Path.cwd() / Path(reference_url).name
-        io.download_s3_file_requester_pays(reference_path, bucket, reference_url)
+        reference_path = reference_metadata['assets'][f'{band}.TIF']['href']
+        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', '/vsis3/usgs-landsat/')
 
         secondary_metadata = get_lc2_metadata(secondary)
-        secondary_url = secondary_metadata['assets'][f'{band}.TIF']['href']
-        # FIXME: This is only because autoRIFT can't handle /vsis3/
-        secondary_url = secondary_url.replace('https://landsatlook.usgs.gov/data/', '')
-        secondary_path = Path.cwd() / Path(secondary_url).name
-        io.download_s3_file_requester_pays(secondary_path, bucket, secondary_url)
+        secondary_path = secondary_metadata['assets'][f'{band}.TIF']['href']
+        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', '/vsis3/usgs-landsat/')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    tifs = io.subset_jpl_tifs(scene_poly, parameter_file, target_dir=Path.cwd())
-
-    geogrid_parameters = f'-d {tifs["h"]} -ssm {tifs["StableSurface"]} ' \
-                         f'-sx {tifs["dhdx"]} -sy {tifs["dhdy"]} ' \
-                         f'-vx {tifs["vx0"]} -vy {tifs["vy0"]} ' \
-                         f'-srx {tifs["vxSearchRange"]} -sry {tifs["vySearchRange"]} ' \
-                         f'-csminx {tifs["xMinChipSize"]} -csminy {tifs["yMinChipSize"]} ' \
-                         f'-csmaxx {tifs["xMaxChipSize"]} -csmaxy {tifs["yMaxChipSize"]}'
-    autorift_parameters = '-g window_location.tif -o window_offset.tif -sr window_search_range.tif ' \
-                          '-csmin window_chip_size_min.tif -csmax window_chip_size_max.tif ' \
-                          '-vx window_rdr_off2vel_x_vec.tif -vy window_rdr_off2vel_y_vec.tif ' \
-                          '-ssm window_stable_surface_mask.tif'
+    parameter_info = io.find_jpl_parameter_info(scene_poly, parameter_file)
 
     if platform == 'S1':
-        isce_dem = geometry.prep_isce_dem(tifs["h"], lat_limits, lon_limits)
+        isce_dem = geometry.prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
 
         io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
-        with open('topsApp.txt', 'w') as f:
-            cmd = '${ISCE_HOME}/applications/topsApp.py topsApp.xml --end=mergebursts'
-            execute(cmd, logfile=f, uselogging=True)
+        import isce  # noqa
+        from topsApp import TopsInSAR
+        insar = TopsInSAR(name='topsApp', cmdline=['topsApp.xml', '--end=mergebursts'])
+        insar.configure()
+        insar.run()
 
-        r_slc = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
-        s_slc = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
+        reference_path = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
+        secondary_path = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
 
-        with open('createImages.txt', 'w') as f:
-            for slc in [r_slc, s_slc]:
-                cmd = f'gdal_translate -of ENVI {slc}.vrt {slc}'
-                execute(cmd, logfile=f, uselogging=True)
+        for slc in [reference_path, secondary_path]:
+            gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
 
-        with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogrid_ISCE.py -r reference -s secondary {geogrid_parameters}'
-            execute(cmd, logfile=f, uselogging=True)
+        from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
+        meta_r = loadMetadata('reference')
+        meta_s = loadMetadata('secondary')
+        geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-        with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT_ISCE.py -r {r_slc} -s {s_slc} {autorift_parameters} -nc S'
-            execute(cmd, logfile=f, uselogging=True)
+        # NOTE: After Geogrid is run, all drivers are no longer registered.
+        #       I've got no idea why, or if there are other affects...
+        gdal.AllRegister()
+
+        from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
+        netcdf_file = generateAutoriftProduct(
+            reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False, ncname=None,
+            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
+            parameter_file=parameter_file.replace('/vsicurl/', ''),
+        )
 
     else:
-        with open('testGeogrid.txt', 'w') as f:
-            cmd = f'testGeogridOptical.py -r {reference_path.name} -s {secondary_path.name} {geogrid_parameters} ' \
-                  f'-urlflag 0'
-            execute(cmd, logfile=f, uselogging=True)
+        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+        meta_r, meta_s = coregisterLoadMetadata(
+            reference_path, secondary_path,
+            reference_metadata=reference_metadata,
+            secondary_metadata=secondary_metadata,
+        )
+        geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-        with open('testautoRIFT.txt', 'w') as f:
-            cmd = f'testautoRIFT.py -r {reference_path.name} -s {secondary_path.name} {autorift_parameters} ' \
-                  f'-nc {platform} -fo 1 -urlflag 0'
-            execute(cmd, logfile=f, uselogging=True)
+        from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
+        netcdf_file = generateAutoriftProduct(
+            reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
+            reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
+            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
+            parameter_file=parameter_file.replace('/vsicurl/', ''),
+        )
 
-    netcdf_files = glob.glob('*.nc')
-    if not netcdf_files:
+    if netcdf_file is None:
         raise Exception('Processing failed! Output netCDF file not found')
-    if len(netcdf_files) > 1:
-        log.warning(f'Too many netCDF files found; using first:\n    {netcdf_files}')
 
     if naming_scheme == 'ITS_LIVE_PROD':
-        product_file = Path(netcdf_files[0])
+        product_file = Path(netcdf_file)
     elif naming_scheme == 'ASF':
         product_name = get_product_name(
-            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec), band=band
+            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
+            band=band, pixel_spacing=parameter_info['xsize'],
         )
         product_file = Path(f'{product_name}.nc')
-        shutil.move(netcdf_files[0], str(product_file))
+        shutil.move(netcdf_file, str(product_file))
     else:
-        product_file = Path(netcdf_files[0].replace('.nc', '_IL_ASF_OD.nc'))
-        shutil.move(netcdf_files[0], str(product_file))
+        product_file = Path(netcdf_file.replace('.nc', '_IL_ASF_OD.nc'))
+        shutil.move(netcdf_file, str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
