@@ -14,7 +14,8 @@ to [`v1.2.0`](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.2.0).
 Changes, as listed in `CHANGES.diff`, were done to facilitate better packaging 
 and distribution of these modules, to correctly handle Sentinel-2 Level 1C
 products, and to provide better netCDF metadata. Additionally, `NC-PATCH.diff`
-was applied to fix the grid resolution specifier in the netCDF file names.
+was applied to fix the grid resolution specifier in the netCDF file names and to
+not truncate Landsat scene names in the netCDF file names.
 
 ## `testGeogrid_ISCE.py` and `testGeogridOptical.py`
 

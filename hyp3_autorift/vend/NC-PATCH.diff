@@ -13,10 +13,12 @@ diff --git a/testautoRIFT.py b/testautoRIFT.py
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
 
-@@ -828,9 +828,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+@@ -827,7 +827,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
-                         out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
+-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
++                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
 -                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
 +                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      else:
@@ -53,10 +55,12 @@ index 53325f8..b7fd589 100755
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
 
-@@ -830,9 +830,10 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+@@ -829,7 +829,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
-                         out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
+-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
++                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
 -                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
 +                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      else:
