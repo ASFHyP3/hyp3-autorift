@@ -751,9 +751,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
                         out_nc_filename = f"./{master_filename[0:-4]}_X_{slave_filename[0:-4]}" \
-                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
-                        out_nc_filename = f"{ncname}_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"{ncname}_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
 
@@ -827,10 +827,10 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
     #                out_nc_filename = 'Jakobshavn_opt.nc'
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
-                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
-                        out_nc_filename = f"{ncname}_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"{ncname}_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
 
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
@@ -902,9 +902,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
                         out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
-                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
-                        out_nc_filename = f"{ncname}_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"{ncname}_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
                     from datetime import date
