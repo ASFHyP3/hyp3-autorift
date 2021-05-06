@@ -668,8 +668,11 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
 
                 V_temp = np.sqrt(VX**2 + VY**2)
-                V_temp_threshold = np.percentile(V_temp[np.logical_not(np.isnan(V_temp))],25)
-                SSM1 = (V_temp <= V_temp_threshold)
+                try:
+                    V_temp_threshold = np.percentile(V_temp[np.logical_not(np.isnan(V_temp))],25)
+                    SSM1 = (V_temp <= V_temp_threshold)
+                except IndexError:
+                    SSM1 = np.zeros(V_temp.shape).astype('bool')
 
                 stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
 
@@ -750,9 +753,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
                         out_nc_filename = f"./{master_filename[0:-4]}_X_{slave_filename[0:-4]}" \
-                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
-                        out_nc_filename = f"{ncname}_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"{ncname}_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
 
@@ -826,10 +829,11 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
     #                out_nc_filename = 'Jakobshavn_opt.nc'
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
-                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
-                        out_nc_filename = f"{ncname}_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"{ncname}_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
                     from datetime import date
@@ -900,9 +904,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
                         out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
-                                          f"_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                                          f"_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
-                        out_nc_filename = f"{ncname}_G{chipsizex0:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        out_nc_filename = f"{ncname}_G{tran[1]:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
                     from datetime import date
