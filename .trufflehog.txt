@@ -1,6 +1,3 @@
 .*gitleaks.toml$
-.gitlab-ci.yml
-Dockerfile
-.*install_autoRIFT_ISCE_conda.sh$
-.*single_scene.*_full.py$
+.*hyp3_autorift/vend/workflow/.*
 .*hyp3_autorift/vend/README.md$
