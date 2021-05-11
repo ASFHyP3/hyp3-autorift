@@ -1,11 +1,20 @@
+import io
 from datetime import datetime
 from re import match
+from unittest import mock
 
 import pytest
 import responses
-from requests import HTTPError
+from botocore.stub import Stubber
 
 from hyp3_autorift import process
+
+
+@pytest.fixture
+def s3_stubber():
+    with Stubber(process.S3_CLIENT) as stubber:
+        yield stubber
+        stubber.assert_no_pending_responses()
 
 
 def test_get_platform():
@@ -26,25 +35,34 @@ def test_get_platform():
         process.get_platform('foobar')
 
 
-@responses.activate
-def test_get_lc2_metadata_not_found():
-    responses.add(responses.GET, f'{process.LC2_SEARCH_URL}/foo', status=404)
-    with pytest.raises(HTTPError):
-        process.get_lc2_metadata('foo')
+def test_get_lc2_stac_json_key():
+    expected = 'collection02/level-1/standard/oli-tirs/2019/041/001/LC08_L1TP_041001_20191005_20200825_02_T1/' \
+               'LC08_L1TP_041001_20191005_20200825_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LC08_L1TP_041001_20191005_20200825_02_T1') == expected
+
+    expected = 'collection02/level-1/standard/oli-tirs/2020/226/012/LO08_L1TP_226012_20201108_20201120_02_T2/' \
+               'LO08_L1TP_226012_20201108_20201120_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LO08_L1TP_226012_20201108_20201120_02_T2') == expected
 
 
 @responses.activate
-def test_get_lc2_metadata():
-    responses.add(
-        responses.GET, f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200703_20200913_02_T1',
-        body='{"foo": "bar"}', status=200,
-    )
-    assert process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1') == {'foo': 'bar'}
+def test_get_lc2_metadata(s3_stubber):
+    params = {
+        'Bucket': process.LANDSAT_BUCKET,
+        'Key': 'foo.json',
+        'RequestPayer': 'requester',
+    }
+    s3_response = {
+        'Body': io.StringIO('{"foo": "bar"}')
+    }
+    s3_stubber.add_response(method='get_object', expected_params=params, service_response=s3_response)
+
+    with mock.patch('hyp3_autorift.process.get_lc2_stac_json_key', return_value='foo.json'):
+        assert process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1') == {'foo': 'bar'}
 
 
 @responses.activate
 def test_get_s2_metadata_not_found():
-
     responses.add(responses.GET, f'{process.S2_SEARCH_URL}/foo', status=404)
     responses.add(
         responses.POST, process.S2_SEARCH_URL,

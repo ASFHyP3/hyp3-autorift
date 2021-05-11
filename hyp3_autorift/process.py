@@ -3,6 +3,7 @@ Package for processing with autoRIFT
 """
 
 import argparse
+import json
 import logging
 import os
 import shutil
@@ -11,6 +12,7 @@ from pathlib import Path
 from secrets import token_hex
 from typing import Tuple
 
+import boto3
 import numpy as np
 import requests
 from hyp3lib.fetch import download_file
@@ -27,17 +29,25 @@ log = logging.getLogger(__name__)
 
 gdal.UseExceptions()
 
+S3_CLIENT = boto3.client('s3')
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
-LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
+LANDSAT_BUCKET = 'usgs-landsat'
 
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 
+def get_lc2_stac_json_key(scene_name):
+    year = scene_name[17:21]
+    path = scene_name[10:13]
+    row = scene_name[13:16]
+    return f'collection02/level-1/standard/oli-tirs/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
+
+
 def get_lc2_metadata(scene_name):
-    response = requests.get(f'{LC2_SEARCH_URL}/{scene_name}')
-    response.raise_for_status()
-    return response.json()
+    key = get_lc2_stac_json_key(scene_name)
+    obj = S3_CLIENT.get_object(Bucket=LANDSAT_BUCKET, Key=key, RequestPayer='requester')
+    return json.load(obj['Body'])
 
 
 def get_s2_metadata(scene_name):
@@ -156,9 +166,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         orbits = Path('Orbits').resolve()
         orbits.mkdir(parents=True, exist_ok=True)
-        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=orbits)
+        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=str(orbits))
         log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=orbits)
+        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=str(orbits))
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
         polarization = get_s1_primary_polarization(reference)
@@ -188,11 +198,11 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
         reference_path = reference_metadata['assets'][f'{band}.TIF']['href']
-        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', '/vsis3/usgs-landsat/')
+        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = secondary_metadata['assets'][f'{band}.TIF']['href']
-        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', '/vsis3/usgs-landsat/')
+        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
