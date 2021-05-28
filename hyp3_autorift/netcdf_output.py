@@ -47,16 +47,16 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     if pair_type is 'radar':
         VR = DX * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
-        VA = (-DY) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+        VA = (DY) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
         VR = VR.astype(np.float32)
         VA = VA.astype(np.float32)
 
 
         vr_mean_shift = dx_mean_shift * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
-        va_mean_shift = (-dy_mean_shift) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+        va_mean_shift = (dy_mean_shift) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
 
         vr_mean_shift1 = dx_mean_shift1 * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
-        va_mean_shift1 = (-dy_mean_shift1) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+        va_mean_shift1 = (dy_mean_shift1) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
 
         # create the (slope parallel & reference) flow-based range-projected result
         alpha_sp = DX / (offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * (-SX) - offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * (-SY))
@@ -199,7 +199,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('references', references)
 
     varname='img_pair_info'
-    datatype=np.dtype('S1')
+    datatype='U1'
     dimensions=()
     FillValue=None
 
@@ -242,9 +242,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     if (srs.GetAttrValue('PROJECTION') == 'Polar_Stereographic'):
 
-        mapping_name='Polar_Stereographic'
+        mapping_name='mapping'
         grid_mapping='polar_stereographic'  # need to set this as an attribute for the image variables
-        datatype=np.dtype('S1')
+        datatype='U1'
         dimensions=()
         FillValue=None
 
@@ -267,9 +267,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     elif (srs.GetAttrValue('PROJECTION') == 'Transverse_Mercator'):
 
-        mapping_name='UTM_projection'
+        mapping_name='mapping'
         grid_mapping='universal_transverse_mercator'  # need to set this as an attribute for the image variables
-        datatype=np.dtype('S1')
+        datatype='U1'
         dimensions=()
         FillValue=None
 
@@ -350,10 +350,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         var.setncattr('stable_shift_slow',np.nan)
 
-
-    var.setncattr('vx_error_mask',int(round(vx_error_mask*10))/10)
+    if stable_count != 0:
+        var.setncattr('vx_error_mask',int(round(vx_error_mask*10))/10)
+    else:
+        var.setncattr('vx_error_mask',np.nan)
     var.setncattr('vx_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-    var.setncattr('vx_error_slow',int(round(vx_error_slow*10))/10)
+    if stable_count1 != 0:
+        var.setncattr('vx_error_slow',int(round(vx_error_slow*10))/10)
+    else:
+        var.setncattr('vx_error_slow',np.nan)
     var.setncattr('vx_error_slow_description','RMSE over slowest 25% of retrieved velocities')
     var.setncattr('vx_error_modeled',int(round(vx_error_mod*10))/10)
     var.setncattr('vx_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
@@ -425,10 +430,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         var.setncattr('stable_shift_slow',np.nan)
 
-
-    var.setncattr('vy_error_mask',int(round(vy_error_mask*10))/10)
+    if stable_count != 0:
+        var.setncattr('vy_error_mask',int(round(vy_error_mask*10))/10)
+    else:
+        var.setncattr('vy_error_mask',np.nan)
     var.setncattr('vy_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-    var.setncattr('vy_error_slow',int(round(vy_error_slow*10))/10)
+    if stable_count1 != 0:
+        var.setncattr('vy_error_slow',int(round(vy_error_slow*10))/10)
+    else:
+        var.setncattr('vy_error_slow',np.nan)
     var.setncattr('vy_error_slow_description','RMSE over slowest 25% of retrieved velocities')
     var.setncattr('vy_error_modeled',int(round(vy_error_mod*10))/10)
     var.setncattr('vy_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
@@ -546,10 +556,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             var.setncattr('stable_shift_slow',np.nan)
 
-
-        var.setncattr('vr_error_mask',int(round(vr_error_mask*10))/10)
+        if stable_count != 0:
+            var.setncattr('vr_error_mask',int(round(vr_error_mask*10))/10)
+        else:
+            var.setncattr('vr_error_mask',np.nan)
         var.setncattr('vr_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-        var.setncattr('vr_error_slow',int(round(vr_error_slow*10))/10)
+        if stable_count1 != 0:
+            var.setncattr('vr_error_slow',int(round(vr_error_slow*10))/10)
+        else:
+            var.setncattr('vr_error_slow',np.nan)
         var.setncattr('vr_error_slow_description','RMSE over slowest 25% of retrieved velocities')
         var.setncattr('vr_error_modeled',int(round(vr_error_mod*10))/10)
         var.setncattr('vr_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
@@ -619,10 +634,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             var.setncattr('stable_shift_slow',np.nan)
 
-
-        var.setncattr('va_error_mask',int(round(va_error_mask*10))/10)
+        if stable_count != 0:
+            var.setncattr('va_error_mask',int(round(va_error_mask*10))/10)
+        else:
+            var.setncattr('va_error_mask',np.nan)
         var.setncattr('va_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-        var.setncattr('va_error_slow',int(round(va_error_slow*10))/10)
+        if stable_count1 != 0:
+            var.setncattr('va_error_slow',int(round(va_error_slow*10))/10)
+        else:
+            var.setncattr('va_error_slow',np.nan)
         var.setncattr('va_error_slow_description','RMSE over slowest 25% of retrieved velocities')
         var.setncattr('va_error_modeled',int(round(va_error_mod*10))/10)
         var.setncattr('va_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
@@ -774,10 +794,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             var.setncattr('stable_shift_slow',np.nan)
 
-
-        var.setncattr('vxp_error_mask',int(round(vxp_error_mask*10))/10)
+        if stable_count_p != 0:
+            var.setncattr('vxp_error_mask',int(round(vxp_error_mask*10))/10)
+        else:
+            var.setncattr('vxp_error_mask',np.nan)
         var.setncattr('vxp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-        var.setncattr('vxp_error_slow',int(round(vxp_error_slow*10))/10)
+        if stable_count1_p != 0:
+            var.setncattr('vxp_error_slow',int(round(vxp_error_slow*10))/10)
+        else:
+            var.setncattr('vxp_error_slow',np.nan)
         var.setncattr('vxp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
         var.setncattr('vxp_error_modeled',int(round(vxp_error_mod*10))/10)
         var.setncattr('vxp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
@@ -849,10 +874,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             var.setncattr('stable_shift_slow',np.nan)
 
-
-        var.setncattr('vyp_error_mask',int(round(vyp_error_mask*10))/10)
+        if stable_count_p != 0:
+            var.setncattr('vyp_error_mask',int(round(vyp_error_mask*10))/10)
+        else:
+            var.setncattr('vyp_error_mask',np.nan)
         var.setncattr('vyp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-        var.setncattr('vyp_error_slow',int(round(vyp_error_slow*10))/10)
+        if stable_count1_p != 0:
+            var.setncattr('vyp_error_slow',int(round(vyp_error_slow*10))/10)
+        else:
+            var.setncattr('vyp_error_slow',np.nan)
         var.setncattr('vyp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
         var.setncattr('vyp_error_modeled',int(round(vyp_error_mod*10))/10)
         var.setncattr('vyp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
@@ -957,7 +987,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     varname='interp_mask'
     datatype=np.dtype('uint8')
     dimensions=('y','x')
-    FillValue=None
+    FillValue=0
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
 
     var.setncattr('standard_name','interpolated_value_mask')
