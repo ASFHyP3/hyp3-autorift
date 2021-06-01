@@ -1,5 +1,5 @@
---- testautoRIFT.py	2021-04-15 21:56:06.690237585 -0800
-+++ testautoRIFT.py	2021-04-19 11:08:28.353300102 -0800
+--- testautoRIFT.py
++++ testautoRIFT.py
 @@ -2,6 +2,7 @@
 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -8,7 +8,7 @@
  #
  # Licensed under the Apache License, Version 2.0 (the "License");
  # you may not use this file except in compliance with the License.
-@@ -393,7 +394,7 @@
+@@ -395,7 +396,7 @@
 
  def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
                              offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
@@ -17,7 +17,7 @@
 
      import numpy as np
      import time
-@@ -731,14 +732,14 @@
+@@ -739,14 +740,14 @@
                      runCmd('topsinsar_filename.py')
      #                import scipy.io as sio
                      conts = sio.loadmat('topsinsar_filename.mat')
@@ -37,7 +37,7 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -777,7 +778,8 @@
+@@ -785,7 +786,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                          rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -47,7 +47,7 @@
                      )
 
                  elif nc_sensor == "L":
-@@ -814,7 +815,7 @@
+@@ -824,7 +826,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
@@ -56,7 +56,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -855,7 +857,8 @@
+@@ -832,7 +834,7 @@
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
+                     PPP = roi_valid_percentage * 100
+                     if ncname is None:
+-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
++                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     else:
+                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+@@ -865,7 +867,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -66,7 +75,7 @@
                      )
 
                  elif nc_sensor == "S2":
-@@ -873,8 +874,8 @@
+@@ -885,8 +888,8 @@
                      master_path = indir_m
                      slave_path = indir_s
 
@@ -77,7 +86,7 @@
 
                      import os
 
-@@ -888,7 +889,7 @@
+@@ -900,7 +903,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
@@ -86,7 +95,7 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -927,7 +930,8 @@
+@@ -939,7 +942,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -96,8 +105,8 @@
                      )
 
                  elif nc_sensor is None:
---- testautoRIFT_ISCE.py	2021-04-15 21:56:06.690237585 -0800
-+++ testautoRIFT_ISCE.py	2021-04-19 11:08:28.349300092 -0800
+--- testautoRIFT_ISCE.py
++++ testautoRIFT_ISCE.py
 @@ -2,6 +2,7 @@
 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,7 +115,7 @@
  #
  # Licensed under the Apache License, Version 2.0 (the "License");
  # you may not use this file except in compliance with the License.
-@@ -393,7 +394,7 @@
+@@ -394,7 +395,7 @@
 
  def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
                              offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
@@ -115,7 +124,7 @@
 
      import numpy as np
      import time
-@@ -733,14 +734,14 @@
+@@ -739,14 +740,14 @@
                      runCmd('topsinsar_filename.py')
      #                import scipy.io as sio
                      conts = sio.loadmat('topsinsar_filename.mat')
@@ -135,7 +144,7 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -779,7 +780,8 @@
+@@ -785,7 +786,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                          rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -145,7 +154,7 @@
                      )
 
                  elif nc_sensor == "L":
-@@ -816,7 +817,7 @@
+@@ -824,7 +826,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
@@ -154,7 +163,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -856,7 +858,8 @@
+@@ -832,7 +834,7 @@
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
+                     PPP = roi_valid_percentage * 100
+                     if ncname is None:
+-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
++                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     else:
+                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+@@ -864,7 +866,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -164,7 +182,7 @@
                      )
 
                  elif nc_sensor == "S2":
-@@ -874,8 +875,8 @@
+@@ -884,8 +887,8 @@
                      master_path = indir_m
                      slave_path = indir_s
 
@@ -175,7 +193,7 @@
 
                      import os
 
-@@ -889,7 +890,7 @@
+@@ -899,7 +902,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
@@ -184,7 +202,7 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -928,7 +931,8 @@
+@@ -938,7 +941,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -194,8 +212,8 @@
                      )
 
                  elif nc_sensor is None:
---- testGeogrid_ISCE.py	2021-04-15 21:56:06.690237585 -0800
-+++ testGeogrid_ISCE.py	2021-04-19 11:08:28.341300071 -0800
+--- testGeogrid_ISCE.py
++++ testGeogrid_ISCE.py
 @@ -2,6 +2,7 @@
 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -233,8 +251,8 @@
      elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
          info1.time = DS1.GetDescription().split('_')[2]
      else:
---- testGeogridOptical.py	2021-04-15 21:56:06.690237585 -0800
-+++ testGeogridOptical.py	2021-04-19 11:08:28.329300040 -0800
+--- testGeogridOptical.py
++++ testGeogridOptical.py
 @@ -2,6 +2,7 @@
 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -252,7 +270,7 @@
      '''
      Input file.
      '''
-@@ -101,6 +102,9 @@
+@@ -102,6 +103,9 @@
      if re.findall("L[CO]08_",DS.GetDescription()).__len__() > 0:
          nameString = os.path.basename(DS.GetDescription())
          info.time = nameString.split('_')[3]
@@ -262,7 +280,7 @@
      elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
          info.time = DS.GetDescription().split('_')[2]
      else:
-@@ -118,6 +122,9 @@
+@@ -119,6 +123,9 @@
      if re.findall("L[CO]08_",DS1.GetDescription()).__len__() > 0:
          nameString1 = os.path.basename(DS1.GetDescription())
          info1.time = nameString1.split('_')[3]
