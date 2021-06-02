@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import shutil
-import sys
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -179,6 +178,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
+        # Also set for new CXX threads in Geogrid/autoRIFT
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
         os.environ['AWS_REGION'] = 'eu-central-1'
@@ -197,6 +197,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+        # Also set for new CXX threads in Geogrid/autoRIFT
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
         os.environ['AWS_REGION'] = 'us-west-2'
