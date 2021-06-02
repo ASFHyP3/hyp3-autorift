@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -178,6 +179,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
+        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+        os.environ['AWS_REQUEST_PAYER'] = 'requester'
+        os.environ['AWS_REGION'] = 'eu-central-1'
 
         reference_metadata = get_s2_metadata(reference)
         reference_path = reference_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
@@ -193,6 +197,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+        os.environ['AWS_REQUEST_PAYER'] = 'requester'
+        os.environ['AWS_REGION'] = 'us-west-2'
 
         if band == 'B08':
             band = 'B8'
