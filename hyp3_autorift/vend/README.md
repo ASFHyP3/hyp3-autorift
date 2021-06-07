@@ -3,7 +3,7 @@
 This directory contains modules needed for the HyP3 autoRIFT plugin that couldn't
 be easily incorporated from a package manager or installed appropriately.
 
-## `testautoRIFT_ISCE.py`, `testautoRIFT.py`, `testGeogrid_ISCE.py` and `testGeogridOptical.py`
+## `testautoRIFT_ISCE.py`, `testautoRIFT.py`, `testGeogrid_ISCE.py`, and `testGeogridOptical.py`
 
 These modules are required for the expected workflow provided to ASF, and are
 provided in autoRIFT, but not distributed as part of the package. These modules
