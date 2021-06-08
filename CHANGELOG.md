@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.0...v0.6.1)
+
+### Changed
+* Upgraded autoRIFT to [v1.3.1](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.3.1)
+  and [ISCE2 v2.5.1 built with autoRIFT v1.3.1](https://anaconda.org/hyp3/isce2)
+  
 ## [0.6.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.5.2...v0.6.0)
 
 ### Changed
