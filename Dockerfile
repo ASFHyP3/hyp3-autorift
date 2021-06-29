@@ -37,9 +37,9 @@ USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
 WORKDIR /home/conda
 
-COPY conda-env.yml /home/conda/conda-env.yml
+COPY environment.yml /home/conda/environment.yml
 
-RUN conda env create -f conda-env.yml && \
+RUN conda env create -f environment.yml && \
     conda clean -afy && \
     conda activate hyp3-autorift && \
     sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile
