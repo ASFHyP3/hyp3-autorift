@@ -1,19 +1,20 @@
-import os
+from pathlib import Path
 
 from setuptools import find_packages, setup
 
-_HERE = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(_HERE, 'README.md')) as f:
-    long_desc = f.read()
+readme = Path(__file__).parent / 'README.md'
 
 setup(
     name='hyp3_autorift',
     use_scm_version=True,
     description='A HyP3 plugin for feature tracking processing with AutoRIFT-ISCE',
-    long_description=long_desc,
+    long_description=readme.read_text(),
     long_description_content_type='text/markdown',
 
     url='https://github.com/ASFHyP3/hyp3-autorift',
+    project_urls={
+        'Documentation': 'https://hyp3-docs.asf.alaska.edu',
+    },
 
     author='ASF APD/Tools Team',
     author_email='uaf-asf-apd@alaska.edu',
@@ -45,6 +46,10 @@ setup(
 
     extras_require={
         'develop': [
+            'flake8',
+            'flake8-import-order',
+            'flake8-blind-except',
+            'flake8-builtins',
             'pillow',
             'pytest',
             'pytest-cov',

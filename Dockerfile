@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.7.12
+FROM condaforge/mambaforge:latest
 
 # For opencontainers label definitions, see:
 #    https://github.com/opencontainers/image-spec/blob/master/annotations.md
@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.authors="ASF APD/Tools Team <uaf-asf-apd@alaska.e
 LABEL org.opencontainers.image.licenses="BSD-3-Clause"
 LABEL org.opencontainers.image.url="https://github.com/ASFHyP3/hyp3-autorift"
 LABEL org.opencontainers.image.source="https://github.com/ASFHyP3/hyp3-autorift"
-# LABEL org.opencontainers.image.documentation=""
+LABEL org.opencontainers.image.documentation="https://hyp3-docs.asf.alaska.edu"
 
 # Dynamic lables to define at build time via `docker build --label`
 # LABEL org.opencontainers.image.created=""
@@ -27,31 +27,21 @@ ARG CONDA_GID=1000
 
 RUN groupadd -g "${CONDA_GID}" --system conda && \
     useradd -l -u "${CONDA_UID}" -g "${CONDA_GID}" --system -d /home/conda -m  -s /bin/bash conda && \
-    conda update -n base -c defaults conda && \
     chown -R conda:conda /opt && \
-    conda clean -afy && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> /home/conda/.profile && \
     echo "conda activate base" >> /home/conda/.profile
 
 USER ${CONDA_UID}
 SHELL ["/bin/bash", "-l", "-c"]
-WORKDIR /home/conda
+WORKDIR /home/conda/
 
-COPY conda-env.yml /home/conda/conda-env.yml
+COPY --chown=${CONDA_UID}:${CONDA_GID} . /hyp3-autorift/
 
-RUN conda env create -f conda-env.yml && \
+RUN mamba env create -f /hyp3-autorift/environment.yml && \
     conda clean -afy && \
     conda activate hyp3-autorift && \
-    sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile
+    sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
+    python -m pip install --no-cache-dir /hyp3-autorift
 
-ARG S3_PYPI_HOST
-ARG SDIST_SPEC
-
-RUN python3 -m pip install --no-cache-dir hyp3_autorift${SDIST_SPEC} \
-    --trusted-host "${S3_PYPI_HOST}" \
-    --extra-index-url "http://${S3_PYPI_HOST}"
-
-COPY hyp3_autorift/etc/entrypoint.sh /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/hyp3-autorift/hyp3_autorift/etc/entrypoint.sh"]
 CMD ["-h"]
