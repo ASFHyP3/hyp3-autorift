@@ -6,7 +6,7 @@ channels:
 dependencies:
   - boto3
   - botocore
-  - python=3.8
+  - python>=3.8
   - pip
   # For packaging, and testing
   - flake8
