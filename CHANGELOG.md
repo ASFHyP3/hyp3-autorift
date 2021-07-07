@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * `conda-env.yml` has been renamed to `environment.yml` in-line with community practice
+* Upgraded to hyp3lib [v1.6.8](https://github.com/ASFHyP3/hyp3-lib/blob/develop/CHANGELOG.md#168) from v1.6.7
 
 ## [0.6.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.0...v0.6.1)
 
