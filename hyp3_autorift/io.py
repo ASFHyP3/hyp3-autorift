@@ -5,7 +5,6 @@ import logging
 import os
 import textwrap
 
-import boto3
 from hyp3lib import DemError
 from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
@@ -15,8 +14,6 @@ from scipy.io import savemat
 from hyp3_autorift.geometry import flip_point_coordinates
 
 log = logging.getLogger(__name__)
-
-_s3_client = boto3.client('s3')
 
 
 def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
