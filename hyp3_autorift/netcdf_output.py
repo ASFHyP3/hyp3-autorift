@@ -966,7 +966,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
 
     var.setncattr('standard_name','chip_size_width')
-    var.setncattr('description','width of search window')
+    var.setncattr('description','width of search template (chip)')
     var.setncattr('units','m')
 
     if pair_type is 'radar':
@@ -990,7 +990,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
 
     var.setncattr('standard_name','chip_size_height')
-    var.setncattr('description','height of search window')
+    var.setncattr('description','height of search template (chip)')
     var.setncattr('units','m')
 
     if pair_type is 'radar':
