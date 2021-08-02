@@ -12,4 +12,6 @@ with the unreleased [minor error estimate edits](https://github.com/leiyangleon/
 included. Changes, as listed in `CHANGES.diff`, were done to facilitate better packaging 
 and distribution of these modules, to correctly handle Sentinel-2 Level 1C
 products, to prevent truncating Landsat scene names in the netCDF file names, 
-and to provide better netCDF metadata.
+and to provide better netCDF metadata. Furthermore, a patch, as listed in `L8-PATCH.diff`, was applied to
+`testautoRIFT_ISCE.py` and `testautoRIFT.py` to provide more detailed acquisition times
+for Landsat-8 pairs.
