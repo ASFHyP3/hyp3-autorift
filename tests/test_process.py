@@ -5,16 +5,8 @@ from unittest import mock
 
 import pytest
 import responses
-from botocore.stub import Stubber
 
 from hyp3_autorift import process
-
-
-@pytest.fixture
-def s3_stubber():
-    with Stubber(process.S3_CLIENT) as stubber:
-        yield stubber
-        stubber.assert_no_pending_responses()
 
 
 def test_get_platform():
