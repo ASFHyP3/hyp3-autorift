@@ -111,7 +111,7 @@ def get_datetime(scene_name):
     raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
-def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240, band=None):
+def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240):
     mission = reference_name[0:2]
     plat1 = reference_name.split('_')[0][-1]
     plat2 = secondary_name.split('_')[0][-1]
@@ -129,7 +129,7 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
         orbit = least_precise_orbit_of(orbit_files)
         misc = polarization1 + polarization2 + orbit
     else:
-        misc = band.ljust(3, '-')
+        misc = 'B08'
 
     product_id = token_hex(2).upper()
 
@@ -289,7 +289,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     elif naming_scheme == 'ASF':
         product_name = get_product_name(
             reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
-            band=band, pixel_spacing=parameter_info['xsize'],
+            pixel_spacing=parameter_info['xsize'],
         )
         product_file = Path(f'{product_name}.nc')
         shutil.move(netcdf_file, str(product_file))
