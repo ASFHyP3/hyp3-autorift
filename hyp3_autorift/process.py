@@ -31,6 +31,7 @@ gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
+LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
 
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
@@ -45,9 +46,25 @@ def get_lc2_stac_json_key(scene_name):
 
 
 def get_lc2_metadata(scene_name):
+    response = requests.get(f'{LC2_SEARCH_URL}/{scene_name}')
+    try:
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError:
+        if response.status_code != 404:
+            raise
+
     key = get_lc2_stac_json_key(scene_name)
     obj = S3_CLIENT.get_object(Bucket=LANDSAT_BUCKET, Key=key, RequestPayer='requester')
     return json.load(obj['Body'])
+
+
+def get_lc2_path(metadata):
+    band = metadata['assets'].get('B8.TIF')
+    if band is None:
+        band = metadata['assets']['pan']
+
+    return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
 
 def get_s2_metadata(scene_name):
@@ -138,7 +155,7 @@ def get_s1_primary_polarization(granule_name):
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
-            naming_scheme: str = 'ITS_LIVE_OD', band: str = 'B08') -> Tuple[Path, Path]:
+            naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
@@ -146,7 +163,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
-        band: Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes
     """
     orbits = None
     polarization = None
@@ -184,10 +200,10 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         os.environ['AWS_REGION'] = 'eu-central-1'
 
         reference_metadata = get_s2_metadata(reference)
-        reference_path = reference_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
+        reference_path = reference_metadata['assets']['B08']['href'].replace('s3://', '/vsis3/')
 
         secondary_metadata = get_s2_metadata(secondary)
-        secondary_path = secondary_metadata['assets'][band]['href'].replace('s3://', '/vsis3/')
+        secondary_path = secondary_metadata['assets']['B08']['href'].replace('s3://', '/vsis3/')
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -202,15 +218,11 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
         os.environ['AWS_REGION'] = 'us-west-2'
 
-        if band == 'B08':
-            band = 'B8'
         reference_metadata = get_lc2_metadata(reference)
-        reference_path = reference_metadata['assets'][f'{band}.TIF']['href']
-        reference_path = reference_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
+        reference_path = get_lc2_path(reference_metadata)
 
         secondary_metadata = get_lc2_metadata(secondary)
-        secondary_path = secondary_metadata['assets'][f'{band}.TIF']['href']
-        secondary_path = secondary_path.replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
+        secondary_path = get_lc2_path(secondary_metadata)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -305,8 +317,6 @@ def main():
                         help='Reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
     parser.add_argument('secondary', type=os.path.abspath,
                         help='Secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
-    parser.add_argument('-b', '--band', default='B08',
-                        help='Band to process for Sentinel-2 or Landsat-8 Collection 2 scenes')
     args = parser.parse_args()
 
     process(**args.__dict__)
