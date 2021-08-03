@@ -7,6 +7,16 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.6.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.2...v0.6.3)
+
+### Changed
+* `process.get_lc2_metadata()` now attempts to fetch STAC metadata from the
+  https://landsatlook.usgs.gov/ API and falls back the STAC json in the S3 bucket
+
+### Removed
+* `hyp3_autorift.process` and the associated `autorift_proc_pair` entrypoint no longer
+  accept the `band` argument, which wasn't being used.
+
 ## [0.6.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.1...v0.6.2)
 
 ### Changed
