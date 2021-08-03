@@ -5,16 +5,8 @@ from unittest import mock
 
 import pytest
 import responses
-from botocore.stub import Stubber
 
 from hyp3_autorift import process
-
-
-@pytest.fixture
-def s3_stubber():
-    with Stubber(process.S3_CLIENT) as stubber:
-        yield stubber
-        stubber.assert_no_pending_responses()
 
 
 def test_get_platform():
@@ -46,7 +38,18 @@ def test_get_lc2_stac_json_key():
 
 
 @responses.activate
-def test_get_lc2_metadata(s3_stubber):
+def test_get_lc2_metadata():
+    responses.add(
+        responses.GET, f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200703_20200913_02_T1',
+        body='{"foo": "bar"}', status=200,
+    )
+
+    assert process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1') == {'foo': 'bar'}
+
+
+@responses.activate
+def test_get_lc2_metadata_fallback(s3_stubber):
+    responses.add(responses.GET, f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200703_20200913_02_T1', status=404)
     params = {
         'Bucket': process.LANDSAT_BUCKET,
         'Key': 'foo.json',
@@ -172,29 +175,18 @@ def test_get_product_name():
     payload = {
         'reference_name': 'S2B_MSIL2A_20200903T151809_N0214_R068_T22WEB_20200903T194353',
         'secondary_name': 'S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
-        'band': 'B08',
         'pixel_spacing': 40,
     }
     name = process.get_product_name(**payload)
     assert match(r'S2BB_20200903T151809_20200913T151809_B08010_VEL40_A_[0-9A-F]{4}$', name)
 
     payload = {
-        'reference_name': 'LE07_L2SP_233095_20200306_20200822_02_T2',
-        'secondary_name': 'LE07_L2SP_233095_20190115_20200827_02_T2',
-        'band': 'B7',
-        'pixel_spacing': 40,
-    }
-    name = process.get_product_name(**payload)
-    assert match(r'LE77_20200306T000000_20190115T000000_B7-416_VEL40_A_[0-9A-F]{4}$', name)
-
-    payload = {
         'reference_name': 'LC08_L1TP_009011_20200703_20200913_02_T1',
         'secondary_name': 'LC08_L1TP_009011_20200820_20200905_02_T1',
-        'band': 'B8',
         'pixel_spacing': 40,
     }
     name = process.get_product_name(**payload)
-    assert match(r'LC88_20200703T000000_20200820T000000_B8-048_VEL40_A_[0-9A-F]{4}$', name)
+    assert match(r'LC88_20200703T000000_20200820T000000_B08048_VEL40_A_[0-9A-F]{4}$', name)
 
 
 def test_get_s1_primary_polarization():

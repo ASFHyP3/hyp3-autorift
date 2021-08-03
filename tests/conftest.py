@@ -1,11 +1,11 @@
 import pytest
 from botocore.stub import Stubber
 
-from hyp3_autorift.io import _s3_client
+from hyp3_autorift.process import S3_CLIENT
 
 
 @pytest.fixture
-def s3_stub():
-    with Stubber(_s3_client) as stubber:
+def s3_stubber():
+    with Stubber(S3_CLIENT) as stubber:
         yield stubber
         stubber.assert_no_pending_responses()
