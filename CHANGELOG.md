@@ -10,6 +10,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.6.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.2...v0.6.3)
 
 ### Changed
+* Applied some minor error estimate fixes and netCDF metadata attribute updates as
+  described in the [vendored software README.md](hyp3_autorift/vend/README.md)
 * `process.get_lc2_metadata()` now attempts to fetch STAC metadata from the
   https://landsatlook.usgs.gov/ API and falls back the STAC json in the S3 bucket
 
