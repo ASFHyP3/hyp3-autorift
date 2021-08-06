@@ -564,6 +564,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         outband = outRaster.GetRasterBand(4)
         outband.WriteArray(CHIPSIZEX)
         outband.FlushCache()
+        del outRaster
 
 
         if offset2vx is not None:
@@ -604,6 +605,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             outband = outRaster.GetRasterBand(2)
             outband.WriteArray(VY)
             outband.FlushCache()
+            del outRaster
 
             ############ prepare for netCDF packaging
 
@@ -666,7 +668,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 DXref = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref - offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref
                 DYref = offset2vx_1 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref - offset2vy_1 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref
 
-                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+#                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
 
                 V_temp = np.sqrt(VX**2 + VY**2)
                 try:
@@ -675,7 +678,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 except IndexError:
                     SSM1 = np.zeros(V_temp.shape).astype('bool')
 
-                stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+#                stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
+                stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)))
 
                 dx_mean_shift = 0.0
                 dy_mean_shift = 0.0
@@ -685,20 +689,24 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 if stable_count != 0:
                     temp = DX.copy() - DXref.copy()
                     temp[np.logical_not(SSM)] = np.nan
-                    dx_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
+#                    dx_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
+                    dx_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
 
                     temp = DY.copy() - DYref.copy()
                     temp[np.logical_not(SSM)] = np.nan
-                    dy_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
+#                    dy_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
+                    dy_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
 
                 if stable_count1 != 0:
                     temp = DX.copy() - DXref.copy()
                     temp[np.logical_not(SSM1)] = np.nan
-                    dx_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
+#                    dx_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
+                    dx_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
 
                     temp = DY.copy() - DYref.copy()
                     temp[np.logical_not(SSM1)] = np.nan
-                    dy_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
+#                    dy_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
+                    dy_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
 
                 if stable_count == 0:
                     if stable_count1 == 0:
@@ -855,10 +863,33 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         date_ct = d0 + (d1 - d0)/2
                         date_center = date_ct.strftime("%Y%m%d")
 
-                    master_dt = master_split[3][0:8] + master_time.strftime("T%H:%M:%S")
-                    slave_dt = slave_split[3][0:8] + slave_time.strftime("T%H:%M:%S")
+                    from datetime import datetime
+                    master_dt = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    slave_dt = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
 
-                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':master_split[0][1],'satellite_img1':np.float64(master_split[0][2:4]),'correction_level_img1':master_split[1],'path_img1':np.float64(master_split[2][0:3]),'row_img1':np.float64(master_split[2][3:6]),'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','processing_date_img1':master_split[4][0:8],'collection_number_img1':np.float64(master_split[5]),'collection_category_img1':master_split[6],'mission_img2':slave_split[0][0],'sensor_img2':slave_split[0][1],'satellite_img2':np.float64(slave_split[0][2:4]),'correction_level_img2':slave_split[1],'path_img2':np.float64(slave_split[2][0:3]),'row_img2':np.float64(slave_split[2][3:6]),'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','processing_date_img2':slave_split[4][0:8],'collection_number_img2':np.float64(slave_split[5]),'collection_category_img2':slave_split[6],'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
+                    IMG_INFO_DICT = {'mission_img1': master_split[0][0], 'sensor_img1': master_split[0][1],
+                                     'satellite_img1': np.float64(master_split[0][2:4]),
+                                     'correction_level_img1': master_split[1],
+                                     'path_img1': np.float64(master_split[2][0:3]),
+                                     'row_img1': np.float64(master_split[2][3:6]),
+                                     'acquisition_date_img1': master_dt.strftime('%Y%m%dT%H:%M:%S'),
+                                     'time_standard_img1': 'UTC',
+                                     'processing_date_img1': master_split[4][0:8],
+                                     'collection_number_img1': np.float64(master_split[5]),
+                                     'collection_category_img1': master_split[6],
+                                     'mission_img2': slave_split[0][0],
+                                     'sensor_img2': slave_split[0][1],
+                                     'satellite_img2': np.float64(slave_split[0][2:4]),
+                                     'correction_level_img2': slave_split[1],
+                                     'path_img2': np.float64(slave_split[2][0:3]),
+                                     'row_img2': np.float64(slave_split[2][3:6]),
+                                     'acquisition_date_img2': slave_dt.strftime('%Y%m%dT%H:%M:%S'),
+                                     'time_standard_img2': 'UTC',
+                                     'processing_date_img2': slave_split[4][0:8],
+                                     'collection_number_img2': np.float64(slave_split[5]),
+                                     'collection_category_img2': slave_split[6], 'date_dt': date_dt,
+                                     'date_center': date_center, 'latitude': cen_lat, 'longitude': cen_lon,
+                                     'roi_valid_percentage': PPP, 'autoRIFT_software_version': version}
 
                     error_vector = np.array([25.5,25.5])
 
