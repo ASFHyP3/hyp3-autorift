@@ -898,23 +898,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     date_dt = np.float64(date_dt_base.days)
                     if date_dt < 0:
                         raise Exception('Input image 1 must be older than input image 2')
-                    if date_dt_base.days < 0:
-                        date_ct = d1 + (d0 - d1)/2
-                        date_center = date_ct.strftime("%Y%m%d")
-                    else:
-                        date_ct = d0 + (d1 - d0)/2
-                        date_center = date_ct.strftime("%Y%m%d")
 
                     from datetime import datetime
                     master_dt = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     slave_dt = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    date_center = master_dt + (slave_dt - master_dt)/2
 
                     IMG_INFO_DICT = {'mission_img1': master_split[0][0], 'sensor_img1': master_split[0][1],
                                      'satellite_img1': np.float64(master_split[0][2:4]),
                                      'correction_level_img1': master_split[1],
                                      'path_img1': np.float64(master_split[2][0:3]),
                                      'row_img1': np.float64(master_split[2][3:6]),
-                                     'acquisition_date_img1': master_dt.strftime('%Y%m%dT%H:%M:%S'),
+                                     'acquisition_date_img1': master_dt.strftime('%Y%m%dT%H:%M:%S.%f'),
                                      'time_standard_img1': 'UTC',
                                      'processing_date_img1': master_split[4][0:8],
                                      'collection_number_img1': np.float64(master_split[5]),
@@ -925,12 +920,13 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                                      'correction_level_img2': slave_split[1],
                                      'path_img2': np.float64(slave_split[2][0:3]),
                                      'row_img2': np.float64(slave_split[2][3:6]),
-                                     'acquisition_date_img2': slave_dt.strftime('%Y%m%dT%H:%M:%S'),
+                                     'acquisition_date_img2': slave_dt.strftime('%Y%m%dT%H:%M:%S.%f'),
                                      'time_standard_img2': 'UTC',
                                      'processing_date_img2': slave_split[4][0:8],
                                      'collection_number_img2': np.float64(slave_split[5]),
                                      'collection_category_img2': slave_split[6], 'date_dt': date_dt,
-                                     'date_center': date_center, 'latitude': cen_lat, 'longitude': cen_lon,
+                                     'date_center': date_center.strftime('%Y%m%dT%H:%M:%S.%f'),
+                                     'latitude': cen_lat, 'longitude': cen_lon,
                                      'roi_valid_percentage': PPP, 'autoRIFT_software_version': version}
 
                     error_vector = np.array([25.5,25.5])
