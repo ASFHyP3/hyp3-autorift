@@ -1,114 +1,7 @@
---- testautoRIFT.py
-+++ testautoRIFT.py
-@@ -2,6 +2,7 @@
-
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
-+# Modifications Copyright 2021 Alaska Satellite Facility
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
-@@ -395,7 +396,7 @@
-
- def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
--                            geogrid_run_info=None):
-+                            geogrid_run_info=None, **kwargs):
-
-     import numpy as np
-     import time
-@@ -739,14 +740,14 @@
-                     runCmd('topsinsar_filename.py')
-     #                import scipy.io as sio
-                     conts = sio.loadmat('topsinsar_filename.mat')
--                    master_filename = conts['master_filename'][0]
--                    slave_filename = conts['slave_filename'][0]
--                    master_dt = conts['master_dt'][0]
--                    slave_dt = conts['slave_dt'][0]
-+                    master_filename = conts['reference_filename'][0]
-+                    slave_filename = conts['secondary_filename'][0]
-+                    master_dt = conts['reference_dt'][0]
-+                    slave_dt = conts['secondary_dt'][0]
-                     master_split = str.split(master_filename,'_')
-                     slave_split = str.split(slave_filename,'_')
-
--                    import netcdf_output as no
-+                    import hyp3_autorift.netcdf_output as no
-                     pair_type = 'radar'
-                     detection_method = 'feature'
-                     coordinates = 'radar'
-@@ -785,7 +786,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
-                         rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
-
-                 elif nc_sensor == "L":
-@@ -824,7 +826,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
-
--                    import netcdf_output as no
-+                    import hyp3_autorift.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -832,7 +834,7 @@
-     #                out_nc_filename = 'Jakobshavn_opt.nc'
-                     PPP = roi_valid_percentage * 100
-                     if ncname is None:
--                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
-+                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
-                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     else:
-                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-@@ -865,7 +867,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
-                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
-
-                 elif nc_sensor == "S2":
-@@ -885,8 +888,8 @@
-                     master_path = indir_m
-                     slave_path = indir_s
-
--                    master_split = master_path.split('_')
--                    slave_split = slave_path.split('_')
-+                    master_split = kwargs['reference_metadata']['id'].split('_')
-+                    slave_split = kwargs['secondary_metadata']['id'].split('_')
-
-                     import os
-
-@@ -900,7 +903,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
-
--                    import netcdf_output as no
-+                    import hyp3_autorift.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -939,7 +942,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
-                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
-
-                 elif nc_sensor is None:
 --- testautoRIFT_ISCE.py
 +++ testautoRIFT_ISCE.py
 @@ -2,6 +2,7 @@
-
+ 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 +# Modifications Copyright 2021 Alaska Satellite Facility
@@ -116,15 +9,42 @@
  # Licensed under the Apache License, Version 2.0 (the "License");
  # you may not use this file except in compliance with the License.
 @@ -394,7 +395,7 @@
-
+ 
  def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
                              offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
 -                            geogrid_run_info=None):
 +                            geogrid_run_info=None, **kwargs):
-
+ 
      import numpy as np
      import time
-@@ -739,14 +740,14 @@
+@@ -494,7 +495,7 @@
+     intermediate_nc_file = 'autoRIFT_intermediate.nc'
+     
+     if os.path.exists(intermediate_nc_file):
+-        import netcdf_output as no
++        import hyp3_autorift.netcdf_output as no
+         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
+     else:
+         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
+@@ -502,7 +503,7 @@
+             noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
+         )
+         if nc_sensor is not None:
+-            import netcdf_output as no
++            import hyp3_autorift.netcdf_output as no
+             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
+ 
+ 
+@@ -647,7 +648,7 @@
+                 
+                 if nc_sensor == "S":
+                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
+-                    import netcdf_output as no
++                    import hyp3_autorift.netcdf_output as no
+                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
+                 
+                 
+@@ -789,14 +790,14 @@
                      runCmd('topsinsar_filename.py')
      #                import scipy.io as sio
                      conts = sio.loadmat('topsinsar_filename.mat')
@@ -138,32 +58,32 @@
 +                    slave_dt = conts['secondary_dt'][0]
                      master_split = str.split(master_filename,'_')
                      slave_split = str.split(slave_filename,'_')
-
+ 
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -785,7 +786,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+@@ -838,7 +839,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
                          rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
 +                        parameter_file=kwargs['parameter_file'],
                      )
-
+ 
                  elif nc_sensor == "L":
-@@ -824,7 +826,7 @@
+@@ -876,7 +878,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
-
+ 
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -832,7 +834,7 @@
+@@ -887,7 +889,7 @@
      #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
@@ -172,50 +92,278 @@
                                            f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      else:
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-@@ -864,7 +866,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+@@ -900,17 +902,36 @@
+                     date_dt = np.float64(date_dt_base.days)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%d")
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%d")
+-
+-                    master_dt = master_split[3][0:8] + master_time.strftime("T%H:%M:%S")
+-                    slave_dt = slave_split[3][0:8] + slave_time.strftime("T%H:%M:%S")
+ 
+-                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':master_split[0][1],'satellite_img1':np.float64(master_split[0][2:4]),'correction_level_img1':master_split[1],'path_img1':np.float64(master_split[2][0:3]),'row_img1':np.float64(master_split[2][3:6]),'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','processing_date_img1':master_split[4][0:8],'collection_number_img1':np.float64(master_split[5]),'collection_category_img1':master_split[6],'mission_img2':slave_split[0][0],'sensor_img2':slave_split[0][1],'satellite_img2':np.float64(slave_split[0][2:4]),'correction_level_img2':slave_split[1],'path_img2':np.float64(slave_split[2][0:3]),'row_img2':np.float64(slave_split[2][3:6]),'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','processing_date_img2':slave_split[4][0:8],'collection_number_img2':np.float64(slave_split[5]),'collection_category_img2':slave_split[6],'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
++                    from datetime import datetime
++                    master_dt = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
++                    slave_dt = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
++                    date_center = master_dt + (slave_dt - master_dt)/2
++
++                    IMG_INFO_DICT = {'mission_img1': master_split[0][0], 'sensor_img1': master_split[0][1],
++                                     'satellite_img1': np.float64(master_split[0][2:4]),
++                                     'correction_level_img1': master_split[1],
++                                     'path_img1': np.float64(master_split[2][0:3]),
++                                     'row_img1': np.float64(master_split[2][3:6]),
++                                     'acquisition_date_img1': master_dt.strftime('%Y%m%dT%H:%M:%S'),
++                                     'time_standard_img1': 'UTC',
++                                     'processing_date_img1': master_split[4][0:8],
++                                     'collection_number_img1': np.float64(master_split[5]),
++                                     'collection_category_img1': master_split[6],
++                                     'mission_img2': slave_split[0][0],
++                                     'sensor_img2': slave_split[0][1],
++                                     'satellite_img2': np.float64(slave_split[0][2:4]),
++                                     'correction_level_img2': slave_split[1],
++                                     'path_img2': np.float64(slave_split[2][0:3]),
++                                     'row_img2': np.float64(slave_split[2][3:6]),
++                                     'acquisition_date_img2': slave_dt.strftime('%Y%m%dT%H:%M:%S'),
++                                     'time_standard_img2': 'UTC',
++                                     'processing_date_img2': slave_split[4][0:8],
++                                     'collection_number_img2': np.float64(slave_split[5]),
++                                     'collection_category_img2': slave_split[6], 'date_dt': date_dt,
++                                     'date_center': date_center.strftime('%Y%m%dT%H:%M:%S'),
++                                     'latitude': cen_lat, 'longitude': cen_lon,
++                                     'roi_valid_percentage': PPP, 'autoRIFT_software_version': version}
+ 
+                     error_vector = np.array([25.5,25.5])
+ 
+@@ -919,7 +940,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
 +                        parameter_file=kwargs['parameter_file'],
                      )
-
+ 
                  elif nc_sensor == "S2":
-@@ -884,8 +887,8 @@
+@@ -939,8 +961,8 @@
                      master_path = indir_m
                      slave_path = indir_s
-
+ 
 -                    master_split = master_path.split('_')
 -                    slave_split = slave_path.split('_')
 +                    master_split = kwargs['reference_metadata']['id'].split('_')
 +                    slave_split = kwargs['secondary_metadata']['id'].split('_')
-
-                     import os
-
-@@ -899,7 +902,7 @@
+ 
+                     master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
+                     slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
+@@ -952,7 +974,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
-
+ 
 -                    import netcdf_output as no
 +                    import hyp3_autorift.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -938,7 +941,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref,
+@@ -994,7 +1016,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
 +                        parameter_file=kwargs['parameter_file'],
                      )
-
+ 
+                 elif nc_sensor is None:
+--- testautoRIFT.py
++++ testautoRIFT.py
+@@ -2,6 +2,7 @@
+ 
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -395,7 +396,7 @@
+ 
+ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
+                             offset2vx, offset2vy, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
+-                            geogrid_run_info=None):
++                            geogrid_run_info=None, **kwargs):
+ 
+     import numpy as np
+     import time
+@@ -495,7 +496,7 @@
+     intermediate_nc_file = 'autoRIFT_intermediate.nc'
+     
+     if os.path.exists(intermediate_nc_file):
+-        import netcdf_output as no
++        import hyp3_autorift.netcdf_output as no
+         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
+     else:
+         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
+@@ -503,7 +504,7 @@
+             noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
+         )
+         if nc_sensor is not None:
+-            import netcdf_output as no
++            import hyp3_autorift.netcdf_output as no
+             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
+ 
+     if optical_flag == 0:
+@@ -643,7 +644,7 @@
+                 
+                 if nc_sensor == "S":
+                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
+-                    import netcdf_output as no
++                    import hyp3_autorift.netcdf_output as no
+                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
+                 
+                 if geogrid_run_info is None:
+@@ -784,14 +785,14 @@
+                     runCmd('topsinsar_filename.py')
+     #                import scipy.io as sio
+                     conts = sio.loadmat('topsinsar_filename.mat')
+-                    master_filename = conts['master_filename'][0]
+-                    slave_filename = conts['slave_filename'][0]
+-                    master_dt = conts['master_dt'][0]
+-                    slave_dt = conts['slave_dt'][0]
++                    master_filename = conts['reference_filename'][0]
++                    slave_filename = conts['secondary_filename'][0]
++                    master_dt = conts['reference_dt'][0]
++                    slave_dt = conts['secondary_dt'][0]
+                     master_split = str.split(master_filename,'_')
+                     slave_split = str.split(slave_filename,'_')
+ 
+-                    import netcdf_output as no
++                    import hyp3_autorift.netcdf_output as no
+                     pair_type = 'radar'
+                     detection_method = 'feature'
+                     coordinates = 'radar'
+@@ -833,7 +834,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
+                         rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+ 
+                 elif nc_sensor == "L":
+@@ -871,7 +873,7 @@
+                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
+                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+ 
+-                    import netcdf_output as no
++                    import hyp3_autorift.netcdf_output as no
+                     pair_type = 'optical'
+                     detection_method = 'feature'
+                     coordinates = 'map'
+@@ -882,7 +884,7 @@
+     #                out_nc_filename = 'Jakobshavn_opt.nc'
+                     PPP = roi_valid_percentage * 100
+                     if ncname is None:
+-                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
++                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     else:
+                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+@@ -896,17 +898,36 @@
+                     date_dt = np.float64(date_dt_base.days)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%d")
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%d")
+-
+-                    master_dt = master_split[3][0:8] + master_time.strftime("T%H:%M:%S")
+-                    slave_dt = slave_split[3][0:8] + slave_time.strftime("T%H:%M:%S")
+ 
+-                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':master_split[0][1],'satellite_img1':np.float64(master_split[0][2:4]),'correction_level_img1':master_split[1],'path_img1':np.float64(master_split[2][0:3]),'row_img1':np.float64(master_split[2][3:6]),'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','processing_date_img1':master_split[4][0:8],'collection_number_img1':np.float64(master_split[5]),'collection_category_img1':master_split[6],'mission_img2':slave_split[0][0],'sensor_img2':slave_split[0][1],'satellite_img2':np.float64(slave_split[0][2:4]),'correction_level_img2':slave_split[1],'path_img2':np.float64(slave_split[2][0:3]),'row_img2':np.float64(slave_split[2][3:6]),'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','processing_date_img2':slave_split[4][0:8],'collection_number_img2':np.float64(slave_split[5]),'collection_category_img2':slave_split[6],'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
++                    from datetime import datetime
++                    master_dt = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
++                    slave_dt = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
++                    date_center = master_dt + (slave_dt - master_dt)/2
++
++                    IMG_INFO_DICT = {'mission_img1': master_split[0][0], 'sensor_img1': master_split[0][1],
++                                     'satellite_img1': np.float64(master_split[0][2:4]),
++                                     'correction_level_img1': master_split[1],
++                                     'path_img1': np.float64(master_split[2][0:3]),
++                                     'row_img1': np.float64(master_split[2][3:6]),
++                                     'acquisition_date_img1': master_dt.strftime('%Y%m%dT%H:%M:%S'),
++                                     'time_standard_img1': 'UTC',
++                                     'processing_date_img1': master_split[4][0:8],
++                                     'collection_number_img1': np.float64(master_split[5]),
++                                     'collection_category_img1': master_split[6],
++                                     'mission_img2': slave_split[0][0],
++                                     'sensor_img2': slave_split[0][1],
++                                     'satellite_img2': np.float64(slave_split[0][2:4]),
++                                     'correction_level_img2': slave_split[1],
++                                     'path_img2': np.float64(slave_split[2][0:3]),
++                                     'row_img2': np.float64(slave_split[2][3:6]),
++                                     'acquisition_date_img2': slave_dt.strftime('%Y%m%dT%H:%M:%S'),
++                                     'time_standard_img2': 'UTC',
++                                     'processing_date_img2': slave_split[4][0:8],
++                                     'collection_number_img2': np.float64(slave_split[5]),
++                                     'collection_category_img2': slave_split[6], 'date_dt': date_dt,
++                                     'date_center': date_center.strftime('%Y%m%dT%H:%M:%S'),
++                                     'latitude': cen_lat, 'longitude': cen_lon,
++                                     'roi_valid_percentage': PPP, 'autoRIFT_software_version': version}
+ 
+                     error_vector = np.array([25.5,25.5])
+ 
+@@ -915,7 +936,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
+                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+ 
+                 elif nc_sensor == "S2":
+@@ -935,8 +957,8 @@
+                     master_path = indir_m
+                     slave_path = indir_s
+ 
+-                    master_split = master_path.split('_')
+-                    slave_split = slave_path.split('_')
++                    master_split = kwargs['reference_metadata']['id'].split('_')
++                    slave_split = kwargs['secondary_metadata']['id'].split('_')
+ 
+                     master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
+                     slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
+@@ -948,7 +970,7 @@
+                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
+                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+ 
+-                    import netcdf_output as no
++                    import hyp3_autorift.netcdf_output as no
+                     pair_type = 'optical'
+                     detection_method = 'feature'
+                     coordinates = 'map'
+@@ -990,7 +1012,8 @@
+                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
+                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
++                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+ 
                  elif nc_sensor is None:
 --- testGeogrid_ISCE.py
 +++ testGeogrid_ISCE.py
 @@ -2,6 +2,7 @@
-
+ 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 +# Modifications Copyright 2021 Alaska Satellite Facility
@@ -224,8 +372,8 @@
  # you may not use this file except in compliance with the License.
 @@ -142,7 +143,7 @@
      return info
-
-
+ 
+ 
 -def coregisterLoadMetadataOptical(indir_m, indir_s):
 +def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
      '''
@@ -254,7 +402,7 @@
 --- testGeogridOptical.py
 +++ testGeogridOptical.py
 @@ -2,6 +2,7 @@
-
+ 
  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
 +# Modifications Copyright 2021 Alaska Satellite Facility
@@ -263,8 +411,8 @@
  # you may not use this file except in compliance with the License.
 @@ -72,7 +73,7 @@
      pass
-
-
+ 
+ 
 -def coregisterLoadMetadata(indir_m, indir_s):
 +def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
      '''

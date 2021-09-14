@@ -44,10 +44,190 @@ def v_error_cal(vx_error, vy_error):
     return np.std(v)
 
 
+def netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, filename='./autoRIFT_intermediate.nc'):
+    
+    
+    title = 'autoRIFT intermediate results'
+    author = 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech'
+    institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
+    
+
+    clobber = True     # overwrite existing output nc file
+    
+    nc_outfile = netCDF4.Dataset(filename,'w',clobber=clobber,format='NETCDF4')
+    
+    # First set global attributes that GDAL uses when it reads netCFDF files
+    nc_outfile.setncattr('date_created',datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+    nc_outfile.setncattr('title',title)
+    nc_outfile.setncattr('author',author)
+    nc_outfile.setncattr('institution',institution)
 
 
 
-def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY, offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, MM, VXref, VYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied, dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
+    # set dimensions
+    dimidY, dimidX = Dx.shape
+    nc_outfile.createDimension('x',dimidX)
+    nc_outfile.createDimension('y',dimidY)
+    #    pdb.set_trace()
+    x = np.arange(0,dimidX,1)
+    y = np.arange(0,dimidY,1)
+    #    pdb.set_trace()
+    chunk_lines = np.min([np.ceil(8192/dimidY)*128, dimidY])
+    #    ChunkSize = [dimidX, chunk_lines]
+    ChunkSize = [chunk_lines, dimidX]
+    
+    nc_outfile.createDimension('x1',noDataMask.shape[1])
+    nc_outfile.createDimension('y1',noDataMask.shape[0])
+
+
+
+
+    varname='x'
+    datatype=np.dtype('int32')
+    dimensions=('x')
+    FillValue=None
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    var.setncattr('standard_name','x_index')
+    var.setncattr('description','x index')
+    var[:] = x
+    
+    varname='y'
+    datatype=np.dtype('int32')
+    dimensions=('y')
+    FillValue=None
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    var.setncattr('standard_name','y_index')
+    var.setncattr('description','y index')
+    var[:] = y
+    
+
+
+    NoDataValue = np.nan
+    
+    varname='Dx'
+    datatype=np.dtype('float32')
+    dimensions=('y','x')
+    FillValue=NoDataValue
+    var = nc_outfile.createVariable(varname,datatype,dimensions, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize, fill_value=FillValue)
+    var.setncattr('standard_name','x_offset')
+    var.setncattr('description','x offset')
+    var[:] = Dx.astype(np.float32)
+    
+    varname='Dy'
+    datatype=np.dtype('float32')
+    dimensions=('y','x')
+    FillValue=NoDataValue
+    var = nc_outfile.createVariable(varname,datatype,dimensions, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize, fill_value=FillValue)
+    var.setncattr('standard_name','y_offset')
+    var.setncattr('description','y offset')
+    var[:] = Dy.astype(np.float32)
+
+    varname='InterpMask'
+    datatype=np.dtype('uint8')
+    dimensions=('y','x')
+    FillValue=0
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name','interpolated_value_mask')
+    var.setncattr('description','light interpolation mask')
+    var[:] = np.round(np.clip(InterpMask, 0, 255)).astype('uint8')
+
+    varname='ChipSizeX'
+    datatype=np.dtype('uint16')
+    dimensions=('y','x')
+    FillValue=0
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name','chip_size_x')
+    var.setncattr('description','width of search window')
+    var[:] = np.round(np.clip(ChipSizeX, 0, 65535)).astype('uint16')
+    
+    varname='SearchLimitX'
+    datatype=np.dtype('uint8')
+    dimensions=('y','x')
+    FillValue=0
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name','search_limit_x')
+    var.setncattr('description','search limit x')
+    var[:] = np.round(np.clip(SearchLimitX, 0, 255)).astype('uint8')
+    
+    varname='SearchLimitY'
+    datatype=np.dtype('uint8')
+    dimensions=('y','x')
+    FillValue=0
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name','search_limit_y')
+    var.setncattr('description','search limit y')
+    var[:] = np.round(np.clip(SearchLimitY, 0, 255)).astype('uint8')
+    
+    varname='noDataMask'
+    datatype=np.dtype('uint8')
+    dimensions=('y1','x1')
+    FillValue=0
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name','nodata_value_mask')
+    var.setncattr('description','nodata value mask')
+    var[:] = np.round(np.clip(noDataMask, 0, 255)).astype('uint8')
+    
+    varname='GridSpacingX'
+    datatype=np.dtype('uint16')
+    dimensions=()
+    FillValue=None
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    var.setncattr('standard_name','GridSpacingX')
+    var.setncattr('description','grid spacing x')
+    var[0] = GridSpacingX
+    
+    varname='ScaleChipSizeY'
+    datatype=np.dtype('float32')
+    dimensions=()
+    FillValue=None
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    var.setncattr('standard_name','ScaleChipSizeY')
+    var.setncattr('description','scale of chip size in y to chip size in x')
+    var[0] = ScaleChipSizeY
+    
+    varname='origSizeX'
+    datatype=np.dtype('uint16')
+    dimensions=()
+    FillValue=None
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    var.setncattr('standard_name','origSizeX')
+    var.setncattr('description','original array size x')
+    var[0] = origSize[1]
+    
+    varname='origSizeY'
+    datatype=np.dtype('uint16')
+    dimensions=()
+    FillValue=None
+    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    var.setncattr('standard_name','origSizeY')
+    var.setncattr('description','original array size y')
+    var[0] = origSize[0]
+
+    
+    nc_outfile.sync() # flush data to disk
+    nc_outfile.close()
+
+
+def netCDF_read_intermediate(filename='./autoRIFT_intermediate.nc'):
+    
+    from netCDF4 import Dataset
+    inter_file = Dataset(filename, mode='r')
+    Dx = inter_file.variables['Dx'][:].data
+    Dy = inter_file.variables['Dy'][:].data
+    InterpMask = inter_file.variables['InterpMask'][:].data
+    ChipSizeX = inter_file.variables['ChipSizeX'][:].data
+    SearchLimitX = inter_file.variables['SearchLimitX'][:].data
+    SearchLimitY = inter_file.variables['SearchLimitY'][:].data
+    noDataMask = inter_file.variables['noDataMask'][:].data
+    noDataMask = noDataMask.astype('bool')
+    GridSpacingX = inter_file.variables['GridSpacingX'][:].data
+    ScaleChipSizeY = inter_file.variables['ScaleChipSizeY'][:].data
+    origSize = (inter_file.variables['origSizeY'][:].data,inter_file.variables['origSizeX'][:].data)
+
+    return Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask
+
+
+def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY, offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied, dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
     
     
     vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
@@ -76,18 +256,32 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     V = np.sqrt(VX**2+VY**2)
     
     if pair_type is 'radar':
-        VR = DX * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
-        VA = (DY) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+        dr_2_vr_factor = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))])
+        SlantRangePixelSize = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))]) *dt/365.0/24.0/3600.0
+        azimuthPixelSize = np.median(offset2va[np.logical_not(np.isnan(offset2va))]) *dt/365.0/24.0/3600.0
+#        VR = DX * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
+#        VA = (DY) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+        VR = DX * offset2vr
+        VA = (DY) * offset2va
         VR = VR.astype(np.float32)
         VA = VA.astype(np.float32)
         
         
-        vr_mean_shift = dx_mean_shift * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
-        va_mean_shift = (dy_mean_shift) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+#        vr_mean_shift = dx_mean_shift * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
+#        va_mean_shift = (dy_mean_shift) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+#
+#        vr_mean_shift1 = dx_mean_shift1 * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
+#        va_mean_shift1 = (dy_mean_shift1) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
+        vr_mean_shift = dx_mean_shift * offset2vr
+        va_mean_shift = (dy_mean_shift) * offset2va
+        vr_mean_shift = np.median(vr_mean_shift[np.logical_not(np.isnan(vr_mean_shift))])
+        va_mean_shift = np.median(va_mean_shift[np.logical_not(np.isnan(va_mean_shift))])
         
-        vr_mean_shift1 = dx_mean_shift1 * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
-        va_mean_shift1 = (dy_mean_shift1) * azimuthPixelSize / dt * 365.0 * 24.0 * 3600.0
-        
+        vr_mean_shift1 = dx_mean_shift1 * offset2vr
+        va_mean_shift1 = (dy_mean_shift1) * offset2va
+        vr_mean_shift1 = np.median(vr_mean_shift1[np.logical_not(np.isnan(vr_mean_shift1))])
+        va_mean_shift1 = np.median(va_mean_shift1[np.logical_not(np.isnan(va_mean_shift1))])
+
         # create the (slope parallel & reference) flow-based range-projected result
         alpha_sp = DX / (offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * (-SX) - offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * (-SY))
         alpha_ref = DX / (offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VXref - offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) * VYref)
@@ -118,10 +312,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         VXR[angle_df_R < angle_threshold_R] = np.nan
         VYR[angle_df_R < angle_threshold_R] = np.nan
 
-        VXP = VXS
-        VXP[MM == 1] = VXR[MM == 1]
-        VYP = VYS
-        VYP[MM == 1] = VYR[MM == 1]
+#        VXP = VXS
+#        VXP[MM == 1] = VXR[MM == 1]
+#        VYP = VYS
+#        VYP[MM == 1] = VYR[MM == 1]
+        VXP = VXR
+        VYP = VYR
 
         VXP = VXP.astype(np.float32)
         VYP = VYP.astype(np.float32)
@@ -1075,6 +1271,77 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
 
 
+        M11 = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1)
+
+        x1 = np.nanmin(M11[:])
+        x2 = np.nanmax(M11[:])
+        y1 = -50
+        y2 = 50
+        
+        C = [(y2-y1)/(x2-x1), y1-x1*(y2-y1)/(x2-x1)]
+#        M11 = C[0]*M11+C[1]
+        
+        varname='M11'
+        datatype=np.dtype('int16')
+        dimensions=('y','x')
+        FillValue=NoDataValue
+        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+        var.setncattr('standard_name','conversion_matrix_element_11')
+        var.setncattr('description','conversion matrix element (1st row, 1st column) that can be multiplied with vx to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
+        var.setncattr('units','pixel/(m/y)')
+        
+        var.setncattr('grid_mapping',mapping_name)
+        var.setncattr('dr_to_vr_factor',dr_2_vr_factor)
+        var.setncattr('dr_to_vr_factor_description','multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
+
+        var.setncattr('scale_factor',np.float32(1/C[0]))
+        var.setncattr('add_offset',np.float32(-C[1]/C[0]))
+
+        M11[noDataMask] = NoDataValue * np.float32(1/C[0]) + np.float32(-C[1]/C[0])
+#        M11[noDataMask] = NoDataValue
+        var[:] = M11
+#        var[:] = np.round(np.clip(M11, -32768, 32767)).astype(np.int16)
+#        var[:] = np.clip(M11, -3.4028235e+38, 3.4028235e+38).astype(np.float32)
+#        var.setncattr('missing_value',np.int16(NoDataValue))
+
+
+
+        M12 = -offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1)
+
+        x1 = np.nanmin(M12[:])
+        x2 = np.nanmax(M12[:])
+        y1 = -50
+        y2 = 50
+        
+        C = [(y2-y1)/(x2-x1), y1-x1*(y2-y1)/(x2-x1)]
+#        M12 = C[0]*M12+C[1]
+
+        varname='M12'
+        datatype=np.dtype('int16')
+        dimensions=('y','x')
+        FillValue=NoDataValue
+        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+        var.setncattr('standard_name','conversion_matrix_element_12')
+        var.setncattr('description','conversion matrix element (1st row, 2nd column) that can be multiplied with vy to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
+        var.setncattr('units','pixel/(m/y)')
+        
+        var.setncattr('grid_mapping',mapping_name)
+        var.setncattr('dr_to_vr_factor',dr_2_vr_factor)
+        var.setncattr('dr_to_vr_factor_description','multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
+
+        var.setncattr('scale_factor',np.float32(1/C[0]))
+        var.setncattr('add_offset',np.float32(-C[1]/C[0]))
+
+        M12[noDataMask] = NoDataValue * np.float32(1/C[0]) + np.float32(-C[1]/C[0])
+#        M12[noDataMask] = NoDataValue
+        var[:] = M12
+#        var[:] = np.round(np.clip(M12, -32768, 32767)).astype(np.int16)
+#        var[:] = np.clip(M12, -3.4028235e+38, 3.4028235e+38).astype(np.float32)
+#        var.setncattr('missing_value',np.int16(NoDataValue))
+
+
+
+
 
 
     varname='chip_size_width'
@@ -1084,7 +1351,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     
     var.setncattr('standard_name','chip_size_width')
-    var.setncattr('description','width of search window')
+    var.setncattr('description','width of search template (chip)')
     var.setncattr('units','m')
     
     if pair_type is 'radar':
@@ -1110,7 +1377,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
 
     var.setncattr('standard_name','chip_size_height')
-    var.setncattr('description','height of search window')
+    var.setncattr('description','height of search template (chip)')
     var.setncattr('units','m')
 
     if pair_type is 'radar':
@@ -1149,6 +1416,249 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     nc_outfile.sync() # flush data to disk
     nc_outfile.close()
+
+
+
+
+def rotate_vel2radar(rngind, azmind, vel_x, vel_y, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, flag):
+    from osgeo import gdal
+    import numpy as np
+    import scipy.io as sio
+    import pandas as pd
+    
+    
+    ncols = np.nanmax(rngind)+1
+    nrows = np.nanmax(azmind)+1
+    
+#    pdb.set_trace()
+    
+    skipSample_x = GridSpacingX
+    skipSample_y = int(np.round(GridSpacingX*ScaleChipSizeY))
+    xGrid = np.arange(0,ncols,skipSample_x)
+    yGrid = np.arange(0,nrows,skipSample_y)
+    nd = xGrid.__len__()
+    md = yGrid.__len__()
+    rngind1 = np.int32(np.dot(np.ones((md,1)),np.reshape(xGrid,(1,xGrid.__len__()))))
+    azmind1 = np.int32(np.dot(np.reshape(yGrid,(yGrid.__len__(),1)),np.ones((1,nd))))
+    
+    rngind1 = rngind1.astype(np.float32)
+    azmind1 = azmind1.astype(np.float32)
+    
+    output_vel_x = np.zeros(rngind1.shape)*np.nan
+    output_vel_y = np.zeros(rngind1.shape)*np.nan
+    
+#    pdb.set_trace()
+    
+    for irow in range(rngind.shape[0]):
+        for icol in range(rngind.shape[1]):
+            tempcol = rngind[irow,icol]
+            temprow = azmind[irow,icol]
+            if ((~np.isnan(tempcol))&(~np.isnan(temprow))):
+                tempcol = np.argmin(np.abs(xGrid-rngind[irow,icol]))
+                temprow = np.argmin(np.abs(yGrid-azmind[irow,icol]))
+                output_vel_x[temprow,tempcol] = vel_x[irow,icol]
+                output_vel_y[temprow,tempcol] = vel_y[irow,icol]
+
+    shift = 500
+    
+    if flag == 0:
+        mask = (rngind1 > swath_border[0]-shift)&(rngind1 < swath_border[0]+shift)
+#        mask = (rngind1 > swath_border_full[0])&(rngind1 < swath_border_full[1])
+        output_vel_x[mask] = np.nan
+        output_vel_y[mask] = np.nan
+
+    if flag == 1:
+        mask = (rngind1 > swath_border[1]-shift)&(rngind1 < swath_border[1]+shift)
+#        mask = (rngind1 > swath_border_full[2])&(rngind1 < swath_border_full[3])
+        output_vel_x[mask] = np.nan
+        output_vel_y[mask] = np.nan
+    
+    df = pd.DataFrame(output_vel_x)
+    df = df.interpolate(method='linear',axis=1)
+    output_vel_x = df.to_numpy()
+    
+    df = pd.DataFrame(output_vel_y)
+    df = df.interpolate(method='linear',axis=1)
+    output_vel_y = df.to_numpy()
+    
+    output_vel_x=output_vel_x.astype('float32')
+    output_vel_y=output_vel_y.astype('float32')
+    
+    output_vel_x1 = vel_x.copy()
+    output_vel_y1 = vel_y.copy()
+    
+    for irow in range(rngind.shape[0]):
+        for icol in range(rngind.shape[1]):
+            tempcol = rngind[irow,icol]
+            temprow = azmind[irow,icol]
+            if ((~np.isnan(tempcol))&(~np.isnan(temprow))):
+                tempcol = np.argmin(np.abs(xGrid-rngind[irow,icol]))
+                temprow = np.argmin(np.abs(yGrid-azmind[irow,icol]))
+                output_vel_x1[irow,icol] = output_vel_x[temprow,tempcol]
+                output_vel_y1[irow,icol] = output_vel_y[temprow,tempcol]
+
+    output_vel_x1[np.isnan(vel_x)] = np.nan
+    output_vel_y1[np.isnan(vel_y)] = np.nan
+
+    return output_vel_x1, output_vel_y1
+
+
+def loadProduct(xmlname):
+    '''
+        Load the product using Product Manager.
+        '''
+    import isce
+    from iscesys.Component.ProductManager import ProductManager as PM
+    
+    pm = PM()
+    pm.configure()
+    
+    obj = pm.loadProduct(xmlname)
+    
+    return obj
+
+
+
+def loadMetadata(indir):
+    '''
+        Input file.
+        '''
+    import os
+    import numpy as np
+    
+    frames = []
+    for swath in range(1,4):
+        inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
+        if os.path.exists(inxml):
+            ifg = loadProduct(inxml)
+            frames.append(ifg)
+    flight_direction = frames[0].bursts[0].passDirection[0]
+    return frames, flight_direction
+
+
+
+
+def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, output_ref=[0.0,0.0,0.0,0.0]):
+    from osgeo import gdal
+    import numpy as np
+    
+    frames =  None
+    flight_direction = None
+    frames_s =  None
+    flight_direction_s = None
+    
+    frames, flight_direction = loadMetadata(os.path.dirname(indir_m)[:-6]+'fine_coreg')
+    frames_s, flight_direction_s = loadMetadata(os.path.dirname(indir_m)[:-6]+'secondary')
+    
+    if flight_direction == 'D':
+        flight_direction = 'descending'
+    elif flight_direction == 'A':
+        flight_direction = 'ascending'
+    else:
+        flight_direction = 'N/A'
+
+    if flight_direction_s == 'D':
+        flight_direction_s = 'descending'
+    elif flight_direction_s == 'A':
+        flight_direction_s = 'ascending'
+    else:
+        flight_direction_s = 'N/A'
+    
+    if frames[0].orbit.orbitSource[2] == frames_s[0].orbit.orbitSource[2]:
+        print('subswath offset bias correction not performed for non-S1A/B combination')
+        return DX, DY, flight_direction, flight_direction_s
+    else:
+        if frames[0].orbit.orbitSource[2] == 'B':
+            output_ref = [-output_ref[0], -output_ref[1], -output_ref[2], -output_ref[3]]
+    
+    output = []
+    swath_border = []
+    swath_border_full = []
+    flag21 = 0
+    flag32 = 0
+    
+    
+
+    rngind = rngind.astype(np.float32)
+    azmind = azmind.astype(np.float32)
+    rngind[rngind == nodata] = np.nan
+    azmind[azmind == nodata] = np.nan
+
+#    pdb.set_trace()
+    ncols = int( np.round( (frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    
+    ind2 = int( np.round( (frames[0].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    
+    ind1 = int( np.round( (frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    
+    swath_border.append((ind1+ind2)/2)
+    swath_border_full.append(ind1)
+    swath_border_full.append(ind2)
+    
+    mask1 = (rngind > ind1-500)&(rngind < ind1)
+    mask2 = (rngind > ind2)&(rngind < ind2+500)
+    
+    if (np.nanstd(VX[mask2])<25)&(np.nanstd(VX[mask1])<25)&(np.nanstd(VY[mask2])<25)&(np.nanstd(VY[mask1])<25):
+#        output.append(np.nanmedian(DX[mask2])-np.nanmedian(DX[mask1]))
+#        output.append(np.nanmedian(DY[mask2])-np.nanmedian(DY[mask1]))
+        output.append(output_ref[0])
+        output.append(output_ref[1])
+        flag21 = 1
+    else:
+        output.append(output_ref[0])
+        output.append(output_ref[1])
+
+#    pdb.set_trace()
+    
+    ind2 = int( np.round( (frames[1].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    
+    ind1 = int( np.round( (frames[2].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    
+    swath_border.append((ind1+ind2)/2)
+    swath_border_full.append(ind1)
+    swath_border_full.append(ind2)
+    
+    mask1 = (rngind > ind1-500)&(rngind < ind1)
+    mask2 = (rngind > ind2)&(rngind < ind2+500)
+
+    
+    if (np.nanstd(VX[mask2])<25)&(np.nanstd(VX[mask1])<25)&(np.nanstd(VY[mask2])<25)&(np.nanstd(VY[mask1])<25):
+#        output.append(np.nanmedian(DX[mask2])-np.nanmedian(DX[mask1]))
+#        output.append(np.nanmedian(DY[mask2])-np.nanmedian(DY[mask1]))
+        output.append(output_ref[2])
+        output.append(output_ref[3])
+        flag32 = 1
+    else:
+        output.append(output_ref[2])
+        output.append(output_ref[3])
+
+
+
+
+#    pdb.set_trace()
+    
+    mask1 = (rngind > swath_border[1])&(rngind < ncols)
+    DX[mask1] = DX[mask1] - output[2]
+    DY[mask1] = DY[mask1] - output[3]
+    
+    mask2 = (rngind > swath_border[0])&(rngind < ncols)
+    DX[mask2] = DX[mask2] - output[0]
+    DY[mask2] = DY[mask2] - output[1]
+
+    if (flag21 == 1):
+        DX, DY = rotate_vel2radar(rngind, azmind, DX, DY, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, 0)
+        print('sharp peaks corrected at subswath 2 and 1 borders')
+    if (flag32 == 1):
+        DX, DY = rotate_vel2radar(rngind, azmind, DX, DY, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, 1)
+        print('sharp peaks corrected at subswath 3 and 2 borders')
+
+
+    print('subswath offset bias between subswath 2 and 1: {0} {1}'.format(output[0],output[1]))
+    print('subswath offset bias between subswath 3 and 2: {0} {1}'.format(output[2],output[3]))
+    print('subswath border index: {0} {1}'.format(swath_border[0],swath_border[1]))
+
+    return DX, DY, flight_direction, flight_direction_s
+
 
 
 
