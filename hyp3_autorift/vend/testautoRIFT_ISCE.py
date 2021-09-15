@@ -538,8 +538,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
     if SSM is not None:
         SSM[SEARCHLIMITX == 0] = False
 
-    import scipy.io as sio
-    sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
+    # import scipy.io as sio
+    # sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
 
     #####################  Uncomment for debug mode
 #    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'GridSpacingX':GridSpacingX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY,'origSize':origSize,'noDataMask':noDataMask})

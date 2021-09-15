@@ -193,14 +193,17 @@
      if optical_flag == 0:
          Dy = -Dy
  
-@@ -622,7 +621,6 @@
-             if offset2va is not None:
-                 offset2va[offset2va == nodata] = np.nan
+@@ -539,8 +538,8 @@
+     if SSM is not None:
+         SSM[SEARCHLIMITX == 0] = False
  
--
-             VX = offset2vx_1 * DX + offset2vx_2 * DY
-             VY = offset2vy_1 * DX + offset2vy_2 * DY
-             VX = VX.astype(np.float32)
+-    import scipy.io as sio
+-    sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
++    # import scipy.io as sio
++    # sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
+ 
+     #####################  Uncomment for debug mode
+ #    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'GridSpacingX':GridSpacingX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY,'origSize':origSize,'noDataMask':noDataMask})
 @@ -647,10 +645,9 @@
                  
                  if nc_sensor == "S":
@@ -292,12 +295,16 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -889,30 +912,60 @@
+@@ -889,7 +912,7 @@
      #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
 -                        out_nc_filename = f"./{master_filename[0:-8]}_X_{slave_filename[0:-8]}" \
 +                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     else:
+                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+@@ -893,26 +916,56 @@
                                            f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      else:
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
@@ -493,6 +500,17 @@
              no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
  
      if optical_flag == 0:
+@@ -539,8 +539,8 @@
+     if SSM is not None:
+         SSM[SEARCHLIMITX == 0] = False
+     
+-    import scipy.io as sio
+-    sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
++    # import scipy.io as sio
++    # sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
+ 
+ #    #####################  Uncomment for debug mode
+ #    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY})
 @@ -643,7 +643,7 @@
                  
                  if nc_sensor == "S":
