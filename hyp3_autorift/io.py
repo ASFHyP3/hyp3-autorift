@@ -107,7 +107,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
 
 
 def get_topsinsar_config():
-    insar = TopsInSAR(name="topsApp")
+    insar = TopsInSAR(name="topsApp", cmdline=[])
     insar.configure()
 
     config_data = {}
