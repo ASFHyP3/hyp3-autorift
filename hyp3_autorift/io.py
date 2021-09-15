@@ -1,15 +1,13 @@
 """Helper io utilities for autoRIFT"""
 
-import argparse
 import logging
-import os
 import textwrap
+from pathlib import Path
 
 from hyp3lib import DemError
 from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
 from osgeo import ogr
-from scipy.io import savemat
 
 from hyp3_autorift.geometry import flip_point_coordinates
 
@@ -108,11 +106,11 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
         f.write(textwrap.dedent(xml_template))
 
 
-def save_topsinsar_mat():
+def get_topsinsar_config():
     insar = TopsInSAR(name="topsApp")
     insar.configure()
 
-    mat_data = {}
+    config_data = {}
     for name in ['reference', 'secondary']:
         scene = insar.__getattribute__(name)
 
@@ -130,19 +128,7 @@ def save_topsinsar_mat():
 
         sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
 
-        mat_data[f'{name}_filename'] = os.path.basename(scene.safe[0])
-        mat_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S")
+        config_data[f'{name}_filename'] = Path(scene.safe[0]).name
+        config_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-    savemat('topsinsar_filename.mat', mat_data)
-
-
-def topsinsar_mat():
-    parser = argparse.ArgumentParser(
-        prog=os.path.basename(__file__),
-        description='Save the TopsApp InSAR configuration dictionary into a MATLAB file',
-    )
-
-    # just get a help option
-    _ = parser.parse_args()
-
-    save_topsinsar_mat()
+    return config_data
