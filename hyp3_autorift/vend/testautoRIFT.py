@@ -492,11 +492,10 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         ds=None
 
 
-
     intermediate_nc_file = 'autoRIFT_intermediate.nc'
 
     if os.path.exists(intermediate_nc_file):
-        import hyp3_autorift.netcdf_output as no
+        import hyp3_autorift.vend.netcdf_output as no
         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
     else:
         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
@@ -504,7 +503,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
         )
         if nc_sensor is not None:
-            import hyp3_autorift.netcdf_output as no
+            import hyp3_autorift.vend.netcdf_output as no
             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
 
     if optical_flag == 0:
@@ -644,7 +643,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                 if nc_sensor == "S":
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
-                    import hyp3_autorift.netcdf_output as no
+                    import hyp3_autorift.vend.netcdf_output as no
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
 
                 if geogrid_run_info is None:
@@ -792,7 +791,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     master_split = str.split(master_filename,'_')
                     slave_split = str.split(slave_filename,'_')
 
-                    import hyp3_autorift.netcdf_output as no
+                    import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'radar'
                     detection_method = 'feature'
                     coordinates = 'radar'
@@ -811,21 +810,49 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
 
 
-                    from datetime import date
-                    d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
-                    d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+                    from datetime import date, datetime
+#                    d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
+#                    d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+                    d0 = datetime.strptime(master_dt,"%Y%m%dT%H:%M:%S.%f")
+                    d1 = datetime.strptime(slave_dt,"%Y%m%dT%H:%M:%S.%f")
                     date_dt_base = d1 - d0
                     date_dt = np.float64(date_dt_base.days)
                     if date_dt < 0:
                         raise Exception('Input image 1 must be older than input image 2')
                     if date_dt_base.days < 0:
                         date_ct = d1 + (d0 - d1)/2
-                        date_center = date_ct.strftime("%Y%m%d")
+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
                     else:
                         date_ct = d0 + (d1 - d0)/2
-                        date_center = date_ct.strftime("%Y%m%d")
+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':'C','satellite_img1':master_split[0][1:3],'acquisition_img1':master_dt,'time_standard_img1':'UTC','absolute_orbit_number_img1':master_split[7],'mission_data_take_ID_img1':master_split[8],'product_unique_ID_img1':master_split[9][0:4],'flight_direction_img1':flight_direction_m,'mission_img2':slave_split[0][0],'sensor_img2':'C','satellite_img2':slave_split[0][1:3],'acquisition_img2':slave_dt,'time_standard_img2':'UTC','absolute_orbit_number_img2':slave_split[7],'mission_data_take_ID_img2':slave_split[8],'product_unique_ID_img2':slave_split[9][0:4],'flight_direction_img2':flight_direction_s,'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
+                    IMG_INFO_DICT = {
+                        'mission_img1': master_split[0][0],
+                        'sensor_img1': 'C',
+                        'satellite_img1': master_split[0][1:3],
+                        'acquisition_img1': master_dt,
+                        'time_standard_img1': 'UTC',
+                        'absolute_orbit_number_img1': master_split[7],
+                        'mission_data_take_ID_img1': master_split[8],
+                        'product_unique_ID_img1': master_split[9][0:4],
+                        'flight_direction_img1': flight_direction_m,
+                        'mission_img2': slave_split[0][0],
+                        'sensor_img2': 'C',
+                        'satellite_img2': slave_split[0][1:3],
+                        'acquisition_img2': slave_dt,
+                        'time_standard_img2': 'UTC',
+                        'absolute_orbit_number_img2': slave_split[7],
+                        'mission_data_take_ID_img2': slave_split[8],
+                        'product_unique_ID_img2': slave_split[9][0:4],
+                        'flight_direction_img2': flight_direction_s,
+                        'date_dt': date_dt,
+                        'date_center': date_center,
+                        'latitude': cen_lat,
+                        'longitude': cen_lon,
+                        'roi_valid_percentage': PPP,
+                        'autoRIFT_software_version': version
+                    }
+
                     error_vector = np.array([[0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
                                              [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628]])
 
@@ -873,7 +900,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
-                    import hyp3_autorift.netcdf_output as no
+                    import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
@@ -891,43 +918,53 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                    from datetime import date
-                    d0 = date(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
-                    d1 = date(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
+                    from datetime import datetime
+                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     date_dt_base = d1 - d0
                     date_dt = np.float64(date_dt_base.days)
                     if date_dt < 0:
                         raise Exception('Input image 1 must be older than input image 2')
+                    if date_dt_base.days < 0:
+                        date_ct = d1 + (d0 - d1)/2
+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                    else:
+                        date_ct = d0 + (d1 - d0)/2
+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-                    from datetime import datetime
-                    master_dt = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    slave_dt = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    date_center = master_dt + (slave_dt - master_dt)/2
+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f')
+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f')
 
-                    IMG_INFO_DICT = {'mission_img1': master_split[0][0], 'sensor_img1': master_split[0][1],
-                                     'satellite_img1': np.float64(master_split[0][2:4]),
-                                     'correction_level_img1': master_split[1],
-                                     'path_img1': np.float64(master_split[2][0:3]),
-                                     'row_img1': np.float64(master_split[2][3:6]),
-                                     'acquisition_date_img1': master_dt.strftime('%Y%m%dT%H:%M:%S.%f'),
-                                     'time_standard_img1': 'UTC',
-                                     'processing_date_img1': master_split[4][0:8],
-                                     'collection_number_img1': np.float64(master_split[5]),
-                                     'collection_category_img1': master_split[6],
-                                     'mission_img2': slave_split[0][0],
-                                     'sensor_img2': slave_split[0][1],
-                                     'satellite_img2': np.float64(slave_split[0][2:4]),
-                                     'correction_level_img2': slave_split[1],
-                                     'path_img2': np.float64(slave_split[2][0:3]),
-                                     'row_img2': np.float64(slave_split[2][3:6]),
-                                     'acquisition_date_img2': slave_dt.strftime('%Y%m%dT%H:%M:%S.%f'),
-                                     'time_standard_img2': 'UTC',
-                                     'processing_date_img2': slave_split[4][0:8],
-                                     'collection_number_img2': np.float64(slave_split[5]),
-                                     'collection_category_img2': slave_split[6], 'date_dt': date_dt,
-                                     'date_center': date_center.strftime('%Y%m%dT%H:%M:%S.%f'),
-                                     'latitude': cen_lat, 'longitude': cen_lon,
-                                     'roi_valid_percentage': PPP, 'autoRIFT_software_version': version}
+                    IMG_INFO_DICT = {
+                        'mission_img1': master_split[0][0],
+                        'sensor_img1': master_split[0][1],
+                        'satellite_img1': np.float64(master_split[0][2:4]),
+                        'correction_level_img1': master_split[1],
+                        'path_img1': np.float64(master_split[2][0:3]),
+                        'row_img1': np.float64(master_split[2][3:6]),
+                        'acquisition_date_img1': master_dt,
+                        'time_standard_img1': 'UTC',
+                        'processing_date_img1': master_split[4][0:8],
+                        'collection_number_img1': np.float64(master_split[5]),
+                        'collection_category_img1': master_split[6],
+                        'mission_img2': slave_split[0][0],
+                        'sensor_img2': slave_split[0][1],
+                        'satellite_img2': np.float64(slave_split[0][2:4]),
+                        'correction_level_img2': slave_split[1],
+                        'path_img2': np.float64(slave_split[2][0:3]),
+                        'row_img2': np.float64(slave_split[2][3:6]),
+                        'acquisition_date_img2': slave_dt,
+                        'time_standard_img2': 'UTC',
+                        'processing_date_img2': slave_split[4][0:8],
+                        'collection_number_img2': np.float64(slave_split[5]),
+                        'collection_category_img2': slave_split[6],
+                        'date_dt': date_dt,
+                        'date_center': date_center,
+                        'latitude': cen_lat,
+                        'longitude': cen_lon,
+                        'roi_valid_percentage': PPP,
+                        'autoRIFT_software_version': version
+                    }
 
                     error_vector = np.array([25.5,25.5])
 
@@ -970,7 +1007,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
-                    import hyp3_autorift.netcdf_output as no
+                    import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
@@ -986,24 +1023,41 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                    from datetime import date
-                    d0 = date(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
-                    d1 = date(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
+                    from datetime import datetime
+                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
+                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
                     date_dt_base = d1 - d0
                     date_dt = np.float64(date_dt_base.days)
                     if date_dt < 0:
                         raise Exception('Input image 1 must be older than input image 2')
                     if date_dt_base.days < 0:
                         date_ct = d1 + (d0 - d1)/2
-                        date_center = date_ct.strftime("%Y%m%d")
+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
                     else:
                         date_ct = d0 + (d1 - d0)/2
-                        date_center = date_ct.strftime("%Y%m%d")
+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-                    master_dt = master_split[2] + master_time.strftime("T%H:%M:%S")
-                    slave_dt = slave_split[2] + slave_time.strftime("T%H:%M:%S")
+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S')
+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S')
 
-                    IMG_INFO_DICT = {'mission_img1':master_split[0][-3],'satellite_img1':master_split[0][-2:],'correction_level_img1':master_split[4][:3],'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','mission_img2':slave_split[0][-3],'satellite_img2':slave_split[0][-2:],'correction_level_img2':slave_split[4][:3],'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
+                    IMG_INFO_DICT = {
+                        'mission_img1': master_split[0][-3],
+                        'satellite_img1': master_split[0][-2:],
+                        'correction_level_img1': master_split[4][:3],
+                        'acquisition_date_img1': master_dt,
+                        'time_standard_img1': 'UTC',
+                        'mission_img2': slave_split[0][-3],
+                        'satellite_img2': slave_split[0][-2:],
+                        'correction_level_img2': slave_split[4][:3],
+                        'acquisition_date_img2': slave_dt,
+                        'time_standard_img2': 'UTC',
+                        'date_dt': date_dt,
+                        'date_center': date_center,
+                        'latitude': cen_lat,
+                        'longitude': cen_lon,
+                        'roi_valid_percentage': PPP,
+                        'autoRIFT_software_version': version
+                    }
 
                     error_vector = np.array([25.5,25.5])
 

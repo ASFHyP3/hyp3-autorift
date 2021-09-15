@@ -1,14 +1,16 @@
-# Turned off flake8 because we haven't refactored 3rd party provided functions
-# flake8: noqa
+#!/usr/bin/env python3
 
-import datetime
-import subprocess
+########
+#Yang Lei, Jet Propulsion Laboratory
+#November 2017
 
-import netCDF4
 import numpy as np
+import subprocess
+import os
+import datetime
+import netCDF4
 
 import hyp3_autorift
-
 
 def v_error_cal(vx_error, vy_error):
     vx = np.random.normal(0, vx_error, 1000000)
@@ -344,6 +346,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             stable_shift_applied_p = 1
 
 
+
     CHIPSIZEX = CHIPSIZEX * rangePixelSize
     CHIPSIZEY = CHIPSIZEY * azimuthPixelSize
 
@@ -366,15 +369,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     author = 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech'
     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
 
-    #    VX = np.round(np.clip(VX, -32768, 32767)).astype(np.int16)
-    #    VY = np.round(np.clip(VY, -32768, 32767)).astype(np.int16)
-    #    V = np.round(np.clip(V, -32768, 32767)).astype(np.int16)
-    #    if pair_type is 'radar':
-    #        VR = np.round(np.clip(VR, -32768, 32767)).astype(np.int16)
-    #        VA = np.round(np.clip(VA, -32768, 32767)).astype(np.int16)
-    #    CHIPSIZEX = np.round(np.clip(CHIPSIZEX, 0, 65535)).astype(np.uint16)
-    #    CHIPSIZEY = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype(np.uint16)
-    #    INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
+#    VX = np.round(np.clip(VX, -32768, 32767)).astype(np.int16)
+#    VY = np.round(np.clip(VY, -32768, 32767)).astype(np.int16)
+#    V = np.round(np.clip(V, -32768, 32767)).astype(np.int16)
+#    if pair_type is 'radar':
+#        VR = np.round(np.clip(VR, -32768, 32767)).astype(np.int16)
+#        VA = np.round(np.clip(VA, -32768, 32767)).astype(np.int16)
+#    CHIPSIZEX = np.round(np.clip(CHIPSIZEX, 0, 65535)).astype(np.uint16)
+#    CHIPSIZEY = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype(np.uint16)
+#    INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
 
     source = f'NASA MEaSUREs ITS_LIVE project. Processed by ASF DAAC HyP3 {datetime.datetime.now().year} using the ' \
              f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
@@ -402,44 +405,84 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
 
-    clobber = True  # overwrite existing output nc file
+    clobber = True     # overwrite existing output nc file
 
     nc_outfile = netCDF4.Dataset(out_nc_filename,'w',clobber=clobber,format='NETCDF4')
 
     # First set global attributes that GDAL uses when it reads netCFDF files
-    nc_outfile.setncattr('GDAL_AREA_OR_POINT', 'Area')
-    nc_outfile.setncattr('Conventions', 'CF-1.6')
-    nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
-    nc_outfile.setncattr('title', title)
+    nc_outfile.setncattr('GDAL_AREA_OR_POINT','Area')
+    nc_outfile.setncattr('Conventions','CF-1.6')
+    nc_outfile.setncattr('date_created',datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+    nc_outfile.setncattr('title',title)
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
     nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
-    nc_outfile.setncattr('scene_pair_type', pair_type)
-    nc_outfile.setncattr('motion_detection_method', detection_method)
-    nc_outfile.setncattr('motion_coordinates', coordinates)
+    nc_outfile.setncattr('scene_pair_type',pair_type)
+    nc_outfile.setncattr('motion_detection_method',detection_method)
+    nc_outfile.setncattr('motion_coordinates',coordinates)
     nc_outfile.setncattr('author', author)
     nc_outfile.setncattr('institution', institution)
     nc_outfile.setncattr('source', source)
     nc_outfile.setncattr('references', references)
 
     varname='img_pair_info'
+#    datatype=np.dtype('S1')
     datatype='U1'
     dimensions=()
     FillValue=None
 
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue)
+    # variable made, now add attributes
+
+#    var.setncattr('mission_img1',master_split[0][0])
+#    var.setncattr('sensor_img1','C')
+#    var.setncattr('satellite_img1',master_split[0][1:3])
+#    var.setncattr('acquisition_img1',master_split[5][0:8])
+#    var.setncattr('absolute_orbit_number_img1',master_split[7])
+#    var.setncattr('mission_data_take_ID_img1',master_split[8])
+#    var.setncattr('product_unique_ID_img1',master_split[9][0:4])
+#
+#    var.setncattr('mission_img2',slave_split[0][0])
+#    var.setncattr('sensor_img2','C')
+#    var.setncattr('satellite_img2',slave_split[0][1:3])
+#    var.setncattr('acquisition_img2',slave_split[5][0:8])
+#    var.setncattr('absolute_orbit_number_img2',slave_split[7])
+#    var.setncattr('mission_data_take_ID_img2',slave_split[8])
+#    var.setncattr('product_unique_ID_img2',slave_split[9][0:4])
+#
+#    from datetime import date
+#    d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
+#    d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+#    date_dt = d1 - d0
+#    var.setncattr('date_dt',np.float64(np.abs(date_dt.days)))
+#    if date_dt.days < 0:
+#        date_ct = d1 + (d0 - d1)/2
+#        var.setncattr('date_center',date_ct.strftime("%Y%m%d"))
+#    else:
+#        date_ct = d0 + (d1 - d0)/2
+#        var.setncattr('date_center',date_ct.strftime("%Y%m%d"))
+##    var.setncattr('date_center',np.abs(np.int(slave_split[5][0:8])+np.int(master_split[5][0:8]))/2)
+#
+#    var.setncattr('roi_valid_percentage',roi_valid_percentage)
+#    var.setncattr('autoRIFT_software_version',version)
 
     for key in IMG_INFO_DICT:
         if key == 'autoRIFT_software_version':
             continue
-        var.setncattr(key, IMG_INFO_DICT[key])
+        var.setncattr(key,IMG_INFO_DICT[key])
+
+
+
 
     # set dimensions
     dimidY, dimidX = VX.shape
     nc_outfile.createDimension('x',dimidX)
     nc_outfile.createDimension('y',dimidY)
+#    pdb.set_trace()
     x = np.arange(tran[0],tran[0]+tran[1]*(dimidX),tran[1])
     y = np.arange(tran[3],tran[3]+tran[5]*(dimidY),tran[5])
+#    pdb.set_trace()
     chunk_lines = np.min([np.ceil(8192/dimidY)*128, dimidY])
+#    ChunkSize = [dimidX, chunk_lines]
     ChunkSize = [chunk_lines, dimidX]
 
 
@@ -451,6 +494,10 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name','projection_x_coordinate')
     var.setncattr('description','x coordinate of projection')
     var.setncattr('units','m')
+#    var.setncattr('scene_pair_type',pair_type)
+#    var.setncattr('motion_detection_method',detection_method)
+#    var.setncattr('motion_coordinates',coordinates)
+#    pdb.set_trace()
     var[:] = x
 
     varname='y'
@@ -461,12 +508,19 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name','projection_y_coordinate')
     var.setncattr('description','y coordinate of projection')
     var.setncattr('units','m')
+#    var.setncattr('scene_pair_type',pair_type)
+#    var.setncattr('motion_detection_method',detection_method)
+#    var.setncattr('motion_coordinates',coordinates)
     var[:] = y
+
+
 
     if (srs.GetAttrValue('PROJECTION') == 'Polar_Stereographic'):
 
+#        mapping_name='Polar_Stereographic'
         mapping_name='mapping'
         grid_mapping='polar_stereographic'  # need to set this as an attribute for the image variables
+#        datatype=np.dtype('S1')
         datatype='U1'
         dimensions=()
         FillValue=None
@@ -480,7 +534,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('false_northing',srs.GetProjParm('false_northing'))
         var.setncattr('latitude_of_projection_origin',np.sign(srs.GetProjParm('latitude_of_origin'))*90.0)  # could hardcode this to be -90 for landsat - just making it more general, maybe...
         var.setncattr('latitude_of_origin',srs.GetProjParm('latitude_of_origin'))
+#        var.setncattr('longitude_of_prime_meridian',float(srs.GetAttrValue('GEOGCS|PRIMEM',1)))
         var.setncattr('semi_major_axis',float(srs.GetAttrValue('GEOGCS|SPHEROID',1)))
+#        var.setncattr('semi_minor_axis',float(6356.752))
         var.setncattr('scale_factor_at_projection_origin',1)
         var.setncattr('inverse_flattening',float(srs.GetAttrValue('GEOGCS|SPHEROID',2)))
         var.setncattr('spatial_ref',srs.ExportToWkt())
@@ -490,19 +546,29 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     elif (srs.GetAttrValue('PROJECTION') == 'Transverse_Mercator'):
 
+#        mapping_name='UTM_projection'
         mapping_name='mapping'
         grid_mapping='universal_transverse_mercator'  # need to set this as an attribute for the image variables
+#        datatype=np.dtype('S1')
         datatype='U1'
         dimensions=()
         FillValue=None
 
         var = nc_outfile.createVariable(mapping_name,datatype,dimensions, fill_value=FillValue)
+        # variable made, now add attributes
+
 
         var.setncattr('grid_mapping_name',grid_mapping)
         zone = epsg - np.floor(epsg/100)*100
         var.setncattr('utm_zone_number',zone)
         var.setncattr('CoordinateTransformType','Projection')
         var.setncattr('CoordinateAxisTypes','GeoX GeoY')
+#        var.setncattr('longitude_of_central_meridian',srs.GetProjParm('central_meridian'))
+#        var.setncattr('false_easting',srs.GetProjParm('false_easting'))
+#        var.setncattr('false_northing',srs.GetProjParm('false_northing'))
+#        var.setncattr('latitude_of_projection_origin',srs.GetProjParm('latitude_of_origin'))
+#        var.setncattr('scale_factor_at_central_meridian',srs.GetProjParm('scale_factor'))
+#        var.setncattr('longitude_of_prime_meridian',float(srs.GetAttrValue('GEOGCS|PRIMEM',1)))
         var.setncattr('semi_major_axis',float(srs.GetAttrValue('GEOGCS|SPHEROID',1)))
         var.setncattr('inverse_flattening',float(srs.GetAttrValue('GEOGCS|SPHEROID',2)))
         var.setncattr('spatial_ref',srs.ExportToWkt())
@@ -511,6 +577,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('GeoTransform',' '.join(str(x) for x in tran))  # note this has pixel size in it - set  explicitly above
     else:
         raise Exception('Projection {0} not recognized for this program'.format(srs.GetAttrValue('PROJECTION')))
+
 
     varname='vx'
     datatype=np.dtype('int16')
@@ -593,6 +660,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     VX[noDataMask] = NoDataValue
     var[:] = np.round(np.clip(VX, -32768, 32767)).astype(np.int16)
 #    var.setncattr('_FillValue',np.int16(FillValue))
+
+
 
     varname='vy'
     datatype=np.dtype('int16')
@@ -925,11 +994,13 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
         VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
 
+
         VXPP[V_error > VP_error] = VXP[V_error > VP_error]
         VYPP[V_error > VP_error] = VYP[V_error > VP_error]
         VXP = VXPP.astype(np.float32)
         VYP = VYPP.astype(np.float32)
         VP = np.sqrt(VXP**2+VYP**2)
+
 
         stable_count_p = np.sum(SSM & np.logical_not(np.isnan(VXP)))
         stable_count1_p = np.sum(SSM1 & np.logical_not(np.isnan(VXP)))
@@ -972,6 +1043,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                 stable_shift_applied_p = 2
         else:
             stable_shift_applied_p = 1
+
 
 
 
@@ -1136,6 +1208,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         VYP[noDataMask] = NoDataValue
         var[:] = np.round(np.clip(VYP, -32768, 32767)).astype(np.int16)
 #        var.setncattr('missing_value',np.int16(NoDataValue))
+
 
 
 
@@ -1309,6 +1382,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     varname='interp_mask'
     datatype=np.dtype('uint8')
     dimensions=('y','x')
+#    FillValue=None
     FillValue=0
     var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
 
@@ -1318,7 +1392,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     var.setncattr('grid_mapping',mapping_name)
 
+    # var[:] = np.flipud(vx_nomask).astype('float32')
     var[:] = np.round(np.clip(INTERPMASK, 0, 255)).astype('uint8')
+#    var.setncattr('missing_value',np.uint8(0))
 
     nc_outfile.sync() # flush data to disk
     nc_outfile.close()
@@ -1564,3 +1640,26 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
     print('subswath border index: {0} {1}'.format(swath_border[0],swath_border[1]))
 
     return DX, DY, flight_direction, flight_direction_s
+
+
+
+
+#if __name__ == '__main__':
+#
+#        inps = cmdLineParse()
+#
+#        print (time.strftime("%H:%M:%S"))
+#        from topsApp import TopsInSAR
+#        insar = TopsInSAR(name="topsApp")
+#
+#
+##        pdb.set_trace()
+#
+#        rangePixelSize = float(str.split(runCmd('fgrep "Range:" testGeogrid.txt'))[2])
+#        prf = float(str.split(runCmd('fgrep "Azimuth:" testGeogrid.txt'))[2])
+#        dt = float(str.split(runCmd('fgrep "Repeat Time:" testGeogrid.txt'))[2])
+#        epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
+#        satv = np.array([float(str.split(runCmd('fgrep "Center Satellite Velocity:" testGeogrid.txt'))[3]), float(str.split(runCmd('fgrep "Center Satellite Velocity:" testGeogrid.txt'))[4]), float(str.split(runCmd('fgrep "Center Satellite Velocity:" testGeogrid.txt'))[5])])
+#        print (str(rangePixelSize)+"      "+str(prf)+"      "+str(satv)+"      "+str(dt))
+#        azimuthPixelSize = np.sqrt(np.sum(satv**2)) / prf
+#        print (str(rangePixelSize)+"      "+str(azimuthPixelSize))
