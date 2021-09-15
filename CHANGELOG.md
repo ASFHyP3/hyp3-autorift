@@ -15,10 +15,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Applied some fixes to the autoRIFT workflow scripts as described in the
   [vendored software README.md](hyp3_autorift/vend/README.md)
 * `hyp3_autorift.io.save_topsinsar_mat` has been renamed to `hyp3_autorift.io.get_topsinsar_config`
-  * It no longer writes a config `.mat` file, and instead returns the config dictionary
+  * It no longer writes a config `.mat` file and instead returns the config dictionary
 
 ### Removed
-* `topsinsar_filename.py` console script entrypoint
+* `topsinsar_filename.py` console script entrypoint has been removed 
+  (use `hyp3_autorift.io.get_topsinsar_config` instead)
 * The `hyp3_autorift/netcdf_output.py` module has been removed in favor of the (new)
   vendored `hyp3_autorift/vend/netcdf_output.py`
 
