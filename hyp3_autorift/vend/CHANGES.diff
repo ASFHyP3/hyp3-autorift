@@ -213,14 +213,19 @@
                  if geogrid_run_info is None:
                      vxrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[1]
                      vyrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[2]
-@@ -789,14 +786,14 @@
-                     runCmd('topsinsar_filename.py')
-     #                import scipy.io as sio
-                     conts = sio.loadmat('topsinsar_filename.mat')
+@@ -786,17 +783,16 @@
+                         dt = geogrid_run_info['dt']
+                         epsg = geogrid_run_info['epsg']
+ 
+-                    runCmd('topsinsar_filename.py')
+-    #                import scipy.io as sio
+-                    conts = sio.loadmat('topsinsar_filename.mat')
 -                    master_filename = conts['master_filename'][0]
 -                    slave_filename = conts['slave_filename'][0]
 -                    master_dt = conts['master_dt'][0]
 -                    slave_dt = conts['slave_dt'][0]
++                    from hyp3_autorift.io import get_topsinsar_config
++                    conts = get_topsinsar_config()
 +                    master_filename = conts['reference_filename'][0]
 +                    slave_filename = conts['secondary_filename'][0]
 +                    master_dt = conts['reference_dt'][0]
@@ -233,7 +238,7 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -831,7 +828,33 @@
+@@ -831,7 +827,33 @@
                          date_ct = d0 + (d1 - d0)/2
                          date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
@@ -268,7 +273,7 @@
                      error_vector = np.array([[0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
                                               [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628]])
  
-@@ -840,7 +863,8 @@
+@@ -840,7 +862,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
                          rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -278,7 +283,7 @@
                      )
  
                  elif nc_sensor == "L":
-@@ -878,7 +902,7 @@
+@@ -878,7 +901,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
  
@@ -287,7 +292,7 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -889,30 +913,60 @@
+@@ -889,30 +912,60 @@
      #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
@@ -357,7 +362,7 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -921,7 +975,8 @@
+@@ -921,7 +974,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -367,7 +372,7 @@
                      )
  
                  elif nc_sensor == "S2":
-@@ -941,8 +996,8 @@
+@@ -941,8 +995,8 @@
                      master_path = indir_m
                      slave_path = indir_s
  
@@ -378,7 +383,7 @@
  
                      master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
                      slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
-@@ -954,7 +1009,7 @@
+@@ -954,7 +1008,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
  
@@ -387,7 +392,7 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -970,24 +1025,41 @@
+@@ -970,24 +1024,41 @@
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
  
@@ -437,7 +442,7 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -996,7 +1068,8 @@
+@@ -996,7 +1067,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -497,14 +502,19 @@
                      DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
                  
                  if geogrid_run_info is None:
-@@ -784,14 +784,14 @@
-                     runCmd('topsinsar_filename.py')
-     #                import scipy.io as sio
-                     conts = sio.loadmat('topsinsar_filename.mat')
+@@ -781,17 +781,16 @@
+                         dt = geogrid_run_info['dt']
+                         epsg = geogrid_run_info['epsg']
+ 
+-                    runCmd('topsinsar_filename.py')
+-    #                import scipy.io as sio
+-                    conts = sio.loadmat('topsinsar_filename.mat')
 -                    master_filename = conts['master_filename'][0]
 -                    slave_filename = conts['slave_filename'][0]
 -                    master_dt = conts['master_dt'][0]
 -                    slave_dt = conts['slave_dt'][0]
++                    from hyp3_autorift.io import get_topsinsar_config
++                    conts = get_topsinsar_config()
 +                    master_filename = conts['reference_filename'][0]
 +                    slave_filename = conts['secondary_filename'][0]
 +                    master_dt = conts['reference_dt'][0]
@@ -517,7 +527,7 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -826,7 +826,33 @@
+@@ -826,7 +825,33 @@
                          date_ct = d0 + (d1 - d0)/2
                          date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
@@ -552,7 +562,7 @@
                      error_vector = np.array([[0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
                                               [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628]])
  
-@@ -835,7 +861,8 @@
+@@ -835,7 +860,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
                          rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -562,7 +572,7 @@
                      )
  
                  elif nc_sensor == "L":
-@@ -873,7 +900,7 @@
+@@ -873,7 +899,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
  
@@ -571,7 +581,7 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -884,31 +911,60 @@
+@@ -884,31 +910,60 @@
      #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
@@ -641,7 +651,7 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -917,7 +973,8 @@
+@@ -917,7 +972,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
@@ -651,7 +661,7 @@
                      )
  
                  elif nc_sensor == "S2":
-@@ -937,8 +994,8 @@
+@@ -937,8 +993,8 @@
                      master_path = indir_m
                      slave_path = indir_s
  
@@ -662,7 +672,7 @@
  
                      master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
                      slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
-@@ -950,7 +1007,7 @@
+@@ -950,7 +1006,7 @@
                      master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
                      slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
  
@@ -671,7 +681,7 @@
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -966,24 +1023,41 @@
+@@ -966,24 +1022,41 @@
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
  
@@ -721,7 +731,7 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -992,7 +1066,8 @@
+@@ -992,7 +1065,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                          XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,

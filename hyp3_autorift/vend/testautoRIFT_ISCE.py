@@ -783,9 +783,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         dt = geogrid_run_info['dt']
                         epsg = geogrid_run_info['epsg']
 
-                    runCmd('topsinsar_filename.py')
-    #                import scipy.io as sio
-                    conts = sio.loadmat('topsinsar_filename.mat')
+                    from hyp3_autorift.io import get_topsinsar_config
+                    conts = get_topsinsar_config()
                     master_filename = conts['reference_filename'][0]
                     slave_filename = conts['secondary_filename'][0]
                     master_dt = conts['reference_dt'][0]
