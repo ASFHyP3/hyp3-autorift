@@ -22,7 +22,7 @@ included. Changes, as listed in `CHANGES.diff`, were done to facilitate better p
 and distribution of these modules, to correctly handle Sentinel-2 Level 1C
 products, to prevent truncating Landsat scene names in the netCDF file names, 
 and to provide better netCDF metadata including more detailed reporting of
-Landsat-8 acquisition times and their respective center date.
+Landsat-8/Sentintel-2 acquisition times and their respective center date.
 
 **Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
 We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`. 
