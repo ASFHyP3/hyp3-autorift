@@ -117,7 +117,7 @@ class SysArgvManager:
         self.argv = sys.argv.copy()
 
     def __enter__(self):
-        sys.argv = [sys.argv[0]]
+        sys.argv = sys.argv[:1]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.argv = self.argv
