@@ -1,6 +1,7 @@
 """Helper io utilities for autoRIFT"""
 
 import logging
+import sys
 import textwrap
 from pathlib import Path
 
@@ -106,9 +107,26 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
         f.write(textwrap.dedent(xml_template))
 
 
+class SysArgvManager:
+    """Context manager to clear and reset sys.argv
+
+    A bug in the ISCE2 Application class causes sys.argv to always be parsed when
+    no options are proved, even when setting `cmdline=[]`, preventing programmatic use.
+    """
+    def __init__(self):
+        self.argv = sys.argv.copy()
+
+    def __enter__(self):
+        sys.argv = sys.argv[:1]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.argv = self.argv
+
+
 def get_topsinsar_config():
-    insar = TopsInSAR(name="topsApp", cmdline=[])
-    insar.configure()
+    with SysArgvManager():
+        insar = TopsInSAR(name="topsApp")
+        insar.configure()
 
     config_data = {}
     for name in ['reference', 'secondary']:
