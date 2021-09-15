@@ -785,10 +785,10 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                     from hyp3_autorift.io import get_topsinsar_config
                     conts = get_topsinsar_config()
-                    master_filename = conts['reference_filename'][0]
-                    slave_filename = conts['secondary_filename'][0]
-                    master_dt = conts['reference_dt'][0]
-                    slave_dt = conts['secondary_dt'][0]
+                    master_filename = conts['reference_filename']
+                    slave_filename = conts['secondary_filename']
+                    master_dt = conts['reference_dt']
+                    slave_dt = conts['secondary_dt']
                     master_split = str.split(master_filename,'_')
                     slave_split = str.split(slave_filename,'_')
 
