@@ -1,0 +1,186 @@
+diff --git a/hyp3_autorift/vend/testautoRIFT.py b/hyp3_autorift/vend/testautoRIFT.py
+index 6f808fa..08d2c9f 100755
+--- a/hyp3_autorift/vend/testautoRIFT.py
++++ b/hyp3_autorift/vend/testautoRIFT.py
+@@ -809,21 +809,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+ 
+ 
+ 
+-                    from datetime import date, datetime
++                    from datetime import datetime, timedelta
+ #                    d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
+ #                    d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+                     d0 = datetime.strptime(master_dt,"%Y%m%dT%H:%M:%S.%f")
+                     d1 = datetime.strptime(slave_dt,"%Y%m%dT%H:%M:%S.%f")
+-                    date_dt_base = d1 - d0
+-                    date_dt = np.float64(date_dt_base.days)
++                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
++                    date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
++
++                    date_ct = d0 + (d1 - d0)/2
++                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+                         'mission_img1': master_split[0][0],
+@@ -917,22 +914,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+ 
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+ 
+-                    from datetime import datetime
++                    from datetime import datetime, timedelta
+                     d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                     d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+-                    date_dt_base = d1 - d0
+-                    date_dt = np.float64(date_dt_base.days)
++                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
++                    date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+ 
+-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f')
+-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f')
++                    date_ct = d0 + (d1 - d0)/2
++                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
++                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
++                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+                         'mission_img1': master_split[0][0],
+@@ -1022,22 +1015,19 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+ 
+-                    from datetime import datetime
++                    from datetime import datetime, timedelta
+                     d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
+                     d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
+-                    date_dt_base = d1 - d0
+-                    date_dt = np.float64(date_dt_base.days)
++                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
++                    date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+ 
+-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S')
+-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S')
++                    date_ct = d0 + (d1 - d0)/2
++                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
++
++                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S').rstrip('0')
++                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S').rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+                         'mission_img1': master_split[0][-3],
+diff --git a/hyp3_autorift/vend/testautoRIFT_ISCE.py b/hyp3_autorift/vend/testautoRIFT_ISCE.py
+index e3ceabd..62fa97b 100755
+--- a/hyp3_autorift/vend/testautoRIFT_ISCE.py
++++ b/hyp3_autorift/vend/testautoRIFT_ISCE.py
+@@ -811,21 +811,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+ 
+ 
+ 
+-                    from datetime import date, datetime
++                    from datetime import datetime, timedelta
+ #                    d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
+ #                    d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+                     d0 = datetime.strptime(master_dt,"%Y%m%dT%H:%M:%S.%f")
+                     d1 = datetime.strptime(slave_dt,"%Y%m%dT%H:%M:%S.%f")
+-                    date_dt_base = d1 - d0
+-                    date_dt = np.float64(date_dt_base.days)
++                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
++                    date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
++
++                    date_ct = d0 + (d1 - d0)/2
++                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+                         'mission_img1': master_split[0][0],
+@@ -919,22 +916,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+ 
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+ 
+-                    from datetime import datetime
++                    from datetime import datetime, timedelta
+                     d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                     d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+-                    date_dt_base = d1 - d0
+-                    date_dt = np.float64(date_dt_base.days)
++                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
++                    date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+ 
+-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f')
+-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f')
++                    date_ct = d0 + (d1 - d0)/2
++                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
++                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
++                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+                         'mission_img1': master_split[0][0],
+@@ -1024,22 +1017,19 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+ 
+-                    from datetime import datetime
++                    from datetime import datetime, timedelta
+                     d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
+                     d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
+-                    date_dt_base = d1 - d0
+-                    date_dt = np.float64(date_dt_base.days)
++                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
++                    date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+                         raise Exception('Input image 1 must be older than input image 2')
+-                    if date_dt_base.days < 0:
+-                        date_ct = d1 + (d0 - d1)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+-                    else:
+-                        date_ct = d0 + (d1 - d0)/2
+-                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+ 
+-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S')
+-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S')
++                    date_ct = d0 + (d1 - d0)/2
++                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
++
++                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S').rstrip('0')
++                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S').rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+                         'mission_img1': master_split[0][-3],
