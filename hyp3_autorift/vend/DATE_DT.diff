@@ -1,7 +1,6 @@
-diff --git a/hyp3_autorift/vend/testautoRIFT.py b/hyp3_autorift/vend/testautoRIFT.py
-index 6f808fa..08d2c9f 100755
---- a/hyp3_autorift/vend/testautoRIFT.py
-+++ b/hyp3_autorift/vend/testautoRIFT.py
+diff --git a/testautoRIFT.py b/testautoRIFT.py
+--- a/testautoRIFT.py
++++ b/testautoRIFT.py
 @@ -809,21 +809,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
  
  
@@ -91,10 +90,9 @@ index 6f808fa..08d2c9f 100755
  
                      IMG_INFO_DICT = {
                          'mission_img1': master_split[0][-3],
-diff --git a/hyp3_autorift/vend/testautoRIFT_ISCE.py b/hyp3_autorift/vend/testautoRIFT_ISCE.py
-index e3ceabd..62fa97b 100755
---- a/hyp3_autorift/vend/testautoRIFT_ISCE.py
-+++ b/hyp3_autorift/vend/testautoRIFT_ISCE.py
+diff --git a/testautoRIFT_ISCE.py b/testautoRIFT_ISCE.py
+--- a/testautoRIFT_ISCE.py
++++ b/testautoRIFT_ISCE.py
 @@ -811,21 +811,18 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
  
  
