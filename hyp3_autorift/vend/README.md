@@ -3,15 +3,31 @@
 This directory contains modules needed for the HyP3 autoRIFT plugin that couldn't
 be easily incorporated from a package manager or installed appropriately.
 
-## `testautoRIFT_ISCE.py`, `testautoRIFT.py`, `testGeogrid_ISCE.py`, and `testGeogridOptical.py`
+## autoRIFT workflow scripts
 
-These modules are required for the expected workflow provided to ASF, and are
-provided in autoRIFT, but not distributed as part of the package. These modules
-correspond to release [`v1.3.1`](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.3.1)
-with the unreleased [minor error estimate edits](https://github.com/leiyangleon/autoRIFT/commit/f11d5eee9b12fb7acb4aa5ce96fe6d69e1548195)
-included. Changes, as listed in `CHANGES.diff`, were done to facilitate better packaging 
+These modules are required for the expected autoRIFT workflow:
+* `testautoRIFT_ISCE.py`
+* `testautoRIFT.py`
+* `testGeogrid_ISCE.py` 
+* `testGeogridOptical.py`
+* `netcdf_output.py`
+* `topsinsar_filename.py`
+
+and are included in the [autoRIFT source code](https://github.com/nasa-jpl/autoRIFT),
+but not distributed as part of the package. 
+
+The version located in this directory correspond to release [`v1.4.0`](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.4.0),
+with the unreleased [packaging updates](https://github.com/leiyangleon/autoRIFT/commit/8e84619962cc0d5b9876240deb6696de71dee357)
+included. Changes, as listed in `CHANGES.diff`, were done to facilitate better packaging
 and distribution of these modules, to correctly handle Sentinel-2 Level 1C
 products, to prevent truncating Landsat scene names in the netCDF file names, 
-and to provide better netCDF metadata. Furthermore, a patch, as listed in `L8-PATCH.diff`, was applied to
-`testautoRIFT_ISCE.py` and `testautoRIFT.py` to provide more detailed acquisition times
-for Landsat-8 pairs.
+and to provide better netCDF metadata including more detailed reporting of
+Landsat-8/Sentintel-2 acquisition times and their respective center date.
+
+**Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
+We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`. 
+
+Additionally, the changes listed in `DATE_DT.diff` were applied to report the
+`img_pair_info.date_dt` attribute in the netCDF product as fractional days, instead
+of rounding down to the nearest whole day. These changes should be included in the
+next autoRIFT release.

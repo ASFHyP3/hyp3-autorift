@@ -7,6 +7,22 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.3...v0.7.0)
+
+### Changed
+* Upgraded autoRIFT to [v1.4.0](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.4.0)
+  and [ISCE2 v2.5.3 built with autoRIFT v1.4.0](https://anaconda.org/hyp3/isce2)
+* Applied some fixes to the autoRIFT workflow scripts as described in the
+  [vendored software README.md](hyp3_autorift/vend/README.md)
+* `hyp3_autorift.io.save_topsinsar_mat` has been renamed to `hyp3_autorift.io.get_topsinsar_config`
+  * It no longer writes a config `.mat` file and instead returns the config dictionary
+
+### Removed
+* `topsinsar_filename.py` console script entrypoint has been removed 
+  (use `hyp3_autorift.io.get_topsinsar_config` instead)
+* The `hyp3_autorift/netcdf_output.py` module has been removed in favor of the (new)
+  vendored `hyp3_autorift/vend/netcdf_output.py`
+
 ## [0.6.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.2...v0.6.3)
 
 ### Changed
