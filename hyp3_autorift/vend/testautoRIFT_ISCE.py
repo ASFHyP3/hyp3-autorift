@@ -926,6 +926,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                     date_ct = d0 + (d1 - d0)/2
                     date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+
                     master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
                     slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
@@ -1028,8 +1029,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     date_ct = d0 + (d1 - d0)/2
                     date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S').rstrip('0')
-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S').rstrip('0')
+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
                     IMG_INFO_DICT = {
                         'mission_img1': master_split[0][-3],
