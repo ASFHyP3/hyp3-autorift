@@ -99,7 +99,7 @@ jobs:
           dst: ${{ env.HYP3_REGISTRY }}/${{ github.event.repository.name }}:latest
 
       - name: Login to GitHub Container Registry
-        if: github.ref == 'refs/heads/main'
+#         if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
