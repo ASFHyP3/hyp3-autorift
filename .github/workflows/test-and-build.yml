@@ -12,9 +12,12 @@ on:
 
 env:
   HYP3_REGISTRY: 845172464411.dkr.ecr.us-west-2.amazonaws.com
+  AUTORIFT_REGISTRY: 230742024655.dkr.ecr.eu-central-1.amazonaws.com
   AWS_REGION: us-west-2
   AWS_ACCESS_KEY_ID: ${{ secrets.V2_AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.V2_AWS_SECRET_ACCESS_KEY }}
+  AUTORIFT_ACCESS_KEY_ID: ${{ secrets.AUTORIFT_ACCESS_KEY_ID }}
+  AUTORIFT_AWS_SECRET_ACCESS_KEY: ${{ secrets.AUTORIFT_AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   pytest:
@@ -114,7 +117,29 @@ jobs:
         with:
           src: ${{ env.HYP3_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
           dst: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
-
+          
       - name: Logout of Amazon ECR
         if: always()
         run: docker logout ${HYP3_REGISTRY}
+        
+      - uses: aws-actions/configure-aws-credentials@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          aws-access-key-id: ${{ env.AUTORIFT_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AUTORIFT_AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+          
+      - name: Login to Amazon ECR
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Publish on ECR Europe
+        if: github.ref == 'refs/heads/main'
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
+          dst: ${{ env.AUTORIFT_REGISTRY }}/${{ github.event.repository.name }}:latest
+
+      - name: Logout of Amazon ECR
+        if: github.ref == 'refs/heads/main'
+        run: docker logout ${AUTORIFT_REGISTRY}
