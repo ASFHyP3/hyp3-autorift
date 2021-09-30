@@ -133,12 +133,12 @@ jobs:
 #         if: github.ref == 'refs/heads/main'
         uses: aws-actions/amazon-ecr-login@v1
         
-      - name: Publish on github container registry Europe
+      - name: Publish on ECR Europe
 #         if: github.ref == 'refs/heads/main'
         uses: akhilerm/tag-push-action@v1.0.0
         with:
-          src: ${{ env.AUTORIFT_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
-          dst: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
+          src: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
+          dst: ${{ env.AUTORIFT_REGISTRY }}/${{ github.event.repository.name }}:latest
 
       - name: Logout of Amazon ECR
 #         if: github.ref == 'refs/heads/main'
