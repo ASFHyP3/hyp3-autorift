@@ -137,7 +137,7 @@ jobs:
 #         if: github.ref == 'refs/heads/main'
         uses: akhilerm/tag-push-action@v1.0.0
         with:
-          src: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
+          src: ${{ env.HYP3_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
           dst: ${{ env.AUTORIFT_REGISTRY }}/${{ github.event.repository.name }}:latest
 
       - name: Logout of Amazon ECR
