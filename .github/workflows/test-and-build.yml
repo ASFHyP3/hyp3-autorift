@@ -117,7 +117,20 @@ jobs:
         with:
           src: ${{ env.HYP3_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
           dst: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
-
+          
+      - name: Logout of Amazon ECR
+        if: always()
+        run: docker logout ${HYP3_REGISTRY}
+        
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        
       - name: Publish on github container registry Europe
         if: github.ref == 'refs/heads/main'
         uses: akhilerm/tag-push-action@v1.0.0
