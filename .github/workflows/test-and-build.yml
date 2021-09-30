@@ -12,9 +12,12 @@ on:
 
 env:
   HYP3_REGISTRY: 845172464411.dkr.ecr.us-west-2.amazonaws.com
+  AUTORIFT_REGISTRY: 230742024655.dkr.ecr.eu-central-1.amazonaws.com
   AWS_REGION: us-west-2
   AWS_ACCESS_KEY_ID: ${{ secrets.V2_AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.V2_AWS_SECRET_ACCESS_KEY }}
+  AUTORIFT_ACCESS_KEY_ID: ${{ secrets.AUTORIFT_ACCESS_KEY_ID }}
+  AUTORIFT_AWS_SECRET_ACCESS_KEY: ${{ secrets.AUTORIFT_AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   pytest:
@@ -113,6 +116,13 @@ jobs:
         uses: akhilerm/tag-push-action@v1.0.0
         with:
           src: ${{ env.HYP3_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
+          dst: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
+
+      - name: Publish on github container registry Europe
+        if: github.ref == 'refs/heads/main'
+        uses: akhilerm/tag-push-action@v1.0.0
+        with:
+          src: ${{ env.AUTORIFT_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
           dst: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
 
       - name: Logout of Amazon ECR
