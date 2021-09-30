@@ -107,12 +107,12 @@ jobs:
           password: ${{ secrets.TOOLS_BOT_PAK }}
 
       - name: Lowercase repo for Github Container Registry
-        if: github.ref == 'refs/heads/main'
+#         if: github.ref == 'refs/heads/main'
         run: |
           echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
       - name: Publish on github container registry
-        if: github.ref == 'refs/heads/main'
+#         if: github.ref == 'refs/heads/main'
         uses: akhilerm/tag-push-action@v1.0.0
         with:
           src: ${{ env.HYP3_REGISTRY }}/${{ github.event.repository.name }}:${{ env.SDIST_VERSION }}
@@ -140,13 +140,6 @@ jobs:
           registry: ghcr.io
           username: tools-bot
           password: ${{ secrets.TOOLS_BOT_PAK }}
-        
-      - name: Publish on ECR Europe
-#         if: github.ref == 'refs/heads/main'
-        uses: akhilerm/tag-push-action@v1.0.0
-        with:
-          src: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
-          dst: ${{ env.AUTORIFT_REGISTRY }}/${{ github.event.repository.name }}:latest
 
       - name: Logout of Amazon ECR
 #         if: github.ref == 'refs/heads/main'
