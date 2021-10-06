@@ -27,7 +27,12 @@ Landsat-8/Sentintel-2 acquisition times and their respective center date.
 **Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
 We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`. 
 
-Additionally, the changes listed in `DATE_DT.diff` were applied to report the
-`img_pair_info.date_dt` attribute in the netCDF product as fractional days, instead
-of rounding down to the nearest whole day. These changes should be included in the
-next autoRIFT release.
+## Additional Patches
+
+1. The changes listed in `DATE_DT.diff` were applied to report the
+   `img_pair_info.date_dt` attribute in the netCDF product as fractional days, instead
+   of rounding down to the nearest whole day. These changes should be included in the
+   next autoRIFT release.
+2. The changes listed in `REF_VEL.diff` were applied to update the reference velocity
+   fields for projected velocity. These changes are expected to be a temporary measure
+   until better estimates of the velocity fields are generated. 
