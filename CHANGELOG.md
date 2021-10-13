@@ -7,11 +7,16 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.1...v0.7.2)
+
+### Fixed
+* Geogrid now points to `fine_coreg` for Sentinel-1 workflows, fixing common `IndexError` failures
+
 ## [0.7.1](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.0...v0.7.1)
 
 ### Changed
 * Applied a fix to the autoRIFT packaging script that updates the reference velocity
-  fields for projected velocity, as described in the [vendored software README.md](hyp3_autorift/vend/README.md).
+  fields for projected velocity, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
 
 ## [0.7.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.3...v0.7.0)
 
