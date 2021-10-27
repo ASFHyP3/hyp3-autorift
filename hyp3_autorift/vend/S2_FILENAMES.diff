@@ -9,7 +9,7 @@ index 22dc26b..024133b 100755
 -                    master_path = indir_m
 -                    slave_path = indir_s
 +                    master_id = kwargs['reference_metadata']['id']
-+                    slave_id = kwargs['reference_metadata']['id']
++                    slave_id = kwargs['secondary_metadata']['id']
  
 -                    master_split = kwargs['reference_metadata']['id'].split('_')
 -                    slave_split = kwargs['secondary_metadata']['id'].split('_')
@@ -41,7 +41,7 @@ index 275e391..d6a6d22 100755
 -                    master_path = indir_m
 -                    slave_path = indir_s
 +                    master_id = kwargs['reference_metadata']['id']
-+                    slave_id = kwargs['reference_metadata']['id']
++                    slave_id = kwargs['secondary_metadata']['id']
  
 -                    master_split = kwargs['reference_metadata']['id'].split('_')
 -                    slave_split = kwargs['secondary_metadata']['id'].split('_')
