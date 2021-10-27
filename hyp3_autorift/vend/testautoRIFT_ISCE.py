@@ -989,7 +989,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     master_id = kwargs['reference_metadata']['id']
                     slave_id = kwargs['reference_metadata']['id']
 
-                    master_split =master_id.split('_')
+                    master_split = master_id.split('_')
                     slave_split = slave_id.split('_')
 
 
