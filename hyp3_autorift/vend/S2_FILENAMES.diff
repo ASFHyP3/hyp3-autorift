@@ -13,7 +13,7 @@ index 22dc26b..024133b 100755
  
 -                    master_split = kwargs['reference_metadata']['id'].split('_')
 -                    slave_split = kwargs['secondary_metadata']['id'].split('_')
-+                    master_split =master_id.split('_')
++                    master_split = master_id.split('_')
 +                    slave_split = slave_id.split('_')
  
 -                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
@@ -45,7 +45,7 @@ index 275e391..d6a6d22 100755
  
 -                    master_split = kwargs['reference_metadata']['id'].split('_')
 -                    slave_split = kwargs['secondary_metadata']['id'].split('_')
-+                    master_split =master_id.split('_')
++                    master_split = master_id.split('_')
 +                    slave_split = slave_id.split('_')
  
 -                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
