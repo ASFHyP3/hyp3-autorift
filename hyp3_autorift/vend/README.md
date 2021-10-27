@@ -36,3 +36,5 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
 2. The changes listed in `REF_VEL.diff` were applied to update the reference velocity
    fields for projected velocity. These changes are expected to be a temporary measure
    until better estimates of the velocity fields are generated. 
+3. The changes listed in `S2_FILENAMES.diff` were applied to use the full Sentinel-2 COG
+   id in the output netCDF product filename to ensure unique names.  
