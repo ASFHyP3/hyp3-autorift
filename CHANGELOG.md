@@ -13,7 +13,6 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * For Sentinel-2 products, file names now include the full COG Id to ensure unique
   file names are produced and to be consistent with other products.
 
-
 ## [0.7.2](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.1...v0.7.2)
 
 ### Fixed
