@@ -204,7 +204,7 @@ def netCDF_read_intermediate(filename='./autoRIFT_intermediate.nc'):
 
 def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY,
                      offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
-                     rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                     DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                      detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
                      dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector, parameter_file):
     vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
@@ -242,6 +242,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         VA = (DY) * offset2va
         VR = VR.astype(np.float32)
         VA = VA.astype(np.float32)
+
+        VRref = DXref * offset2vr
+        VAref = (DYref) * offset2va
+        VRref = VRref.astype(np.float32)
+        VAref = VAref.astype(np.float32)
 
 
 #        vr_mean_shift = dx_mean_shift * rangePixelSize / dt * 365.0 * 24.0 * 3600.0
@@ -298,7 +303,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         #   by default, use the updated dhdxs and dhdys input files that combine the velocity fields and smoothed slopes; should be turned off when better estimates of velocity fields are available
         VXP = VXS
         VYP = VYS
-        
+
 #        #   use the updated (better) estimates of velocity fields; by default, is turned off; should be turned on after generating the new velocity fields
 #        VXP = VXR
 #        VYP = VYR
@@ -602,14 +607,14 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
 
     if stable_count != 0:
-        temp = VX.copy()
+        temp = VX.copy() - VXref.copy()
         temp[np.logical_not(SSM)] = np.nan
 #        vx_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
         vx_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
     else:
         vx_error_mask = np.nan
     if stable_count1 != 0:
-        temp = VX.copy()
+        temp = VX.copy() - VXref.copy()
         temp[np.logical_not(SSM1)] = np.nan
 #        vx_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
         vx_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
@@ -685,14 +690,14 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
 
     if stable_count != 0:
-        temp = VY.copy()
+        temp = VY.copy() - VYref.copy()
         temp[np.logical_not(SSM)] = np.nan
 #        vy_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
         vy_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
     else:
         vy_error_mask = np.nan
     if stable_count1 != 0:
-        temp = VY.copy()
+        temp = VY.copy() - VYref.copy()
         temp[np.logical_not(SSM1)] = np.nan
 #        vy_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
         vy_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
@@ -816,14 +821,14 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('units','m/y')
 
         if stable_count != 0:
-            temp = VR.copy()
+            temp = VR.copy() - VRref.copy()
             temp[np.logical_not(SSM)] = np.nan
 #            vr_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
             vr_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
         else:
             vr_error_mask = np.nan
         if stable_count1 != 0:
-            temp = VR.copy()
+            temp = VR.copy() - VRref.copy()
             temp[np.logical_not(SSM1)] = np.nan
 #            vr_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
             vr_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
@@ -896,14 +901,14 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
 
         if stable_count != 0:
-            temp = VA.copy()
+            temp = VA.copy() - VAref.copy()
             temp[np.logical_not(SSM)] = np.nan
 #            va_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
             va_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
         else:
             va_error_mask = np.nan
         if stable_count1 != 0:
-            temp = VA.copy()
+            temp = VA.copy() - VAref.copy()
             temp[np.logical_not(SSM1)] = np.nan
 #            va_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
             va_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
@@ -967,22 +972,22 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
         # fuse the (slope parallel & reference) flow-based range-projected result with the raw observed range/azimuth-based result
         if stable_count_p != 0:
-            temp = VXP.copy()
+            temp = VXP.copy() - VXref.copy()
             temp[np.logical_not(SSM)] = np.nan
 #            vxp_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
             vxp_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
 
-            temp = VYP.copy()
+            temp = VYP.copy() - VYref.copy()
             temp[np.logical_not(SSM)] = np.nan
 #            vyp_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
             vyp_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
         if stable_count1_p != 0:
-            temp = VXP.copy()
+            temp = VXP.copy() - VXref.copy()
             temp[np.logical_not(SSM1)] = np.nan
 #            vxp_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
             vxp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
 
-            temp = VYP.copy()
+            temp = VYP.copy() - VYref.copy()
             temp[np.logical_not(SSM1)] = np.nan
 #            vyp_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
             vyp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
@@ -1057,206 +1062,206 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
 
 
-        varname='vxp'
-        datatype=np.dtype('int16')
-        dimensions=('y','x')
-        FillValue=NoDataValue
-        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-
-
-        var.setncattr('standard_name','projected_x_velocity')
-        var.setncattr('description','x-direction velocity determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected vx estimates are used')
-        var.setncattr('units','m/y')
-
-
-        if stable_count_p != 0:
-            temp = VXP.copy()
-            temp[np.logical_not(SSM)] = np.nan
-#            vxp_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
-            vxp_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
-        else:
-            vxp_error_mask = np.nan
-        if stable_count1_p != 0:
-            temp = VXP.copy()
-            temp[np.logical_not(SSM1)] = np.nan
-#            vxp_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
-            vxp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
-        else:
-            vxp_error_slow = np.nan
-        if stable_shift_applied_p == 1:
-            vxp_error = vxp_error_mask
-        elif stable_shift_applied_p == 2:
-            vxp_error = vxp_error_slow
-        else:
-            vxp_error = vxp_error_mod
-        var.setncattr('vxp_error',int(round(vxp_error*10))/10)
-        var.setncattr('vxp_error_description','best estimate of projected_x_velocity error: vxp_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
-
-
-        if stable_shift_applied_p == 2:
-            var.setncattr('stable_shift',int(round(vxp_mean_shift1*10))/10)
-        elif stable_shift_applied_p == 1:
-            var.setncattr('stable_shift',int(round(vxp_mean_shift*10))/10)
-        else:
-            var.setncattr('stable_shift',np.nan)
-        var.setncattr('flag_stable_shift',stable_shift_applied_p)
-        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
-
-
-        var.setncattr('stable_count_mask',stable_count_p)
-        var.setncattr('stable_count_slow',stable_count1_p)
-        if stable_count_p != 0:
-            var.setncattr('stable_shift_mask',int(round(vxp_mean_shift*10))/10)
-        else:
-            var.setncattr('stable_shift_mask',np.nan)
-        if stable_count1_p != 0:
-            var.setncattr('stable_shift_slow',int(round(vxp_mean_shift1*10))/10)
-        else:
-            var.setncattr('stable_shift_slow',np.nan)
-
-        if stable_count_p != 0:
-            var.setncattr('vxp_error_mask',int(round(vxp_error_mask*10))/10)
-        else:
-            var.setncattr('vxp_error_mask',np.nan)
-        var.setncattr('vxp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-        if stable_count1_p != 0:
-            var.setncattr('vxp_error_slow',int(round(vxp_error_slow*10))/10)
-        else:
-            var.setncattr('vxp_error_slow',np.nan)
-        var.setncattr('vxp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-        var.setncattr('vxp_error_modeled',int(round(vxp_error_mod*10))/10)
-        var.setncattr('vxp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
-
-
-        var.setncattr('grid_mapping',mapping_name)
-
-        VXP[noDataMask] = NoDataValue
-        var[:] = np.round(np.clip(VXP, -32768, 32767)).astype(np.int16)
-#        var.setncattr('missing_value',np.int16(NoDataValue))
-
-
-
-
-
-
-        varname='vyp'
-        datatype=np.dtype('int16')
-        dimensions=('y','x')
-        FillValue=NoDataValue
-        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-
-
-        var.setncattr('standard_name','projected_y_velocity')
-        var.setncattr('description','y-direction velocity determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected vy estimates are used')
-        var.setncattr('units','m/y')
-
-
-        if stable_count_p != 0:
-            temp = VYP.copy()
-            temp[np.logical_not(SSM)] = np.nan
-#            vyp_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
-            vyp_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
-        else:
-            vyp_error_mask = np.nan
-        if stable_count1_p != 0:
-            temp = VYP.copy()
-            temp[np.logical_not(SSM1)] = np.nan
-#            vyp_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
-            vyp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
-        else:
-            vyp_error_slow = np.nan
-        if stable_shift_applied_p == 1:
-            vyp_error = vyp_error_mask
-        elif stable_shift_applied_p == 2:
-            vyp_error = vyp_error_slow
-        else:
-            vyp_error = vyp_error_mod
-        var.setncattr('vyp_error',int(round(vyp_error*10))/10)
-        var.setncattr('vyp_error_description','best estimate of projected_y_velocity error: vyp_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
-
-
-        if stable_shift_applied_p == 2:
-            var.setncattr('stable_shift',int(round(vyp_mean_shift1*10))/10)
-        elif stable_shift_applied_p == 1:
-            var.setncattr('stable_shift',int(round(vyp_mean_shift*10))/10)
-        else:
-            var.setncattr('stable_shift',np.nan)
-        var.setncattr('flag_stable_shift',stable_shift_applied_p)
-        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
-
-
-        var.setncattr('stable_count_mask',stable_count_p)
-        var.setncattr('stable_count_slow',stable_count1_p)
-        if stable_count_p != 0:
-            var.setncattr('stable_shift_mask',int(round(vyp_mean_shift*10))/10)
-        else:
-            var.setncattr('stable_shift_mask',np.nan)
-        if stable_count1_p != 0:
-            var.setncattr('stable_shift_slow',int(round(vyp_mean_shift1*10))/10)
-        else:
-            var.setncattr('stable_shift_slow',np.nan)
-
-        if stable_count_p != 0:
-            var.setncattr('vyp_error_mask',int(round(vyp_error_mask*10))/10)
-        else:
-            var.setncattr('vyp_error_mask',np.nan)
-        var.setncattr('vyp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
-        if stable_count1_p != 0:
-            var.setncattr('vyp_error_slow',int(round(vyp_error_slow*10))/10)
-        else:
-            var.setncattr('vyp_error_slow',np.nan)
-        var.setncattr('vyp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-        var.setncattr('vyp_error_modeled',int(round(vyp_error_mod*10))/10)
-        var.setncattr('vyp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
-
-
-        var.setncattr('grid_mapping',mapping_name)
-
-        VYP[noDataMask] = NoDataValue
-        var[:] = np.round(np.clip(VYP, -32768, 32767)).astype(np.int16)
-#        var.setncattr('missing_value',np.int16(NoDataValue))
-
-
-
-
-
-
-        varname='vp'
-        datatype=np.dtype('int16')
-        dimensions=('y','x')
-        FillValue=NoDataValue
-        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-        var.setncattr('standard_name','projected_velocity')
-        var.setncattr('description','velocity magnitude determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected v estimates are used')
-        var.setncattr('units','m/y')
-
-        var.setncattr('grid_mapping',mapping_name)
-
-        VP[noDataMask] = NoDataValue
-        var[:] = np.round(np.clip(VP, -32768, 32767)).astype(np.int16)
-#        var.setncattr('missing_value',np.int16(NoDataValue))
-
-
-
-
-
-        vp_error = v_error_cal(vxp_error, vyp_error)
-        varname='vp_error'
-        datatype=np.dtype('int16')
-        dimensions=('y','x')
-        FillValue=NoDataValue
-        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-        var.setncattr('standard_name','projected_velocity_error')
-        var.setncattr('description','velocity magnitude error determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected v_error estimates are used')
-        var.setncattr('units','m/y')
-
-        var.setncattr('grid_mapping',mapping_name)
-
-        VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
-        VP_error[VP==0] = vp_error
-        VP_error[noDataMask] = NoDataValue
-        var[:] = np.round(np.clip(VP_error, -32768, 32767)).astype(np.int16)
-#        var.setncattr('missing_value',np.int16(NoDataValue))
+#        varname='vxp'
+#        datatype=np.dtype('int16')
+#        dimensions=('y','x')
+#        FillValue=NoDataValue
+#        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+#
+#
+#        var.setncattr('standard_name','projected_x_velocity')
+#        var.setncattr('description','x-direction velocity determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected vx estimates are used')
+#        var.setncattr('units','m/y')
+#
+#
+#        if stable_count_p != 0:
+#            temp = VXP.copy() - VXref.copy()
+#            temp[np.logical_not(SSM)] = np.nan
+##            vxp_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
+#            vxp_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
+#        else:
+#            vxp_error_mask = np.nan
+#        if stable_count1_p != 0:
+#            temp = VXP.copy() - VXref.copy()
+#            temp[np.logical_not(SSM1)] = np.nan
+##            vxp_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
+#            vxp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
+#        else:
+#            vxp_error_slow = np.nan
+#        if stable_shift_applied_p == 1:
+#            vxp_error = vxp_error_mask
+#        elif stable_shift_applied_p == 2:
+#            vxp_error = vxp_error_slow
+#        else:
+#            vxp_error = vxp_error_mod
+#        var.setncattr('vxp_error',int(round(vxp_error*10))/10)
+#        var.setncattr('vxp_error_description','best estimate of projected_x_velocity error: vxp_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+#
+#
+#        if stable_shift_applied_p == 2:
+#            var.setncattr('stable_shift',int(round(vxp_mean_shift1*10))/10)
+#        elif stable_shift_applied_p == 1:
+#            var.setncattr('stable_shift',int(round(vxp_mean_shift*10))/10)
+#        else:
+#            var.setncattr('stable_shift',np.nan)
+#        var.setncattr('flag_stable_shift',stable_shift_applied_p)
+#        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+#
+#
+#        var.setncattr('stable_count_mask',stable_count_p)
+#        var.setncattr('stable_count_slow',stable_count1_p)
+#        if stable_count_p != 0:
+#            var.setncattr('stable_shift_mask',int(round(vxp_mean_shift*10))/10)
+#        else:
+#            var.setncattr('stable_shift_mask',np.nan)
+#        if stable_count1_p != 0:
+#            var.setncattr('stable_shift_slow',int(round(vxp_mean_shift1*10))/10)
+#        else:
+#            var.setncattr('stable_shift_slow',np.nan)
+#
+#        if stable_count_p != 0:
+#            var.setncattr('vxp_error_mask',int(round(vxp_error_mask*10))/10)
+#        else:
+#            var.setncattr('vxp_error_mask',np.nan)
+#        var.setncattr('vxp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+#        if stable_count1_p != 0:
+#            var.setncattr('vxp_error_slow',int(round(vxp_error_slow*10))/10)
+#        else:
+#            var.setncattr('vxp_error_slow',np.nan)
+#        var.setncattr('vxp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
+#        var.setncattr('vxp_error_modeled',int(round(vxp_error_mod*10))/10)
+#        var.setncattr('vxp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+#
+#
+#        var.setncattr('grid_mapping',mapping_name)
+#
+#        VXP[noDataMask] = NoDataValue
+#        var[:] = np.round(np.clip(VXP, -32768, 32767)).astype(np.int16)
+##        var.setncattr('missing_value',np.int16(NoDataValue))
+#
+#
+#
+#
+#
+#
+#        varname='vyp'
+#        datatype=np.dtype('int16')
+#        dimensions=('y','x')
+#        FillValue=NoDataValue
+#        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+#
+#
+#        var.setncattr('standard_name','projected_y_velocity')
+#        var.setncattr('description','y-direction velocity determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected vy estimates are used')
+#        var.setncattr('units','m/y')
+#
+#
+#        if stable_count_p != 0:
+#            temp = VYP.copy() - VYref.copy()
+#            temp[np.logical_not(SSM)] = np.nan
+##            vyp_error_mask = np.std(temp[(temp > -500)&(temp < 500)])
+#            vyp_error_mask = np.std(temp[np.logical_not(np.isnan(temp))])
+#        else:
+#            vyp_error_mask = np.nan
+#        if stable_count1_p != 0:
+#            temp = VYP.copy() - VYref.copy()
+#            temp[np.logical_not(SSM1)] = np.nan
+##            vyp_error_slow = np.std(temp[(temp > -500)&(temp < 500)])
+#            vyp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
+#        else:
+#            vyp_error_slow = np.nan
+#        if stable_shift_applied_p == 1:
+#            vyp_error = vyp_error_mask
+#        elif stable_shift_applied_p == 2:
+#            vyp_error = vyp_error_slow
+#        else:
+#            vyp_error = vyp_error_mod
+#        var.setncattr('vyp_error',int(round(vyp_error*10))/10)
+#        var.setncattr('vyp_error_description','best estimate of projected_y_velocity error: vyp_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+#
+#
+#        if stable_shift_applied_p == 2:
+#            var.setncattr('stable_shift',int(round(vyp_mean_shift1*10))/10)
+#        elif stable_shift_applied_p == 1:
+#            var.setncattr('stable_shift',int(round(vyp_mean_shift*10))/10)
+#        else:
+#            var.setncattr('stable_shift',np.nan)
+#        var.setncattr('flag_stable_shift',stable_shift_applied_p)
+#        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+#
+#
+#        var.setncattr('stable_count_mask',stable_count_p)
+#        var.setncattr('stable_count_slow',stable_count1_p)
+#        if stable_count_p != 0:
+#            var.setncattr('stable_shift_mask',int(round(vyp_mean_shift*10))/10)
+#        else:
+#            var.setncattr('stable_shift_mask',np.nan)
+#        if stable_count1_p != 0:
+#            var.setncattr('stable_shift_slow',int(round(vyp_mean_shift1*10))/10)
+#        else:
+#            var.setncattr('stable_shift_slow',np.nan)
+#
+#        if stable_count_p != 0:
+#            var.setncattr('vyp_error_mask',int(round(vyp_error_mask*10))/10)
+#        else:
+#            var.setncattr('vyp_error_mask',np.nan)
+#        var.setncattr('vyp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+#        if stable_count1_p != 0:
+#            var.setncattr('vyp_error_slow',int(round(vyp_error_slow*10))/10)
+#        else:
+#            var.setncattr('vyp_error_slow',np.nan)
+#        var.setncattr('vyp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
+#        var.setncattr('vyp_error_modeled',int(round(vyp_error_mod*10))/10)
+#        var.setncattr('vyp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+#
+#
+#        var.setncattr('grid_mapping',mapping_name)
+#
+#        VYP[noDataMask] = NoDataValue
+#        var[:] = np.round(np.clip(VYP, -32768, 32767)).astype(np.int16)
+##        var.setncattr('missing_value',np.int16(NoDataValue))
+#
+#
+#
+#
+#
+#
+#        varname='vp'
+#        datatype=np.dtype('int16')
+#        dimensions=('y','x')
+#        FillValue=NoDataValue
+#        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+#        var.setncattr('standard_name','projected_velocity')
+#        var.setncattr('description','velocity magnitude determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected v estimates are used')
+#        var.setncattr('units','m/y')
+#
+#        var.setncattr('grid_mapping',mapping_name)
+#
+#        VP[noDataMask] = NoDataValue
+#        var[:] = np.round(np.clip(VP, -32768, 32767)).astype(np.int16)
+##        var.setncattr('missing_value',np.int16(NoDataValue))
+#
+#
+#
+#
+#
+#        vp_error = v_error_cal(vxp_error, vyp_error)
+#        varname='vp_error'
+#        datatype=np.dtype('int16')
+#        dimensions=('y','x')
+#        FillValue=NoDataValue
+#        var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+#        var.setncattr('standard_name','projected_velocity_error')
+#        var.setncattr('description','velocity magnitude error determined by projecting radar range measurements onto an a priori flow vector. Where projected errors are larger than those determined from range and azimuth measurements, unprojected v_error estimates are used')
+#        var.setncattr('units','m/y')
+#
+#        var.setncattr('grid_mapping',mapping_name)
+#
+#        VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
+#        VP_error[VP==0] = vp_error
+#        VP_error[noDataMask] = NoDataValue
+#        var[:] = np.round(np.clip(VP_error, -32768, 32767)).astype(np.int16)
+##        var.setncattr('missing_value',np.int16(NoDataValue))
 
 
 

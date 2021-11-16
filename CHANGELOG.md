@@ -7,6 +7,15 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.4](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.3...v0.7.4)
+
+### Fixed
+* Updated the upgrade to autoRIFT `v1.4.0` to account for the autoRIFT source repo
+  having moved the `v1.4.0` tag  (between commits [`67e4996..b6700f9`](https://github.com/nasa-jpl/autoRIFT/compare/67e4996..b6700f9))
+  and changed the conda-forge package accordingly (new sha256 and bumped the build number).
+  * The autoRIFT workflow scripts are now based on the moved tag and any still
+    necessary fixes were applied as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ## [0.7.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.2...v0.7.3)
 
 ### Fixed
