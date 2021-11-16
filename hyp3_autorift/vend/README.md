@@ -16,7 +16,7 @@ These modules are required for the expected autoRIFT workflow:
 and are included in the [autoRIFT source code](https://github.com/nasa-jpl/autoRIFT),
 but not distributed as part of the package. 
 
-The version located in this directory correspond to release [`v1.4.0`](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.4.0).
+The version located in this directory corresponds to release [`v1.4.0`](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.4.0).
 Changes, as listed in `CHANGES.diff`, were done to: 
 * facilitate better packaging and distribution of these modules
 * correctly handle Sentinel-2 Level 1C products
