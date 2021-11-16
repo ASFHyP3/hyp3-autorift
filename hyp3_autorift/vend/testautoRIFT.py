@@ -492,6 +492,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         ds=None
 
 
+
     intermediate_nc_file = 'autoRIFT_intermediate.nc'
 
     if os.path.exists(intermediate_nc_file):
@@ -707,7 +708,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 #                stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
                 stable_count = np.sum(SSM & np.logical_not(np.isnan(DX)))
 
-                V_temp = np.sqrt(VX**2 + VY**2)
+                V_temp = np.sqrt(VXref**2 + VYref**2)
                 try:
                     V_temp_threshold = np.percentile(V_temp[np.logical_not(np.isnan(V_temp))],25)
                     SSM1 = (V_temp <= V_temp_threshold)
@@ -810,8 +811,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
 
                     from datetime import datetime, timedelta
-#                    d0 = date(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
-#                    d1 = date(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
+#                    d0 = datetime(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
+#                    d1 = datetime(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
                     d0 = datetime.strptime(master_dt,"%Y%m%dT%H:%M:%S.%f")
                     d1 = datetime.strptime(slave_dt,"%Y%m%dT%H:%M:%S.%f")
                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
@@ -855,7 +856,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     netcdf_file = no.netCDF_packaging(
                         VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY,
                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
-                        rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                        DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
                         dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
                         parameter_file=kwargs['parameter_file'],
@@ -889,12 +890,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 #
 #                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
 #                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
-                    master_time = ['00','00','00']
-                    slave_time = ['00','00','00']
-
-                    from datetime import time as time1
-                    master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                    slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
 
                     import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'optical'
@@ -925,8 +920,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     date_ct = d0 + (d1 - d0)/2
                     date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+                    master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                    slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
                     IMG_INFO_DICT = {
                         'mission_img1': master_split[0][0],
@@ -964,7 +959,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     netcdf_file = no.netCDF_packaging(
                         VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY,
                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
-                        XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                        None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
                         dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
                         parameter_file=kwargs['parameter_file'],
@@ -991,12 +986,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     slave_split = slave_id.split('_')
 
 
-                    master_time = ['00','00','00']
-                    slave_time = ['00','00','00']
-
-                    from datetime import time as time1
-                    master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                    slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+#                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
+#                    slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
 
                     import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'optical'
@@ -1022,11 +1013,11 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     if date_dt < 0:
                         raise Exception('Input image 1 must be older than input image 2')
 
-                    date_ct = d0 + (d1 - d0)/2
+                    date_ct = d0 + (d1 - d0) / 2
                     date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
-                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
-                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+                    master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                    slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
                     IMG_INFO_DICT = {
                         'mission_img1': master_split[0][-3],
@@ -1052,7 +1043,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     netcdf_file = no.netCDF_packaging(
                         VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY,
                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
-                        XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                        None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
                         dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
                         parameter_file=kwargs['parameter_file'],
