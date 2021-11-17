@@ -14,8 +14,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instead of `its-live-data.jpl.nasa.gov`
 * A patch was applied to the autoRIFT packaging script to always report the canonical
   parameter file URL, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
-* A patch was applied to the autoRIFT packaging script to fix some Sentinel-1 and
-  Sentinel-2 product metadata, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+* A patch was applied to fix some Sentinel-1 and  Sentinel-2 product metadata, as described
+  in the [vendored software README.md](hyp3_autorift/vend/README.md)
 
 ### Fixed
 * Updated the upgrade to autoRIFT `v1.4.0` to account for the autoRIFT source repo

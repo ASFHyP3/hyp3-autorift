@@ -35,5 +35,5 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
 2. The changes listed in `CHANGES-METADATA.diff` were applied to
    * correct `aquisition_img*` to `acquisition_date_img*` in the NETCDF metadata
      for Sentinel-1 products
-   * provide `sensor_img*=MSI`  in the NETCDF metadata for Sentinel-2 products;
+   * provide `sensor_img*=MSI` in the NETCDF metadata for Sentinel-2 products;
      these changes should be included in the next autoRIFT release.
