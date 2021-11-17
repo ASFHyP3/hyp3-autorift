@@ -11,7 +11,7 @@ import datetime
 import netCDF4
 
 import hyp3_autorift
-from hyp3_autorift.util import get_cononical_paramter_file
+from hyp3_autorift.util import get_canonical_parameter_file
 
 def v_error_cal(vx_error, vy_error):
     vx = np.random.normal(0, vx_error, 1000000)
@@ -428,7 +428,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('date_created',datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title',title)
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
-    nc_outfile.setncattr('autoRIFT_parameter_file', get_cononical_paramter_file(parameter_file))
+    nc_outfile.setncattr('autoRIFT_parameter_file', get_canonical_parameter_file(parameter_file))
     nc_outfile.setncattr('scene_pair_type',pair_type)
     nc_outfile.setncattr('motion_detection_method',detection_method)
     nc_outfile.setncattr('motion_coordinates',coordinates)
