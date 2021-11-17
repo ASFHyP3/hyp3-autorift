@@ -29,5 +29,11 @@ Changes, as listed in `CHANGES.diff`, were done to:
 We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`. 
 
 ## Additional Patches
+
 1. The changes listed in `CHANGES-PARAMETER-FILE.diff` were applied to always report
    the canonical URL for the parameter file instead of existing copies to support custom HyP3 deployments.
+2. The changes listed in `CHANGES-METADATA.diff` were applied to
+   * correct `aquisition_img*` to `acquisition_date_img*` in the NETCDF metadata
+     for Sentinel-1 products
+   * provide `sensor_img*=MSI`  in the NETCDF metadata for Sentinel-2 products
+   and these changes should be included in the next autoRIFT release.
