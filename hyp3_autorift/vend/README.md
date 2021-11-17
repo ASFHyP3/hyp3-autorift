@@ -27,3 +27,7 @@ Changes, as listed in `CHANGES.diff`, were done to:
 
 **Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
 We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`. 
+
+## Additional Patches
+1. The changes listed in `CHANGES-PARAMETER-FILE.diff` were applied to always report
+   the canonical URL for the parameter file instead of existing copies to support custom HyP3 deployments.

@@ -16,6 +16,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   * The autoRIFT workflow scripts are now based on the moved tag and any still
     necessary fixes were applied as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
 
+### Changed
+* A patch was appled to the autoRIFT packaging script to always report the canonical
+  parameter file URL, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ## [0.7.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.2...v0.7.3)
 
 ### Fixed
