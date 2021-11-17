@@ -34,7 +34,7 @@ S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
 
-DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
+DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 
