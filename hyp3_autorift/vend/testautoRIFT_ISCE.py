@@ -1025,11 +1025,13 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                     IMG_INFO_DICT = {
                         'mission_img1': master_split[0][-3],
+                        'sensor_img1': 'MSI',
                         'satellite_img1': master_split[0][-2:],
                         'correction_level_img1': master_split[4][:3],
                         'acquisition_date_img1': master_dt,
                         'time_standard_img1': 'UTC',
                         'mission_img2': slave_split[0][-3],
+                        'sensor_img2': 'MSI',
                         'satellite_img2': slave_split[0][-2:],
                         'correction_level_img2': slave_split[4][:3],
                         'acquisition_date_img2': slave_dt,
