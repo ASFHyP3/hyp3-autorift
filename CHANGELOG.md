@@ -9,6 +9,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.7.4](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.3...v0.7.4)
 
+### Changed
+* Default autoRIFT parameter file was updated to point at the new `its-live-data` AWS S3 bucket
+  instead of `its-live-data.jpl.nasa.gov`
+* A patch was applied to the autoRIFT packaging script to always report the canonical
+  parameter file URL, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ### Fixed
 * Updated the upgrade to autoRIFT `v1.4.0` to account for the autoRIFT source repo
   having moved the `v1.4.0` tag  (between commits [`67e4996..b6700f9`](https://github.com/nasa-jpl/autoRIFT/compare/67e4996..b6700f9))
