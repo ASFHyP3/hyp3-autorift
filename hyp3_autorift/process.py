@@ -261,7 +261,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=parameter_file.replace('/vsicurl/', ''),
+            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
 
     else:
@@ -278,7 +278,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
             reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=parameter_file.replace('/vsicurl/', ''),
+            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
 
     if netcdf_file is None:
