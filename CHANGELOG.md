@@ -12,8 +12,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * Default autoRIFT parameter file was updated to point at the new `its-live-data` AWS S3 bucket
   instead of `its-live-data.jpl.nasa.gov`
-* A patch was applied to the autoRIFT packaging script to always report the canonical
-  parameter file URL, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+* In the netCDF product, the default autoRIFT parameter file URL always be reported
+  instead of reporting copies used to support custom HyP3 deployments
 * A patch was applied to fix some Sentinel-1 and Sentinel-2 product metadata, as described
   in the [vendored software README.md](hyp3_autorift/vend/README.md)
 
