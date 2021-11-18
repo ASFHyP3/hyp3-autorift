@@ -44,18 +44,18 @@
      return Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask
  
  
--def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY, offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied, dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
+-def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY, offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref, DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type, detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied, dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
 -    
 -    
 +def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY,
 +                     offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
-+                     rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
++                     DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
 +                     detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 +                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector, parameter_file):
      vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
      temp = vx_mean_shift
      temp[np.logical_not(SSM)] = np.nan
-@@ -402,6 +379,29 @@
+@@ -414,6 +391,29 @@
  #    CHIPSIZEY = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype(np.uint16)
  #    INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
  
@@ -85,7 +85,7 @@
      
      tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
      
-@@ -414,35 +414,15 @@
+@@ -426,35 +426,15 @@
      nc_outfile.setncattr('Conventions','CF-1.6')
      nc_outfile.setncattr('date_created',datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
      nc_outfile.setncattr('title',title)
@@ -127,7 +127,7 @@
  
      varname='img_pair_info'
  #    datatype=np.dtype('S1')
-@@ -486,6 +466,8 @@
+@@ -498,6 +478,8 @@
  #    var.setncattr('autoRIFT_software_version',version)
  
      for key in IMG_INFO_DICT:
@@ -136,7 +136,7 @@
          var.setncattr(key,IMG_INFO_DICT[key])
  
      
-@@ -1417,7 +1399,7 @@
+@@ -1429,7 +1411,7 @@
      nc_outfile.sync() # flush data to disk
      nc_outfile.close()
  
@@ -164,15 +164,7 @@
  
      import numpy as np
      import time
-@@ -485,7 +486,6 @@
-         ds = gdal.Open(stable_surface_mask)
-         band = ds.GetRasterBand(1)
-         SSM = band.ReadAsArray()
--#        SSM = SSM * 0
-         SSM = SSM.astype('bool')
-         band=None
-         ds=None
-@@ -494,7 +494,7 @@
+@@ -494,7 +495,7 @@
      intermediate_nc_file = 'autoRIFT_intermediate.nc'
      
      if os.path.exists(intermediate_nc_file):
@@ -181,7 +173,7 @@
          Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
      else:
          Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
-@@ -502,10 +502,9 @@
+@@ -502,7 +503,7 @@
              noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
          )
          if nc_sensor is not None:
@@ -189,11 +181,8 @@
 +            import hyp3_autorift.vend.netcdf_output as no
              no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
  
--
-     if optical_flag == 0:
-         Dy = -Dy
  
-@@ -539,8 +538,8 @@
+@@ -539,8 +540,8 @@
      if SSM is not None:
          SSM[SEARCHLIMITX == 0] = False
  
@@ -204,7 +193,7 @@
  
      #####################  Uncomment for debug mode
  #    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'GridSpacingX':GridSpacingX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY,'origSize':origSize,'noDataMask':noDataMask})
-@@ -647,10 +645,9 @@
+@@ -647,7 +648,7 @@
                  
                  if nc_sensor == "S":
                      swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
@@ -212,11 +201,8 @@
 +                    import hyp3_autorift.vend.netcdf_output as no
                      DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
                  
--                
-                 if geogrid_run_info is None:
-                     vxrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[1]
-                     vyrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[2]
-@@ -786,17 +783,16 @@
+                 
+@@ -786,17 +787,16 @@
                          dt = geogrid_run_info['dt']
                          epsg = geogrid_run_info['epsg']
  
@@ -241,9 +227,9 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -831,7 +827,33 @@
-                         date_ct = d0 + (d1 - d0)/2
-                         date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+@@ -828,7 +828,33 @@
+                     date_ct = d0 + (d1 - d0)/2
+                     date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
 -                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':'C','satellite_img1':master_split[0][1:3],'acquisition_img1':master_dt,'time_standard_img1':'UTC','absolute_orbit_number_img1':master_split[7],'mission_data_take_ID_img1':master_split[8],'product_unique_ID_img1':master_split[9][0:4],'flight_direction_img1':flight_direction_m,'mission_img2':slave_split[0][0],'sensor_img2':'C','satellite_img2':slave_split[0][1:3],'acquisition_img2':slave_dt,'time_standard_img2':'UTC','absolute_orbit_number_img2':slave_split[7],'mission_data_take_ID_img2':slave_split[8],'product_unique_ID_img2':slave_split[9][0:4],'flight_direction_img2':flight_direction_s,'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
 +                    IMG_INFO_DICT = {
@@ -276,9 +262,9 @@
                      error_vector = np.array([[0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
                                               [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628]])
  
-@@ -840,7 +862,8 @@
+@@ -837,7 +863,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
-                         rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                         DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
@@ -286,16 +272,16 @@
                      )
  
                  elif nc_sensor == "L":
-@@ -878,7 +901,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+@@ -869,7 +896,7 @@
+ #                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
+ #                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
  
 -                    import netcdf_output as no
 +                    import hyp3_autorift.vend.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -889,7 +912,7 @@
+@@ -880,15 +907,15 @@
      #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
@@ -304,36 +290,19 @@
                                            f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      else:
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-@@ -893,26 +916,56 @@
-                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     else:
-                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-+
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
  
--                    from datetime import date
--                    d0 = date(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
--                    d1 = date(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
-+                    from datetime import datetime
+                     from datetime import datetime, timedelta
+-                    d0 = datetime(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
+-                    d1 = datetime(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
 +                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
 +                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                     date_dt_base = d1 - d0
-                     date_dt = np.float64(date_dt_base.days)
+                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                     date_dt = np.float64(date_dt_base)
                      if date_dt < 0:
-                         raise Exception('Input image 1 must be older than input image 2')
-                     if date_dt_base.days < 0:
-                         date_ct = d1 + (d0 - d1)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
-                     else:
-                         date_ct = d0 + (d1 - d0)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
- 
--                    master_dt = master_split[3][0:8] + master_time.strftime("T%H:%M:%S")
--                    slave_dt = slave_split[3][0:8] + slave_time.strftime("T%H:%M:%S")
-+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f')
-+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f')
+@@ -900,7 +927,36 @@
+                     master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                     slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
 -                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':master_split[0][1],'satellite_img1':np.float64(master_split[0][2:4]),'correction_level_img1':master_split[1],'path_img1':np.float64(master_split[2][0:3]),'row_img1':np.float64(master_split[2][3:6]),'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','processing_date_img1':master_split[4][0:8],'collection_number_img1':np.float64(master_split[5]),'collection_category_img1':master_split[6],'mission_img2':slave_split[0][0],'sensor_img2':slave_split[0][1],'satellite_img2':np.float64(slave_split[0][2:4]),'correction_level_img2':slave_split[1],'path_img2':np.float64(slave_split[2][0:3]),'row_img2':np.float64(slave_split[2][3:6]),'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','processing_date_img2':slave_split[4][0:8],'collection_number_img2':np.float64(slave_split[5]),'collection_category_img2':slave_split[6],'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
 +                    IMG_INFO_DICT = {
@@ -369,9 +338,9 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -921,7 +974,8 @@
+@@ -909,7 +965,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
-                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
@@ -379,53 +348,64 @@
                      )
  
                  elif nc_sensor == "S2":
-@@ -941,8 +995,8 @@
-                     master_path = indir_m
-                     slave_path = indir_s
+@@ -926,30 +983,17 @@
+                         YPixelSize = geogrid_run_info['YPixelSize']
+                         epsg = geogrid_run_info['epsg']
+ 
+-                    master_path = indir_m
+-                    slave_path = indir_s
++                    master_id = kwargs['reference_metadata']['id']
++                    slave_id = kwargs['secondary_metadata']['id']
  
 -                    master_split = master_path.split('_')
 -                    slave_split = slave_path.split('_')
-+                    master_split = kwargs['reference_metadata']['id'].split('_')
-+                    slave_split = kwargs['secondary_metadata']['id'].split('_')
++                    master_split = master_id.split('_')
++                    slave_split = slave_id.split('_')
+                     
+-                    import re
+-                    if re.findall("://",master_path).__len__() > 0:
+-                        master_filename_full = master_path.split('/')
+-                        for item in master_filename_full:
+-                            if re.findall("S2._",item).__len__() > 0:
+-                                master_filename = item
+-                        slave_filename_full = slave_path.split('/')
+-                        for item in slave_filename_full:
+-                            if re.findall("S2._",item).__len__() > 0:
+-                                slave_filename = item
+-                    else:
+-                        master_filename = os.path.basename(master_path)[:-8]
+-                        slave_filename = os.path.basename(slave_path)[:-8]
  
-                     master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
-                     slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
-@@ -954,7 +1008,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+ #                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
+ #                    slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
  
 -                    import netcdf_output as no
 +                    import hyp3_autorift.vend.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -970,24 +1024,41 @@
+@@ -959,15 +1003,15 @@
+                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
+                     PPP = roi_valid_percentage * 100
+                     if ncname is None:
+-                        out_nc_filename = f"./{master_filename}_X_{slave_filename}" \
++                        out_nc_filename = f"./{master_id}_X_{slave_id}" \
+                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     else:
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
  
--                    from datetime import date
--                    d0 = date(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
--                    d1 = date(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
-+                    from datetime import datetime
+                     from datetime import datetime, timedelta
+-                    d0 = datetime(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
+-                    d1 = datetime(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
 +                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
 +                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
-                     date_dt_base = d1 - d0
-                     date_dt = np.float64(date_dt_base.days)
+                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                     date_dt = np.float64(date_dt_base)
                      if date_dt < 0:
-                         raise Exception('Input image 1 must be older than input image 2')
-                     if date_dt_base.days < 0:
-                         date_ct = d1 + (d0 - d1)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
-                     else:
-                         date_ct = d0 + (d1 - d0)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
- 
--                    master_dt = master_split[2] + master_time.strftime("T%H:%M:%S")
--                    slave_dt = slave_split[2] + slave_time.strftime("T%H:%M:%S")
-+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S')
-+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S')
+@@ -979,7 +1023,24 @@
+                     master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                     slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
 -                    IMG_INFO_DICT = {'mission_img1':master_split[0][-3],'satellite_img1':master_split[0][-2:],'correction_level_img1':master_split[4][:3],'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','mission_img2':slave_split[0][-3],'satellite_img2':slave_split[0][-2:],'correction_level_img2':slave_split[4][:3],'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
 +                    IMG_INFO_DICT = {
@@ -449,9 +429,9 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -996,7 +1067,8 @@
+@@ -988,7 +1049,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
-                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
@@ -478,11 +458,7 @@
  
      import numpy as np
      import time
-@@ -491,11 +492,10 @@
-         ds=None
- 
- 
--
+@@ -495,7 +496,7 @@
      intermediate_nc_file = 'autoRIFT_intermediate.nc'
      
      if os.path.exists(intermediate_nc_file):
@@ -491,7 +467,7 @@
          Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
      else:
          Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
-@@ -503,7 +503,7 @@
+@@ -503,7 +504,7 @@
              noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
          )
          if nc_sensor is not None:
@@ -500,7 +476,7 @@
              no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
  
      if optical_flag == 0:
-@@ -539,8 +539,8 @@
+@@ -539,8 +540,8 @@
      if SSM is not None:
          SSM[SEARCHLIMITX == 0] = False
      
@@ -511,7 +487,7 @@
  
  #    #####################  Uncomment for debug mode
  #    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY})
-@@ -643,7 +643,7 @@
+@@ -643,7 +644,7 @@
                  
                  if nc_sensor == "S":
                      swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
@@ -520,7 +496,7 @@
                      DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
                  
                  if geogrid_run_info is None:
-@@ -781,17 +781,16 @@
+@@ -781,17 +782,16 @@
                          dt = geogrid_run_info['dt']
                          epsg = geogrid_run_info['epsg']
  
@@ -545,9 +521,9 @@
                      pair_type = 'radar'
                      detection_method = 'feature'
                      coordinates = 'radar'
-@@ -826,7 +825,33 @@
-                         date_ct = d0 + (d1 - d0)/2
-                         date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+@@ -823,7 +823,33 @@
+                     date_ct = d0 + (d1 - d0)/2
+                     date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
 -                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':'C','satellite_img1':master_split[0][1:3],'acquisition_img1':master_dt,'time_standard_img1':'UTC','absolute_orbit_number_img1':master_split[7],'mission_data_take_ID_img1':master_split[8],'product_unique_ID_img1':master_split[9][0:4],'flight_direction_img1':flight_direction_m,'mission_img2':slave_split[0][0],'sensor_img2':'C','satellite_img2':slave_split[0][1:3],'acquisition_img2':slave_dt,'time_standard_img2':'UTC','absolute_orbit_number_img2':slave_split[7],'mission_data_take_ID_img2':slave_split[8],'product_unique_ID_img2':slave_split[9][0:4],'flight_direction_img2':flight_direction_s,'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
 +                    IMG_INFO_DICT = {
@@ -580,9 +556,9 @@
                      error_vector = np.array([[0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
                                               [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628]])
  
-@@ -835,7 +860,8 @@
+@@ -832,7 +858,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, MM, VXref, VYref,
-                         rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
+                         DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
@@ -590,16 +566,16 @@
                      )
  
                  elif nc_sensor == "L":
-@@ -873,7 +899,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+@@ -864,7 +891,7 @@
+ #                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
+ #                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
  
 -                    import netcdf_output as no
 +                    import hyp3_autorift.vend.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -884,31 +910,60 @@
+@@ -875,7 +902,7 @@
      #                out_nc_filename = 'Jakobshavn_opt.nc'
                      PPP = roi_valid_percentage * 100
                      if ncname is None:
@@ -608,32 +584,20 @@
                                            f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      else:
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
- 
+@@ -883,8 +910,8 @@
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
  
--                    from datetime import date
--                    d0 = date(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
--                    d1 = date(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
-+                    from datetime import datetime
+                     from datetime import datetime, timedelta
+-                    d0 = datetime(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
+-                    d1 = datetime(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
 +                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
 +                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                     date_dt_base = d1 - d0
-                     date_dt = np.float64(date_dt_base.days)
+                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                     date_dt = np.float64(date_dt_base)
                      if date_dt < 0:
-                         raise Exception('Input image 1 must be older than input image 2')
-                     if date_dt_base.days < 0:
-                         date_ct = d1 + (d0 - d1)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
-                     else:
-                         date_ct = d0 + (d1 - d0)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
- 
--                    master_dt = master_split[3][0:8] + master_time.strftime("T%H:%M:%S")
--                    slave_dt = slave_split[3][0:8] + slave_time.strftime("T%H:%M:%S")
-+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S.%f')
-+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f')
+@@ -896,7 +923,36 @@
+                     master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                     slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
 -                    IMG_INFO_DICT = {'mission_img1':master_split[0][0],'sensor_img1':master_split[0][1],'satellite_img1':np.float64(master_split[0][2:4]),'correction_level_img1':master_split[1],'path_img1':np.float64(master_split[2][0:3]),'row_img1':np.float64(master_split[2][3:6]),'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','processing_date_img1':master_split[4][0:8],'collection_number_img1':np.float64(master_split[5]),'collection_category_img1':master_split[6],'mission_img2':slave_split[0][0],'sensor_img2':slave_split[0][1],'satellite_img2':np.float64(slave_split[0][2:4]),'correction_level_img2':slave_split[1],'path_img2':np.float64(slave_split[2][0:3]),'row_img2':np.float64(slave_split[2][3:6]),'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','processing_date_img2':slave_split[4][0:8],'collection_number_img2':np.float64(slave_split[5]),'collection_category_img2':slave_split[6],'date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
 +                    IMG_INFO_DICT = {
@@ -669,9 +633,9 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -917,7 +972,8 @@
+@@ -905,7 +961,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
-                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
@@ -679,53 +643,64 @@
                      )
  
                  elif nc_sensor == "S2":
-@@ -937,8 +993,8 @@
-                     master_path = indir_m
-                     slave_path = indir_s
+@@ -922,30 +979,17 @@
+                         YPixelSize = geogrid_run_info['YPixelSize']
+                         epsg = geogrid_run_info['epsg']
+ 
+-                    master_path = indir_m
+-                    slave_path = indir_s
++                    master_id = kwargs['reference_metadata']['id']
++                    slave_id = kwargs['secondary_metadata']['id']
  
 -                    master_split = master_path.split('_')
 -                    slave_split = slave_path.split('_')
-+                    master_split = kwargs['reference_metadata']['id'].split('_')
-+                    slave_split = kwargs['secondary_metadata']['id'].split('_')
++                    master_split = master_id.split('_')
++                    slave_split = slave_id.split('_')
+                     
+-                    import re
+-                    if re.findall("://",master_path).__len__() > 0:
+-                        master_filename_full = master_path.split('/')
+-                        for item in master_filename_full:
+-                            if re.findall("S2._",item).__len__() > 0:
+-                                master_filename = item
+-                        slave_filename_full = slave_path.split('/')
+-                        for item in slave_filename_full:
+-                            if re.findall("S2._",item).__len__() > 0:
+-                                slave_filename = item
+-                    else:
+-                        master_filename = os.path.basename(master_path)[:-8]
+-                        slave_filename = os.path.basename(slave_path)[:-8]
  
-                     master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
-                     slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
-@@ -950,7 +1006,7 @@
-                     master_time = time1(int(master_time[0]),int(master_time[1]),int(float(master_time[2])))
-                     slave_time = time1(int(slave_time[0]),int(slave_time[1]),int(float(slave_time[2])))
+ #                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
+ #                    slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
  
 -                    import netcdf_output as no
 +                    import hyp3_autorift.vend.netcdf_output as no
                      pair_type = 'optical'
                      detection_method = 'feature'
                      coordinates = 'map'
-@@ -966,24 +1022,41 @@
+@@ -955,15 +999,15 @@
+                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
+                     PPP = roi_valid_percentage * 100
+                     if ncname is None:
+-                        out_nc_filename = f"./{master_filename}_X_{slave_filename}" \
++                        out_nc_filename = f"./{master_id}_X_{slave_id}" \
+                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                     else:
                          out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                      CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
  
--                    from datetime import date
--                    d0 = date(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
--                    d1 = date(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
-+                    from datetime import datetime
+                     from datetime import datetime, timedelta
+-                    d0 = datetime(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
+-                    d1 = datetime(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
 +                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
 +                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
-                     date_dt_base = d1 - d0
-                     date_dt = np.float64(date_dt_base.days)
+                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                     date_dt = np.float64(date_dt_base)
                      if date_dt < 0:
-                         raise Exception('Input image 1 must be older than input image 2')
-                     if date_dt_base.days < 0:
-                         date_ct = d1 + (d0 - d1)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
-                     else:
-                         date_ct = d0 + (d1 - d0)/2
--                        date_center = date_ct.strftime("%Y%m%d")
-+                        date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
- 
--                    master_dt = master_split[2] + master_time.strftime("T%H:%M:%S")
--                    slave_dt = slave_split[2] + slave_time.strftime("T%H:%M:%S")
-+                    master_dt = d0.strftime('%Y%m%dT%H:%M:%S')
-+                    slave_dt = d1.strftime('%Y%m%dT%H:%M:%S')
+@@ -975,7 +1019,24 @@
+                     master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                     slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
  
 -                    IMG_INFO_DICT = {'mission_img1':master_split[0][-3],'satellite_img1':master_split[0][-2:],'correction_level_img1':master_split[4][:3],'acquisition_date_img1':master_dt,'time_standard_img1':'UTC','mission_img2':slave_split[0][-3],'satellite_img2':slave_split[0][-2:],'correction_level_img2':slave_split[4][:3],'acquisition_date_img2':slave_dt,'time_standard_img2':'UTC','date_dt':date_dt,'date_center':date_center,'latitude':cen_lat,'longitude':cen_lon,'roi_valid_percentage':PPP,'autoRIFT_software_version':version}
 +                    IMG_INFO_DICT = {
@@ -749,9 +724,9 @@
  
                      error_vector = np.array([25.5,25.5])
  
-@@ -992,7 +1065,8 @@
+@@ -984,7 +1045,8 @@
                          offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
-                         XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                          detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
 -                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
 +                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,

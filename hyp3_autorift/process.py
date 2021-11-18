@@ -34,7 +34,7 @@ S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
 
-DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.jpl.nasa.gov.s3.amazonaws.com/' \
+DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 
@@ -261,7 +261,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=parameter_file.replace('/vsicurl/', ''),
+            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
 
     else:
@@ -278,7 +278,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
             reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=parameter_file.replace('/vsicurl/', ''),
+            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
 
     if netcdf_file is None:
