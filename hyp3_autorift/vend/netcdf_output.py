@@ -655,7 +655,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift_slow',np.nan)
 
     if stable_count != 0:
-        var.setncattr('verror_mask',int(round(vx_error_mask*10))/10)
+        var.setncattr('error_mask',int(round(vx_error_mask*10))/10)
     else:
         var.setncattr('error_mask',np.nan)
     var.setncattr('error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
@@ -950,7 +950,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             var.setncattr('error_mask',int(round(va_error_mask*10))/10)
         else:
             var.setncattr('error_mask',np.nan)
-        var.setncattr('rror_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+        var.setncattr('error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
         if stable_count1 != 0:
             var.setncattr('error_slow',int(round(va_error_slow*10))/10)
         else:
