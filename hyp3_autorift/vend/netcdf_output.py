@@ -630,8 +630,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         vx_error = vx_error_slow
     else:
         vx_error = vx_error_mod
-    var.setncattr('vx_error',int(round(vx_error*10))/10)
-    var.setncattr('vx_error_description','best estimate of x_velocity error: vx_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
+    var.setncattr('error',int(round(vx_error*10))/10)
+    var.setncattr('error_description','best estimate of x_velocity error: vx_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
     if stable_shift_applied == 2:
         var.setncattr('stable_shift',int(round(vx_mean_shift1*10))/10)
@@ -655,17 +655,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift_slow',np.nan)
 
     if stable_count != 0:
-        var.setncattr('vx_error_mask',int(round(vx_error_mask*10))/10)
+        var.setncattr('verror_mask',int(round(vx_error_mask*10))/10)
     else:
-        var.setncattr('vx_error_mask',np.nan)
-    var.setncattr('vx_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+        var.setncattr('error_mask',np.nan)
+    var.setncattr('error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
     if stable_count1 != 0:
-        var.setncattr('vx_error_slow',int(round(vx_error_slow*10))/10)
+        var.setncattr('error_slow',int(round(vx_error_slow*10))/10)
     else:
-        var.setncattr('vx_error_slow',np.nan)
-    var.setncattr('vx_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-    var.setncattr('vx_error_modeled',int(round(vx_error_mod*10))/10)
-    var.setncattr('vx_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+        var.setncattr('error_slow',np.nan)
+    var.setncattr('error_slow_description','RMSE over slowest 25% of retrieved velocities')
+    var.setncattr('error_modeled',int(round(vx_error_mod*10))/10)
+    var.setncattr('error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
 
     var.setncattr('grid_mapping',mapping_name)
 
@@ -713,8 +713,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         vy_error = vy_error_slow
     else:
         vy_error = vy_error_mod
-    var.setncattr('vy_error',int(round(vy_error*10))/10)
-    var.setncattr('vy_error_description','best estimate of y_velocity error: vy_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
+    var.setncattr('error',int(round(vy_error*10))/10)
+    var.setncattr('error_description','best estimate of y_velocity error: vy_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
 
     if stable_shift_applied == 2:
@@ -739,17 +739,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift_slow',np.nan)
 
     if stable_count != 0:
-        var.setncattr('vy_error_mask',int(round(vy_error_mask*10))/10)
+        var.setncattr('error_mask',int(round(vy_error_mask*10))/10)
     else:
-        var.setncattr('vy_error_mask',np.nan)
-    var.setncattr('vy_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+        var.setncattr('error_mask',np.nan)
+    var.setncattr('error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
     if stable_count1 != 0:
-        var.setncattr('vy_error_slow',int(round(vy_error_slow*10))/10)
+        var.setncattr('error_slow',int(round(vy_error_slow*10))/10)
     else:
-        var.setncattr('vy_error_slow',np.nan)
-    var.setncattr('vy_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-    var.setncattr('vy_error_modeled',int(round(vy_error_mod*10))/10)
-    var.setncattr('vy_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+        var.setncattr('error_slow',np.nan)
+    var.setncattr('error_slow_description','RMSE over slowest 25% of retrieved velocities')
+    var.setncattr('error_modeled',int(round(vy_error_mod*10))/10)
+    var.setncattr('error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
 
 
     var.setncattr('grid_mapping',mapping_name)
@@ -841,8 +841,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             vr_error = vr_error_slow
         else:
             vr_error = vr_error_mod
-        var.setncattr('vr_error',int(round(vr_error*10))/10)
-        var.setncattr('vr_error_description','best estimate of range_velocity error: vr_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
+        var.setncattr('error',int(round(vr_error*10))/10)
+        var.setncattr('error_description','best estimate of range_velocity error: vr_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
 
         if stable_shift_applied == 2:
@@ -867,17 +867,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             var.setncattr('stable_shift_slow',np.nan)
 
         if stable_count != 0:
-            var.setncattr('vr_error_mask',int(round(vr_error_mask*10))/10)
+            var.setncattr('error_mask',int(round(vr_error_mask*10))/10)
         else:
-            var.setncattr('vr_error_mask',np.nan)
-        var.setncattr('vr_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+            var.setncattr('error_mask',np.nan)
+        var.setncattr('error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
         if stable_count1 != 0:
-            var.setncattr('vr_error_slow',int(round(vr_error_slow*10))/10)
+            var.setncattr('error_slow',int(round(vr_error_slow*10))/10)
         else:
-            var.setncattr('vr_error_slow',np.nan)
-        var.setncattr('vr_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-        var.setncattr('vr_error_modeled',int(round(vr_error_mod*10))/10)
-        var.setncattr('vr_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+            var.setncattr('error_slow',np.nan)
+        var.setncattr('error_slow_description','RMSE over slowest 25% of retrieved velocities')
+        var.setncattr('error_modeled',int(round(vr_error_mod*10))/10)
+        var.setncattr('error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
 
 
         var.setncattr('grid_mapping',mapping_name)
@@ -921,8 +921,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             va_error = va_error_slow
         else:
             va_error = va_error_mod
-        var.setncattr('va_error',int(round(va_error*10))/10)
-        var.setncattr('va_error_description','best estimate of azimuth_velocity error: va_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
+        var.setncattr('error',int(round(va_error*10))/10)
+        var.setncattr('error_description','best estimate of azimuth_velocity error: va_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
 
         if stable_shift_applied == 2:
@@ -947,17 +947,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             var.setncattr('stable_shift_slow',np.nan)
 
         if stable_count != 0:
-            var.setncattr('va_error_mask',int(round(va_error_mask*10))/10)
+            var.setncattr('error_mask',int(round(va_error_mask*10))/10)
         else:
-            var.setncattr('va_error_mask',np.nan)
-        var.setncattr('va_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+            var.setncattr('error_mask',np.nan)
+        var.setncattr('rror_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
         if stable_count1 != 0:
-            var.setncattr('va_error_slow',int(round(va_error_slow*10))/10)
+            var.setncattr('error_slow',int(round(va_error_slow*10))/10)
         else:
-            var.setncattr('va_error_slow',np.nan)
-        var.setncattr('va_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-        var.setncattr('va_error_modeled',int(round(va_error_mod*10))/10)
-        var.setncattr('va_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+            var.setncattr('error_slow',np.nan)
+        var.setncattr('error_slow_description','RMSE over slowest 25% of retrieved velocities')
+        var.setncattr('error_modeled',int(round(va_error_mod*10))/10)
+        var.setncattr('error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
 
 
         var.setncattr('grid_mapping',mapping_name)
@@ -1094,8 +1094,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #            vxp_error = vxp_error_slow
 #        else:
 #            vxp_error = vxp_error_mod
-#        var.setncattr('vxp_error',int(round(vxp_error*10))/10)
-#        var.setncattr('vxp_error_description','best estimate of projected_x_velocity error: vxp_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
+#        var.setncattr('error',int(round(vxp_error*10))/10)
+#        var.setncattr('error_description','best estimate of projected_x_velocity error: vxp_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 #
 #
 #        if stable_shift_applied_p == 2:
@@ -1120,17 +1120,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #            var.setncattr('stable_shift_slow',np.nan)
 #
 #        if stable_count_p != 0:
-#            var.setncattr('vxp_error_mask',int(round(vxp_error_mask*10))/10)
+#            var.setncattr('error_mask',int(round(vxp_error_mask*10))/10)
 #        else:
-#            var.setncattr('vxp_error_mask',np.nan)
+#            var.setncattr('error_mask',np.nan)
 #        var.setncattr('vxp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
 #        if stable_count1_p != 0:
-#            var.setncattr('vxp_error_slow',int(round(vxp_error_slow*10))/10)
+#            var.setncattr('error_slow',int(round(vxp_error_slow*10))/10)
 #        else:
-#            var.setncattr('vxp_error_slow',np.nan)
-#        var.setncattr('vxp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-#        var.setncattr('vxp_error_modeled',int(round(vxp_error_mod*10))/10)
-#        var.setncattr('vxp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+#            var.setncattr('error_slow',np.nan)
+#        var.setncattr('error_slow_description','RMSE over slowest 25% of retrieved velocities')
+#        var.setncattr('error_modeled',int(round(vxp_error_mod*10))/10)
+#        var.setncattr('error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
 #
 #
 #        var.setncattr('grid_mapping',mapping_name)
@@ -1176,8 +1176,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #            vyp_error = vyp_error_slow
 #        else:
 #            vyp_error = vyp_error_mod
-#        var.setncattr('vyp_error',int(round(vyp_error*10))/10)
-#        var.setncattr('vyp_error_description','best estimate of projected_y_velocity error: vyp_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
+#        var.setncattr('error',int(round(vyp_error*10))/10)
+#        var.setncattr('error_description','best estimate of projected_y_velocity error: vyp_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 #
 #
 #        if stable_shift_applied_p == 2:
@@ -1202,17 +1202,17 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #            var.setncattr('stable_shift_slow',np.nan)
 #
 #        if stable_count_p != 0:
-#            var.setncattr('vyp_error_mask',int(round(vyp_error_mask*10))/10)
+#            var.setncattr('error_mask',int(round(vyp_error_mask*10))/10)
 #        else:
-#            var.setncattr('vyp_error_mask',np.nan)
-#        var.setncattr('vyp_error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+#            var.setncattr('error_mask',np.nan)
+#        var.setncattr('error_mask_description','RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
 #        if stable_count1_p != 0:
-#            var.setncattr('vyp_error_slow',int(round(vyp_error_slow*10))/10)
+#            var.setncattr('error_slow',int(round(vyp_error_slow*10))/10)
 #        else:
-#            var.setncattr('vyp_error_slow',np.nan)
-#        var.setncattr('vyp_error_slow_description','RMSE over slowest 25% of retrieved velocities')
-#        var.setncattr('vyp_error_modeled',int(round(vyp_error_mod*10))/10)
-#        var.setncattr('vyp_error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
+#            var.setncattr('error_slow',np.nan)
+#        var.setncattr('error_slow_description','RMSE over slowest 25% of retrieved velocities')
+#        var.setncattr('error_modeled',int(round(vyp_error_mod*10))/10)
+#        var.setncattr('error_modeled_description','1-sigma error calculated using a modeled error-dt relationship')
 #
 #
 #        var.setncattr('grid_mapping',mapping_name)
