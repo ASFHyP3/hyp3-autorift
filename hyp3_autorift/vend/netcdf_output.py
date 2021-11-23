@@ -631,7 +631,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         vx_error = vx_error_mod
     var.setncattr('vx_error',int(round(vx_error*10))/10)
-    var.setncattr('vx_error_description','best estimate of x_velocity error: vx_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+    var.setncattr('vx_error_description','best estimate of x_velocity error: vx_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
     if stable_shift_applied == 2:
         var.setncattr('stable_shift',int(round(vx_mean_shift1*10))/10)
@@ -639,8 +639,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift',int(round(vx_mean_shift*10))/10)
     else:
         var.setncattr('stable_shift',np.nan)
-    var.setncattr('flag_stable_shift',stable_shift_applied)
-    var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+    var.setncattr('stable_shift_flag',stable_shift_applied)
+    var.setncattr('stable_shift_flag_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
 
 
     var.setncattr('stable_count_mask',stable_count)
@@ -714,7 +714,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         vy_error = vy_error_mod
     var.setncattr('vy_error',int(round(vy_error*10))/10)
-    var.setncattr('vy_error_description','best estimate of y_velocity error: vy_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+    var.setncattr('vy_error_description','best estimate of y_velocity error: vy_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
 
     if stable_shift_applied == 2:
@@ -723,8 +723,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift',int(round(vy_mean_shift*10))/10)
     else:
         var.setncattr('stable_shift',np.nan)
-    var.setncattr('flag_stable_shift',stable_shift_applied)
-    var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+    var.setncattr('stable_shift_flag',stable_shift_applied)
+    var.setncattr('stable_shift_flag_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
 
 
     var.setncattr('stable_count_mask',stable_count)
@@ -842,7 +842,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             vr_error = vr_error_mod
         var.setncattr('vr_error',int(round(vr_error*10))/10)
-        var.setncattr('vr_error_description','best estimate of range_velocity error: vr_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+        var.setncattr('vr_error_description','best estimate of range_velocity error: vr_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
 
         if stable_shift_applied == 2:
@@ -851,8 +851,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             var.setncattr('stable_shift',int(round(vr_mean_shift*10))/10)
         else:
             var.setncattr('stable_shift',np.nan)
-        var.setncattr('flag_stable_shift',stable_shift_applied)
-        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+        var.setncattr('stable_shift_flag',stable_shift_applied)
+        var.setncattr('stable_shift_flag_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
 
 
         var.setncattr('stable_count_mask',stable_count)
@@ -922,7 +922,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             va_error = va_error_mod
         var.setncattr('va_error',int(round(va_error*10))/10)
-        var.setncattr('va_error_description','best estimate of azimuth_velocity error: va_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+        var.setncattr('va_error_description','best estimate of azimuth_velocity error: va_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 
 
         if stable_shift_applied == 2:
@@ -931,8 +931,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             var.setncattr('stable_shift',int(round(va_mean_shift*10))/10)
         else:
             var.setncattr('stable_shift',np.nan)
-        var.setncattr('flag_stable_shift',stable_shift_applied)
-        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+        var.setncattr('stable_shift_flag',stable_shift_applied)
+        var.setncattr('stable_shift_flag_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
 
 
         var.setncattr('stable_count_mask',stable_count)
@@ -1095,7 +1095,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #        else:
 #            vxp_error = vxp_error_mod
 #        var.setncattr('vxp_error',int(round(vxp_error*10))/10)
-#        var.setncattr('vxp_error_description','best estimate of projected_x_velocity error: vxp_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+#        var.setncattr('vxp_error_description','best estimate of projected_x_velocity error: vxp_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 #
 #
 #        if stable_shift_applied_p == 2:
@@ -1104,8 +1104,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #            var.setncattr('stable_shift',int(round(vxp_mean_shift*10))/10)
 #        else:
 #            var.setncattr('stable_shift',np.nan)
-#        var.setncattr('flag_stable_shift',stable_shift_applied_p)
-#        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+#        var.setncattr('stable_shift_flag',stable_shift_applied_p)
+#        var.setncattr('stable_shift_flag_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
 #
 #
 #        var.setncattr('stable_count_mask',stable_count_p)
@@ -1177,7 +1177,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #        else:
 #            vyp_error = vyp_error_mod
 #        var.setncattr('vyp_error',int(round(vyp_error*10))/10)
-#        var.setncattr('vyp_error_description','best estimate of projected_y_velocity error: vyp_error is populated according to the approach used for the velocity bias correction as indicated in "flag_stable_shift"')
+#        var.setncattr('vyp_error_description','best estimate of projected_y_velocity error: vyp_error is populated according to the approach used for the velocity bias correction as indicated in "stable_shift_flag"')
 #
 #
 #        if stable_shift_applied_p == 2:
@@ -1186,8 +1186,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 #            var.setncattr('stable_shift',int(round(vyp_mean_shift*10))/10)
 #        else:
 #            var.setncattr('stable_shift',np.nan)
-#        var.setncattr('flag_stable_shift',stable_shift_applied_p)
-#        var.setncattr('flag_stable_shift_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
+#        var.setncattr('stable_shift_flag',stable_shift_applied_p)
+#        var.setncattr('stable_shift_flag_description','flag for applying velocity bias correction: 0 = no correction; 1 = correction from overlapping stable surface mask (stationary or slow-flowing surfaces with velocity < 15 m/yr)(top priority); 2 = correction from slowest 25% of overlapping velocities (second priority)')
 #
 #
 #        var.setncattr('stable_count_mask',stable_count_p)
