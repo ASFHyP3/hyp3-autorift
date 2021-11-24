@@ -35,3 +35,11 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
      for Sentinel-1 products
    * provide `sensor_img*=MSI` in the NETCDF metadata for Sentinel-2 products;
      these changes should be included in the next autoRIFT release.
+2. The changes listed in `CHANGES-METADATA-2.diff` were applied to
+   * alphabetize the sensor attributes for the `img_pair_info` variable 
+   * change the `flag_stable_shift*` netCDF attributes to `stable_shift_flag*` so
+     that they group with the other stable shift attributes
+   * change `*_error*` netCDF attributes to `error*` as the prefix is redundant
+     because these attributes are attached to the variable (e.g., `vx_error` is
+     an attribute of the `vx` variable).
+   These changes should be included in the next autoRIFT release.

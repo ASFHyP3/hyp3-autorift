@@ -7,6 +7,12 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.4](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.3...v0.7.4)
+
+### Changed
+* A patch was applied to clean up some netCDF variable attributes, as described
+  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ## [0.7.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.2...v0.7.3)
 
 ### Changed
