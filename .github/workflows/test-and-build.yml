@@ -62,7 +62,6 @@ jobs:
           password: ${{ secrets.TOOLS_BOT_PAK }}
 
       - name: Lowercase repo for Github Container Registry
-        if: github.ref == 'refs/heads/main'
         run: |
           echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
