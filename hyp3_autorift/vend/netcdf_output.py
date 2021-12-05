@@ -24,7 +24,7 @@ def netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, S
 
     nc_outfile = netCDF4.Dataset(filename, 'w', clobber=True, format='NETCDF4')
 
-    # First set global attributes that GDAL uses when it reads netCFDF files
+    # First set global attributes that GDAL uses when it reads netCDF files
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', 'autoRIFT intermediate results')
     nc_outfile.setncattr('author', 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech')
@@ -400,7 +400,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     # var.setncattr('scene_pair_type', pair_type)
     # var.setncattr('motion_detection_method', detection_method)
     # var.setncattr('motion_coordinates', coordinates)
-    # pdb.set_trace()
     var[:] = x
 
 
@@ -414,11 +413,10 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var[:] = y
 
 
-    var = nc_outfile.createVariable('mapping', 'U1', (), fill_value=None)
+    mapping_var_name = 'mapping'  # need to set this as an attribute for the image variables
+    var = nc_outfile.createVariable(mapping_var_name, 'U1', (), fill_value=None)
     if srs.GetAttrValue('PROJECTION') == 'Polar_Stereographic':
-        grid_mapping = 'polar_stereographic'  # need to set this as an attribute for the image variables
-        var.setncattr('grid_mapping_name', grid_mapping)
-
+        var.setncattr('grid_mapping_name', 'polar_stereographic')
         var.setncattr('straight_vertical_longitude_from_pole', srs.GetProjParm('central_meridian'))
         var.setncattr('false_easting', srs.GetProjParm('false_easting'))
         var.setncattr('false_northing', srs.GetProjParm('false_northing'))
@@ -435,9 +433,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))  # note this has pixel size in it - set  explicitly above
 
     elif srs.GetAttrValue('PROJECTION') == 'Transverse_Mercator':
-        grid_mapping = 'universal_transverse_mercator'  # need to set this as an attribute for the image variables
-        var.setncattr('grid_mapping_name', grid_mapping)
-
+        var.setncattr('grid_mapping_name', 'universal_transverse_mercator')
         zone = epsg - np.floor(epsg/100)*100
         var.setncattr('utm_zone_number', zone)
         var.setncattr('CoordinateTransformType', 'Projection')
@@ -467,7 +463,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         var.setncattr('description', 'velocity component in x direction')
     var.setncattr('units', 'm/y')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     if stable_count != 0:
         temp = VX.copy() - VXref.copy()
@@ -553,7 +549,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         var.setncattr('description', 'velocity component in y direction')
     var.setncattr('units', 'm/y')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     if stable_count != 0:
         temp = VY.copy() - VYref.copy()
@@ -639,7 +635,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         var.setncattr('description', 'velocity magnitude')
     var.setncattr('units', 'm/y')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     V[noDataMask] = NoDataValue
     var[:] = np.round(np.clip(V, -32768, 32767)).astype(np.int16)
@@ -654,7 +650,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     else:
         var.setncattr('description', 'velocity magnitude error')
     var.setncattr('units', 'm/y')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     v_error = v_error_cal(vx_error, vy_error)
     V_error = np.sqrt((vx_error * VX / V)**2 + (vy_error * VY / V)**2)
@@ -671,7 +667,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('standard_name', 'range_velocity')
         var.setncattr('description', 'velocity in radar range direction')
         var.setncattr('units', 'm/y')
-        var.setncattr('grid_mapping', grid_mapping)
+        var.setncattr('grid_mapping', mapping_var_name)
 
         if stable_count != 0:
             temp = VR.copy() - VRref.copy()
@@ -751,7 +747,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('standard_name', 'azimuth_velocity')
         var.setncattr('description', 'velocity in radar azimuth direction')
         var.setncattr('units', 'm/y')
-        var.setncattr('grid_mapping', grid_mapping)
+        var.setncattr('grid_mapping', mapping_var_name)
 
         if stable_count != 0:
             temp = VA.copy() - VAref.copy()
@@ -916,7 +912,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected vx estimates are used')
         # var.setncattr('units', 'm/y')
-        # var.setncattr('grid_mapping', grid_mapping)
+        # var.setncattr('grid_mapping', mapping_var_name)
         #
         # if stable_count_p != 0:
         #     temp = VXP.copy() - VXref.copy()
@@ -996,7 +992,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected vy estimates are used')
         # var.setncattr('units', 'm/y')
-        # var.setncattr('grid_mapping', grid_mapping)
+        # var.setncattr('grid_mapping', mapping_var_name)
         #
         # if stable_count_p != 0:
         #     temp = VYP.copy() - VYref.copy()
@@ -1076,7 +1072,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected v estimates are used')
         # var.setncattr('units', 'm/y')
-        # var.setncattr('grid_mapping', grid_mapping)
+        # var.setncattr('grid_mapping', mapping_var_name)
         #
         # VP[noDataMask] = NoDataValue
         # var[:] = np.round(np.clip(VP, -32768, 32767)).astype(np.int16)
@@ -1090,7 +1086,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected v_error estimates are used')
         # var.setncattr('units', 'm/y')
-        # var.setncattr('grid_mapping', grid_mapping)
+        # var.setncattr('grid_mapping', mapping_var_name)
         #
         # vp_error = v_error_cal(vxp_error, vyp_error)
         # VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
@@ -1106,7 +1102,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('description', 'conversion matrix element (1st row, 1st column) that can be multiplied with vx '
                                      'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
         var.setncattr('units', 'pixel/(m/y)')
-        var.setncattr('grid_mapping', grid_mapping)
+        var.setncattr('grid_mapping', mapping_var_name)
         var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
         var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
                                                      'pixel displacement dr to slant range velocity vr')
@@ -1137,7 +1133,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('description', 'conversion matrix element (1st row, 2nd column) that can be multiplied with vy '
                                      'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
         var.setncattr('units', 'pixel/(m/y)')
-        var.setncattr('grid_mapping', grid_mapping)
+        var.setncattr('grid_mapping', mapping_var_name)
 
         var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
         var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
@@ -1168,7 +1164,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name', 'chip_size_width')
     var.setncattr('description', 'width of search template (chip)')
     var.setncattr('units', 'm')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     if pair_type is 'radar':
         var.setncattr('range_pixel_size', rangePixelSize)
@@ -1187,7 +1183,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name', 'chip_size_height')
     var.setncattr('description', 'height of search template (chip)')
     var.setncattr('units', 'm')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     if pair_type is 'radar':
         var.setncattr('azimuth_pixel_size', azimuthPixelSize)
@@ -1206,7 +1202,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name', 'interpolated_value_mask')
     var.setncattr('description', 'light interpolation mask')
     var.setncattr('units', 'binary')
-    var.setncattr('grid_mapping', grid_mapping)
+    var.setncattr('grid_mapping', mapping_var_name)
 
     # var[:] = np.flipud(vx_nomask).astype('float32')
     var[:] = np.round(np.clip(INTERPMASK, 0, 255)).astype('uint8')
