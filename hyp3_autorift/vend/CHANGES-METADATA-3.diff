@@ -36,22 +36,23 @@
 -    title = 'autoRIFT intermediate results'
 -    author = 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech'
 -    institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
-+def netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX,
-+                                  SearchLimitY, origSize, noDataMask, filename='./autoRIFT_intermediate.nc'):
-
+-
 -
 -    clobber = True     # overwrite existing output nc file
 -
 -    nc_outfile = netCDF4.Dataset(filename,'w',clobber=clobber,format='NETCDF4')
-+    nc_outfile = netCDF4.Dataset(filename, 'w', clobber=True, format='NETCDF4')
-
-     # First set global attributes that GDAL uses when it reads netCFDF files
+-
+-    # First set global attributes that GDAL uses when it reads netCFDF files
 -    nc_outfile.setncattr('date_created',datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
 -    nc_outfile.setncattr('title',title)
 -    nc_outfile.setncattr('author',author)
 -    nc_outfile.setncattr('institution',institution)
--
--
++def netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX,
++                                  SearchLimitY, origSize, noDataMask, filename='./autoRIFT_intermediate.nc'):
+
++    nc_outfile = netCDF4.Dataset(filename, 'w', clobber=True, format='NETCDF4')
+
++    # First set global attributes that GDAL uses when it reads netCDF files
 +    nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
 +    nc_outfile.setncattr('title', 'autoRIFT intermediate results')
 +    nc_outfile.setncattr('author', 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech')
@@ -491,7 +492,7 @@
 
      source = f'NASA MEaSUREs ITS_LIVE project. Processed by ASF DAAC HyP3 {datetime.datetime.now().year} using the ' \
               f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
-@@ -419,204 +357,129 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -419,204 +357,125 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
      clobber = True     # overwrite existing output nc file
 
@@ -609,7 +610,6 @@
 +    # var.setncattr('scene_pair_type', pair_type)
 +    # var.setncattr('motion_detection_method', detection_method)
 +    # var.setncattr('motion_coordinates', coordinates)
-+    # pdb.set_trace()
      var[:] = x
 
 -    varname='y'
@@ -665,6 +665,9 @@
 -        datatype='U1'
 -        dimensions=()
 -        FillValue=None
+-
+-        var = nc_outfile.createVariable(mapping_name,datatype,dimensions, fill_value=FillValue)
+-        # variable made, now add attributes
 +    var = nc_outfile.createVariable('y', np.dtype('float64'), 'y', fill_value=None)
 +    var.setncattr('standard_name', 'projection_y_coordinate')
 +    var.setncattr('description', 'y coordinate of projection')
@@ -674,14 +677,12 @@
 +    # var.setncattr('motion_coordinates', coordinates)
 +    var[:] = y
 
--        var = nc_outfile.createVariable(mapping_name,datatype,dimensions, fill_value=FillValue)
--        # variable made, now add attributes
 
-+    var = nc_outfile.createVariable('mapping', 'U1', (), fill_value=None)
+-        var.setncattr('grid_mapping_name',grid_mapping)
++    mapping_var_name = 'mapping'  # need to set this as an attribute for the image variables
++    var = nc_outfile.createVariable(mapping_var_name, 'U1', (), fill_value=None)
 +    if srs.GetAttrValue('PROJECTION') == 'Polar_Stereographic':
-+        grid_mapping = 'polar_stereographic'  # need to set this as an attribute for the image variables
-+        var.setncattr('grid_mapping_name', grid_mapping)
-+
++        var.setncattr('grid_mapping_name', 'polar_stereographic')
 +        var.setncattr('straight_vertical_longitude_from_pole', srs.GetProjParm('central_meridian'))
 +        var.setncattr('false_easting', srs.GetProjParm('false_easting'))
 +        var.setncattr('false_northing', srs.GetProjParm('false_northing'))
@@ -698,10 +699,7 @@
 +        var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))  # note this has pixel size in it - set  explicitly above
 +
 +    elif srs.GetAttrValue('PROJECTION') == 'Transverse_Mercator':
-+        grid_mapping = 'universal_transverse_mercator'  # need to set this as an attribute for the image variables
-+        var.setncattr('grid_mapping_name', grid_mapping)
-
--        var.setncattr('grid_mapping_name',grid_mapping)
++        var.setncattr('grid_mapping_name', 'universal_transverse_mercator')
          zone = epsg - np.floor(epsg/100)*100
 -        var.setncattr('utm_zone_number',zone)
 -        var.setncattr('CoordinateTransformType','Projection')
@@ -758,7 +756,7 @@
 -
 +        var.setncattr('description', 'velocity component in x direction')
 +    var.setncattr('units', 'm/y')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
      if stable_count != 0:
          temp = VX.copy() - VXref.copy()
@@ -776,7 +774,7 @@
          vx_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
      else:
          vx_error_slow = np.nan
-@@ -630,76 +493,79 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -630,76 +489,79 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
          vx_error = vx_error_slow
      else:
          vx_error = vx_error_mod
@@ -814,7 +812,8 @@
      if stable_count1 != 0:
 -        var.setncattr('stable_shift_slow',int(round(vx_mean_shift1*10))/10)
 +        var.setncattr('error_slow', int(round(vx_error_slow*10))/10)
-+    else:
+     else:
+-        var.setncattr('stable_shift_slow',np.nan)
 +        var.setncattr('error_slow', np.nan)
 +    var.setncattr('error_slow_description', 'RMSE over slowest 25% of retrieved velocities')
 +
@@ -822,8 +821,7 @@
 +        var.setncattr('stable_shift', int(round(vx_mean_shift1*10))/10)
 +    elif stable_shift_applied == 1:
 +        var.setncattr('stable_shift', int(round(vx_mean_shift*10))/10)
-     else:
--        var.setncattr('stable_shift_slow',np.nan)
++    else:
 +        var.setncattr('stable_shift', np.nan)
 +    var.setncattr('stable_shift_flag', stable_shift_applied)
 +    var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
@@ -857,16 +855,16 @@
      VX[noDataMask] = NoDataValue
      var[:] = np.round(np.clip(VX, -32768, 32767)).astype(np.int16)
 -#    var.setncattr('_FillValue',np.int16(FillValue))
+-
+-
 +    # var.setncattr('_FillValue', np.int16(FillValue))
 
-
--
 -    varname='vy'
 -    datatype=np.dtype('int16')
 -    dimensions=('y','x')
 -    FillValue=NoDataValue
 -    var = nc_outfile.createVariable(varname,datatype,dimensions, fill_value=FillValue, zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
--
+
 -    var.setncattr('standard_name','y_velocity')
 +    var = nc_outfile.createVariable('vy', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
 +                                    zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
@@ -880,7 +878,7 @@
 -
 +        var.setncattr('description', 'velocity component in y direction')
 +    var.setncattr('units', 'm/y')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
      if stable_count != 0:
          temp = VY.copy() - VYref.copy()
@@ -898,7 +896,7 @@
          vy_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
      else:
          vy_error_slow = np.nan
-@@ -713,124 +579,111 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -713,124 +575,111 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
          vy_error = vy_error_slow
      else:
          vy_error = vy_error_mod
@@ -908,7 +906,7 @@
 +    var.setncattr('error_description', 'best estimate of y_velocity error: vy_error is populated according '
 +                                       'to the approach used for the velocity bias correction as indicated '
 +                                       'in "stable_shift_flag"')
-
++
 +    if stable_count != 0:
 +        var.setncattr('error_mask', int(round(vy_error_mask*10))/10)
 +    else:
@@ -918,7 +916,7 @@
 +
 +    var.setncattr('error_modeled', int(round(vy_error_mod * 10)) / 10)
 +    var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
-+
+
 +    if stable_count1 != 0:
 +        var.setncattr('error_slow', int(round(vy_error_slow * 10)) / 10)
 +    else:
@@ -948,12 +946,12 @@
 -    var.setncattr('stable_count_slow',stable_count1)
      if stable_count != 0:
 -        var.setncattr('stable_shift_mask',int(round(vy_mean_shift*10))/10)
-+        var.setncattr('stable_shift_mask', int(round(vy_mean_shift*10))/10)
-     else:
+-    else:
 -        var.setncattr('stable_shift_mask',np.nan)
 -    if stable_count1 != 0:
 -        var.setncattr('stable_shift_slow',int(round(vy_mean_shift1*10))/10)
--    else:
++        var.setncattr('stable_shift_mask', int(round(vy_mean_shift*10))/10)
+     else:
 -        var.setncattr('stable_shift_slow',np.nan)
 +        var.setncattr('stable_shift_mask', np.nan)
 +    var.setncattr('stable_count_mask', stable_count)
@@ -981,10 +979,10 @@
      var[:] = np.round(np.clip(VY, -32768, 32767)).astype(np.int16)
 -#    var.setncattr('missing_value',np.int16(NoDataValue))
 -
--
 +    # var.setncattr('missing_value', np.int16(NoDataValue))
 
 
+-
 -    varname='v'
 -    datatype=np.dtype('int16')
 -    dimensions=('y','x')
@@ -1004,15 +1002,15 @@
 -    var.setncattr('grid_mapping',mapping_name)
 +        var.setncattr('description', 'velocity magnitude')
 +    var.setncattr('units', 'm/y')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
      V[noDataMask] = NoDataValue
      var[:] = np.round(np.clip(V, -32768, 32767)).astype(np.int16)
 -#    var.setncattr('missing_value',np.int16(NoDataValue))
--
 +    # var.setncattr('missing_value',np.int16(NoDataValue))
 
 
+-
 -
 -    v_error = v_error_cal(vx_error, vy_error)
 -    varname='v_error'
@@ -1034,7 +1032,7 @@
 -    var.setncattr('grid_mapping',mapping_name)
 +        var.setncattr('description', 'velocity magnitude error')
 +    var.setncattr('units', 'm/y')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
 +    v_error = v_error_cal(vx_error, vy_error)
      V_error = np.sqrt((vx_error * VX / V)**2 + (vy_error * VY / V)**2)
@@ -1065,7 +1063,7 @@
 +        var.setncattr('standard_name', 'range_velocity')
 +        var.setncattr('description', 'velocity in radar range direction')
 +        var.setncattr('units', 'm/y')
-+        var.setncattr('grid_mapping', grid_mapping)
++        var.setncattr('grid_mapping', mapping_var_name)
 
          if stable_count != 0:
              temp = VR.copy() - VRref.copy()
@@ -1083,7 +1081,7 @@
              vr_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
          else:
              vr_error_slow = np.nan
-@@ -841,76 +694,76 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -841,76 +690,76 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
              vr_error = vr_error_slow
          else:
              vr_error = vr_error_mod
@@ -1185,7 +1183,7 @@
 +        var.setncattr('standard_name', 'azimuth_velocity')
 +        var.setncattr('description', 'velocity in radar azimuth direction')
 +        var.setncattr('units', 'm/y')
-+        var.setncattr('grid_mapping', grid_mapping)
++        var.setncattr('grid_mapping', mapping_var_name)
 
          if stable_count != 0:
              temp = VA.copy() - VAref.copy()
@@ -1203,7 +1201,7 @@
              va_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
          else:
              va_error_slow = np.nan
-@@ -921,75 +774,76 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -921,75 +770,76 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
              va_error = va_error_slow
          else:
              va_error = va_error_mod
@@ -1317,7 +1315,7 @@
              vyp_error_slow = np.std(temp[np.logical_not(np.isnan(temp))])
          vxp_error_mod = (error_vector[0][4]*IMG_INFO_DICT['date_dt']+error_vector[1][4])/IMG_INFO_DICT['date_dt']*365
          vyp_error_mod = (error_vector[0][5]*IMG_INFO_DICT['date_dt']+error_vector[1][5])/IMG_INFO_DICT['date_dt']*365
-@@ -1006,14 +860,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -1006,14 +856,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
          VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
 
@@ -1332,7 +1330,7 @@
          stable_count_p = np.sum(SSM & np.logical_not(np.isnan(VXP)))
          stable_count1_p = np.sum(SSM1 & np.logical_not(np.isnan(VXP)))
 
-@@ -1025,26 +877,26 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -1025,26 +873,26 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
          if stable_count_p != 0:
              temp = VXP.copy() - VX.copy()
              temp[np.logical_not(SSM)] = np.nan
@@ -1363,7 +1361,7 @@
              bias_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
              vyp_mean_shift1 = vy_mean_shift1 + bias_mean_shift1 / 1
 
-@@ -1057,213 +909,207 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -1057,213 +905,207 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
              stable_shift_applied_p = 1
 
 
@@ -1581,7 +1579,7 @@
 +        #                              'onto an a priori flow vector. Where projected errors are larger than those '
 +        #                              'determined from range and azimuth measurements, unprojected vx estimates are used')
 +        # var.setncattr('units', 'm/y')
-+        # var.setncattr('grid_mapping', grid_mapping)
++        # var.setncattr('grid_mapping', mapping_var_name)
 +        #
 +        # if stable_count_p != 0:
 +        #     temp = VXP.copy() - VXref.copy()
@@ -1661,7 +1659,7 @@
 +        #                              'onto an a priori flow vector. Where projected errors are larger than those '
 +        #                              'determined from range and azimuth measurements, unprojected vy estimates are used')
 +        # var.setncattr('units', 'm/y')
-+        # var.setncattr('grid_mapping', grid_mapping)
++        # var.setncattr('grid_mapping', mapping_var_name)
 +        #
 +        # if stable_count_p != 0:
 +        #     temp = VYP.copy() - VYref.copy()
@@ -1741,7 +1739,7 @@
 +        #                              'onto an a priori flow vector. Where projected errors are larger than those '
 +        #                              'determined from range and azimuth measurements, unprojected v estimates are used')
 +        # var.setncattr('units', 'm/y')
-+        # var.setncattr('grid_mapping', grid_mapping)
++        # var.setncattr('grid_mapping', mapping_var_name)
 +        #
 +        # VP[noDataMask] = NoDataValue
 +        # var[:] = np.round(np.clip(VP, -32768, 32767)).astype(np.int16)
@@ -1755,7 +1753,7 @@
 +        #                              'onto an a priori flow vector. Where projected errors are larger than those '
 +        #                              'determined from range and azimuth measurements, unprojected v_error estimates are used')
 +        # var.setncattr('units', 'm/y')
-+        # var.setncattr('grid_mapping', grid_mapping)
++        # var.setncattr('grid_mapping', mapping_var_name)
 +        #
 +        # vp_error = v_error_cal(vxp_error, vyp_error)
 +        # VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
@@ -1771,14 +1769,14 @@
 +        var.setncattr('description', 'conversion matrix element (1st row, 1st column) that can be multiplied with vx '
 +                                     'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
 +        var.setncattr('units', 'pixel/(m/y)')
-+        var.setncattr('grid_mapping', grid_mapping)
++        var.setncattr('grid_mapping', mapping_var_name)
 +        var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
 +        var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
 +                                                     'pixel displacement dr to slant range velocity vr')
 
          M11 = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1)
 
-@@ -1273,32 +1119,29 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -1273,32 +1115,29 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
          y2 = 50
 
          C = [(y2-y1)/(x2-x1), y1-x1*(y2-y1)/(x2-x1)]
@@ -1821,7 +1819,7 @@
 +        var.setncattr('description', 'conversion matrix element (1st row, 2nd column) that can be multiplied with vy '
 +                                     'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
 +        var.setncattr('units', 'pixel/(m/y)')
-+        var.setncattr('grid_mapping', grid_mapping)
++        var.setncattr('grid_mapping', mapping_var_name)
 
 +        var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
 +        var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
@@ -1829,7 +1827,7 @@
 
          M12 = -offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1)
 
-@@ -1307,133 +1150,87 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+@@ -1307,133 +1146,87 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
          y1 = -50
          y2 = 50
 
@@ -1886,7 +1884,7 @@
 +    var.setncattr('standard_name', 'chip_size_width')
 +    var.setncattr('description', 'width of search template (chip)')
 +    var.setncattr('units', 'm')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
      if pair_type is 'radar':
 -        var.setncattr('range_pixel_size',rangePixelSize)
@@ -1923,7 +1921,7 @@
 +    var.setncattr('standard_name', 'chip_size_height')
 +    var.setncattr('description', 'height of search template (chip)')
 +    var.setncattr('units', 'm')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
      if pair_type is 'radar':
 -        var.setncattr('azimuth_pixel_size',azimuthPixelSize)
@@ -1964,7 +1962,7 @@
 +    var.setncattr('standard_name', 'interpolated_value_mask')
 +    var.setncattr('description', 'light interpolation mask')
 +    var.setncattr('units', 'binary')
-+    var.setncattr('grid_mapping', grid_mapping)
++    var.setncattr('grid_mapping', mapping_var_name)
 
      # var[:] = np.flipud(vx_nomask).astype('float32')
      var[:] = np.round(np.clip(INTERPMASK, 0, 255)).astype('uint8')
@@ -2006,7 +2004,7 @@
 
      rngind1 = rngind1.astype(np.float32)
      azmind1 = azmind1.astype(np.float32)
-@@ -1441,55 +1238,53 @@ def rotate_vel2radar(rngind, azmind, vel_x, vel_y, swath_border, swath_border_fu
+@@ -1441,55 +1234,53 @@ def rotate_vel2radar(rngind, azmind, vel_x, vel_y, swath_border, swath_border_fu
      output_vel_x = np.zeros(rngind1.shape)*np.nan
      output_vel_y = np.zeros(rngind1.shape)*np.nan
 
@@ -2084,7 +2082,7 @@
 
      output_vel_x1[np.isnan(vel_x)] = np.nan
      output_vel_y1[np.isnan(vel_y)] = np.nan
-@@ -1498,10 +1293,9 @@ def rotate_vel2radar(rngind, azmind, vel_x, vel_y, swath_border, swath_border_fu
+@@ -1498,10 +1289,9 @@ def rotate_vel2radar(rngind, azmind, vel_x, vel_y, swath_border, swath_border_fu
 
 
  def loadProduct(xmlname):
@@ -2098,7 +2096,7 @@
      from iscesys.Component.ProductManager import ProductManager as PM
 
      pm = PM()
-@@ -1512,16 +1306,14 @@ def loadProduct(xmlname):
+@@ -1512,16 +1302,14 @@ def loadProduct(xmlname):
      return obj
 
 
@@ -2119,7 +2117,7 @@
          inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
          if os.path.exists(inxml):
              ifg = loadProduct(inxml)
-@@ -1530,16 +1322,8 @@ def loadMetadata(indir):
+@@ -1530,16 +1318,8 @@ def loadMetadata(indir):
      return frames, flight_direction
 
 
@@ -2138,7 +2136,7 @@
 
      frames, flight_direction = loadMetadata(os.path.dirname(indir_m)[:-6]+'fine_coreg')
      frames_s, flight_direction_s = loadMetadata(os.path.dirname(indir_m)[:-6]+'secondary')
-@@ -1571,30 +1355,28 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
+@@ -1571,30 +1351,28 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
      flag21 = 0
      flag32 = 0
 
@@ -2178,7 +2176,7 @@
          output.append(output_ref[0])
          output.append(output_ref[1])
          flag21 = 1
-@@ -1602,23 +1384,20 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
+@@ -1602,23 +1380,20 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
          output.append(output_ref[0])
          output.append(output_ref[1])
 
@@ -2210,7 +2208,7 @@
          output.append(output_ref[2])
          output.append(output_ref[3])
          flag32 = 1
-@@ -1626,52 +1405,23 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
+@@ -1626,52 +1401,23 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata, tran,
          output.append(output_ref[2])
          output.append(output_ref[3])
 
