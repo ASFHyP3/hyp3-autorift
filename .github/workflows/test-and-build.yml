@@ -11,82 +11,21 @@ on:
       - develop
 
 jobs:
-  pytest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
+  call-pytest-workflow:
+    uses: ASFHyP3/actions/.github/workflows/reusable-pytest.yml@reusable-plugins
+    with:
+      local_package_name: hyp3_autorift
+      conda_env_name: hyp3-autorift
 
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          mamba-version: "*"
-          python-version: 3.9
-          activate-environment: hyp3-autorift
-          environment-file: environment.yml
+  call-version-info-workflow:
+    uses: ASFHyP3/actions/.github/workflows/reusable-version-info.yml@reusable-plugins
+    with:
+      conda_env_name: hyp3-autorift
 
-      - name: Pytest in conda environment
-        shell: bash -l {0}
-        run: |
-          python -m pip install .[develop]
-          pytest --cov=hyp3_autorift
-
-  dockerize:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          mamba-version: "*"
-          python-version: 3.9
-          activate-environment: hyp3-autorift
-          environment-file: environment.yml
-
-      - name: set environment variables
-        shell: bash -l {0}
-        run: |
-          git fetch origin +refs/tags/*:refs/tags/*
-          export SDIST_VERSION=$(python setup.py --version)
-          echo "SDIST_VERSION=${SDIST_VERSION/+/_}" >> $GITHUB_ENV
-          echo "CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: tools-bot
-          password: ${{ secrets.TOOLS_BOT_PAK }}
-
-      - name: Lowercase repo for Github Container Registry
-        run: |
-          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
-
-      - name: Build, tag, and push image to GitHub Container Registry
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
-          labels: |
-            org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
-            org.opencontainers.image.version=${{ env.SDIST_VERSION }}
-            org.opencontainers.image.revision=${{ github.sha }}
-
-      - name: Add test tag
-        if: github.ref == 'refs/heads/develop'
-        uses: akhilerm/tag-push-action@v1.0.0
-        with:
-          src: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
-          dst: ghcr.io/${{ env.REPO }}:test
-
-      - name: Add latest tag
-        if: github.ref == 'refs/heads/main'
-        uses: akhilerm/tag-push-action@v1.0.0
-        with:
-          src: ghcr.io/${{ env.REPO }}:${{ env.SDIST_VERSION }}
-          dst: ghcr.io/${{ env.REPO }}:latest
+  call-docker-ghcr-workflow:
+    needs: call-version-info-workflow
+    uses: ASFHyP3/actions/.github/workflows/reusable-docker-ghcr.yml@reusable-plugins
+    with:
+      version_tag: ${{ needs.call-version-info-workflow.outputs.version_tag }}
+    secrets:
+      USER_TOKEN: ${{ secrets.TOOLS_BOT_PAK }}
