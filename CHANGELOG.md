@@ -7,6 +7,12 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.5](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.4...v0.7.5)
+
+### Security
+* It is now possible to inject Earthdata username and password using environment variables: `EARTHDATA_USERNAME`
+  and `EARTHDATA_PASSWORD`.
+
 ## [0.7.4](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.3...v0.7.4)
 
 ### Changed
