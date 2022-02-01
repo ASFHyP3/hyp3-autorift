@@ -14,10 +14,10 @@ from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_datetime, process
 
 def check_earthdata_credentials(username, password):
     if username is None:
-        username = os.environ['EARTHDATA_USERNAME']
+        username = os.getenv('EARTHDATA_USERNAME')
 
     if password is None:
-        password = os.environ['EARTHDATA_PASSWORD']
+        password = os.getenv('EARTHDATA_PASSWORD')
 
     return username, password
 
