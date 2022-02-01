@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
-                        help='Shapefile for determining the correct credentials_to_netrc_filesearch parameters by '
+                        help='Shapefile for determining the correct search parameters by '
                              'geographic location. '
                              'Path to shapefile must be understood by GDAL')
     parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD', 'ASF'],
