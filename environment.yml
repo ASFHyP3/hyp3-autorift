@@ -26,6 +26,7 @@ dependencies:
   - hyp3lib=1.6.8
   - isce2=2.5.3.dev1
   - autorift=1.4.0
+  - opencv=4.5.3  # fix changed libopencv_core.so.* version scheme in v4.5.5
   - boto3
   - matplotlib-base
   - netCDF4
