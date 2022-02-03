@@ -9,9 +9,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.7.5](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.4...v0.7.5)
 
-### Security
+### Added
 * It is now possible to inject Earthdata username and password using environment variables: `EARTHDATA_USERNAME`
   and `EARTHDATA_PASSWORD`.
+
+### Fixed
+* The `opencv` conda package has been pinned to `4.5.3` due to a braking change to its `libopencv_core.so.*`
+  naming scheme in `4.5.5`.
+
 
 ## [0.7.4](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.3...v0.7.4)
 
