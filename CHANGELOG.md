@@ -17,7 +17,6 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * The `opencv` conda package has been pinned to `4.5.3` due to a breaking change to its `libopencv_core.so.*`
   naming scheme in `4.5.5`.
 
-
 ## [0.7.4](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.3...v0.7.4)
 
 ### Changed
