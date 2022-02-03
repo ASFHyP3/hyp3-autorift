@@ -14,7 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `EARTHDATA_PASSWORD`.
 
 ### Fixed
-* The `opencv` conda package has been pinned to `4.5.3` due to a braking change to its `libopencv_core.so.*`
+* The `opencv` conda package has been pinned to `4.5.3` due to a breaking change to its `libopencv_core.so.*`
   naming scheme in `4.5.5`.
 
 
