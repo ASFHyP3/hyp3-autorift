@@ -47,3 +47,6 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    * uniformly order all data variable attributes, loosely in alphabetical order
    * significantly improve the codestyle (e.g., PEP8) of `netcdf_output.py`
    These changes should be included in the next autoRIFT release.
+4. The changes listed in `CHANGES-L9.diff` were applied to allow Landsat-9
+   Collection 2 scenes to be processed by autoRIFT. These changes should be
+   included in the next autoRIFT release.
