@@ -37,7 +37,7 @@ setup(
         'boto3',
         'botocore',
         'gdal',
-        'hyp3lib==1.6.8',
+        'hyp3lib==1.7.0',
         'matplotlib',
         'netCDF4',
         'numpy',
