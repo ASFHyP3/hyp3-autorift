@@ -130,28 +130,34 @@ def test_s3_object_is_accessible(s3_stubber):
         process.s3_object_is_accessible(bucket, key)
 
 
-def test_get_s2_path(monkeypatch):
-    metadata = {'assets': {'B08': {'href': 's3://senintel-s2-l1c/foo/bar.jp2'}}}
+def test_parse_s3_url():
+    assert process.parse_s3_url('s3://sentinel-s2-l1c/foo/bar.jp2') == ('sentinel-s2-l1c', 'foo/bar.jp2')
+    assert process.parse_s3_url('s3://s2-l1c-us-west/hello.jp2') == ('s2-l1c-us-west', 'hello.jp2')
 
-    with monkeypatch.context() as m:
-        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: False)
-        path = process.get_s2_path(metadata)
-        assert path == '/vsis3/senintel-s2-l1c/foo/bar.jp2'
+
+def test_get_s2_paths(monkeypatch):
+    ref_s3_url = 's3://sentinel-s2-l1c/foo/bar.jp2'
+    sec_s3_url = 's3://sentinel-s2-l1c/fiz/buz.jp2'
 
     with monkeypatch.context() as m:
         m.setattr(process, 's3_object_is_accessible', lambda **kwargs: True)
-        path = process.get_s2_path(metadata)
-        assert path == '/vsis3/s2-l1c-us-west-2/foo/bar.jp2'
+        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
+        assert paths == ('/vsis3/s2-l1c-us-west-2/foo/bar.jp2', '/vsis3/s2-l1c-us-west-2/fiz/buz.jp2')
 
+    with monkeypatch.context() as m:
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: False)
+        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
+        assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
-def test_ensure_same_s3_bucket():
-    process.ensure_same_s3_buckets('/vsis3/s2-l1c-us-west-2/foo/bar.jp2', '/vsis3/s2-l1c-us-west-2/fiz/buz.jp2')
-    process.ensure_same_s3_buckets('/vsis3/senintel-s2-l1c/foo/bar.jp2', '/vsis3/senintel-s2-l1c/fiz/buz.jp2')
+    with monkeypatch.context() as m:
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: kwargs['key'] == 'foo/bar.jp2')
+        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
+        assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
-    with pytest.raises(ValueError):
-        process.ensure_same_s3_buckets('/vsis3/senintel-s2-l1c/foo/bar.jp2', '/vsis3/s2-l1c-us-west-2/fiz/buz.jp2')
-    with pytest.raises(ValueError):
-        process.ensure_same_s3_buckets('/vsis3/s2-l1c-us-west-2/foo/bar.jp2', '/vsis3/senintel-s2-l1c/fiz/buz.jp2')
+    with monkeypatch.context() as m:
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: kwargs['key'] == 'fiz/buz.jp2')
+        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
+        assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
 
 def test_get_datetime():
