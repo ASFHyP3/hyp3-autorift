@@ -102,20 +102,24 @@ def s3_object_is_accessible(bucket, key):
     return True
 
 
-def get_s2_path(metadata: dict) -> str:
-    s3_location = metadata['assets']['B08']['href'].replace('s3://', '').split('/')
+def parse_s3_url(s3_url: str) -> Tuple[str, str]:
+    s3_location = s3_url.replace('s3://', '').split('/')
     bucket = s3_location[0]
     key = '/'.join(s3_location[1:])
-
-    if s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=key):
-        return f'/vsis3/{S2_WEST_BUCKET}/{key}'
-
-    return f'/vsis3/{bucket}/{key}'
+    return bucket, key
 
 
-def ensure_same_s3_buckets(reference_path: str, secondary_path: str):
-    if (S2_WEST_BUCKET in reference_path) != (S2_WEST_BUCKET in secondary_path):
-        raise ValueError(f'Only one Sentinel-2 scene is in s3://{S2_WEST_BUCKET}')
+def get_s2_paths(reference_s3_url: str, secondary_s3_url: str) -> Tuple[str, str]:
+    reference_bucket, reference_key = parse_s3_url(reference_s3_url)
+    secondary_bucket, secondary_key = parse_s3_url(secondary_s3_url)
+
+    reference_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=reference_key)
+    secondary_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=secondary_key)
+
+    if reference_in_west_bucket and secondary_in_west_bucket:
+        return f'/vsis3/{S2_WEST_BUCKET}/{reference_key}', f'/vsis3/{S2_WEST_BUCKET}/{secondary_key}'
+
+    return f'/vsis3/{reference_bucket}/{reference_key}', f'/vsis3/{secondary_bucket}/{secondary_key}'
 
 
 def least_precise_orbit_of(orbits):
@@ -227,12 +231,10 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
     elif platform == 'S2':
         reference_metadata = get_s2_metadata(reference)
-        reference_path = get_s2_path(reference_metadata)
-
         secondary_metadata = get_s2_metadata(secondary)
-        secondary_path = get_s2_path(secondary_metadata)
 
-        ensure_same_s3_buckets(reference_path, secondary_path)
+        reference_path, secondary_path = get_s2_paths(reference_metadata['assets']['B08']['href'],
+                                                      secondary_metadata['assets']['B08']['href'])
 
         if S2_WEST_BUCKET not in reference_path:
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
