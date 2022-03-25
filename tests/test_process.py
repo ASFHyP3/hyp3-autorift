@@ -6,7 +6,6 @@ from unittest import mock
 import botocore.exceptions
 import pytest
 import responses
-from botocore.stub import Stubber
 
 from hyp3_autorift import process
 
