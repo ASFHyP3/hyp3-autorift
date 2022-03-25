@@ -13,6 +13,7 @@ from secrets import token_hex
 from typing import Tuple
 
 import boto3
+import botocore.exceptions
 import numpy as np
 import requests
 from hyp3lib.fetch import download_file
@@ -31,6 +32,7 @@ gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
+S2_WEST_BUCKET = 's2-l1c-us-west-2'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/sat-api/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
 
@@ -88,6 +90,36 @@ def get_s2_metadata(scene_name):
     if not response.json().get('numberReturned'):
         raise ValueError(f'Scene could not be found: {scene_name}')
     return response.json()['features'][0]
+
+
+def s3_object_is_accessible(bucket, key):
+    try:
+        S3_CLIENT.head_object(Bucket=bucket, Key=key)
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] in ['403', '404']:
+            return False
+        raise
+    return True
+
+
+def parse_s3_url(s3_url: str) -> Tuple[str, str]:
+    s3_location = s3_url.replace('s3://', '').split('/')
+    bucket = s3_location[0]
+    key = '/'.join(s3_location[1:])
+    return bucket, key
+
+
+def get_s2_paths(reference_s3_url: str, secondary_s3_url: str) -> Tuple[str, str]:
+    reference_bucket, reference_key = parse_s3_url(reference_s3_url)
+    secondary_bucket, secondary_key = parse_s3_url(secondary_s3_url)
+
+    reference_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=reference_key)
+    secondary_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=secondary_key)
+
+    if reference_in_west_bucket and secondary_in_west_bucket:
+        return f'/vsis3/{S2_WEST_BUCKET}/{reference_key}', f'/vsis3/{S2_WEST_BUCKET}/{secondary_key}'
+
+    return f'/vsis3/{reference_bucket}/{reference_key}', f'/vsis3/{secondary_bucket}/{secondary_key}'
 
 
 def least_precise_orbit_of(orbits):
@@ -174,6 +206,13 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
 
+    # Set config and env for new CXX threads in Geogrid/autoRIFT
+    gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
+    os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+
+    gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+    os.environ['AWS_REGION'] = 'us-west-2'
+
     platform = get_platform(reference)
     if platform == 'S1':
         for scene in [reference, secondary]:
@@ -191,32 +230,26 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
 
     elif platform == 'S2':
-        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
-        gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
-        gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
-        # Also set for new CXX threads in Geogrid/autoRIFT
-        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
-        os.environ['AWS_REQUEST_PAYER'] = 'requester'
-        os.environ['AWS_REGION'] = 'eu-central-1'
-
         reference_metadata = get_s2_metadata(reference)
-        reference_path = reference_metadata['assets']['B08']['href'].replace('s3://', '/vsis3/')
-
         secondary_metadata = get_s2_metadata(secondary)
-        secondary_path = secondary_metadata['assets']['B08']['href'].replace('s3://', '/vsis3/')
+
+        reference_path, secondary_path = get_s2_paths(reference_metadata['assets']['B08']['href'],
+                                                      secondary_metadata['assets']['B08']['href'])
+
+        if S2_WEST_BUCKET not in reference_path:
+            gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
+            os.environ['AWS_REQUEST_PAYER'] = 'requester'
+
+            gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
+            os.environ['AWS_REGION'] = 'eu-central-1'
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
     elif platform == 'L':
-        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
-        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
-        # Also set for new CXX threads in Geogrid/autoRIFT
-        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
-        os.environ['AWS_REGION'] = 'us-west-2'
 
         reference_metadata = get_lc2_metadata(reference)
         reference_path = get_lc2_path(reference_metadata)
@@ -227,6 +260,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
+
+    log.info(f'Reference scene path: {reference_path}')
+    log.info(f'Secondary scene path: {secondary_path}')
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = io.find_jpl_parameter_info(scene_poly, parameter_file)
