@@ -92,9 +92,9 @@ def get_s2_metadata(scene_name):
     return response.json()['features'][0]
 
 
-def s3_object_is_accesible(bucket, key):
+def s3_object_is_accessible(bucket, key):
     try:
-        S3_CLIENT.Object(bucket, key).load()
+        S3_CLIENT.head_object(Bucket=bucket, Key=key)
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] in ['403', '404']:
             return False
@@ -103,11 +103,11 @@ def s3_object_is_accesible(bucket, key):
 
 
 def get_s2_path(metadata: dict) -> str:
-    s3_location = metadata['assets']['B08']['href']
+    s3_location = metadata['assets']['B08']['href'].replace('s3://', '').split('/')
     bucket = s3_location[0]
     key = '/'.join(s3_location[1:])
 
-    if s3_object_is_accesible(bucket=S2_WEST_BUCKET, key=key):
+    if s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=key):
         return f'/vsis3/{S2_WEST_BUCKET}/{key}'
 
     return f'/vsis3/{bucket}/{key}'

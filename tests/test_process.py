@@ -3,8 +3,10 @@ from datetime import datetime
 from re import match
 from unittest import mock
 
+import botocore.exceptions
 import pytest
 import responses
+from botocore.stub import Stubber
 
 from hyp3_autorift import process
 
@@ -98,6 +100,59 @@ def test_get_s2_metadata_esa_id():
     )
 
     assert process.get_s2_metadata('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == {"foo": "bar"}
+
+
+def test_s3_object_is_accessible(s3_stubber):
+    bucket = 'MyBucket'
+    key = 'MyKey'
+
+    params = {
+        'Bucket': bucket,
+        'Key': key
+    }
+
+    s3_stubber.add_response(method='head_object', expected_params=params, service_response={})
+    assert process.s3_object_is_accessible(bucket, key)
+
+    s3_stubber.add_client_error(
+        method='head_object', expected_params=params, service_error_code='404', http_status_code=404
+    )
+    assert not process.s3_object_is_accessible(bucket, key)
+
+    s3_stubber.add_client_error(
+        method='head_object', expected_params=params, service_error_code='403', http_status_code=403
+    )
+    assert not process.s3_object_is_accessible(bucket, key)
+
+    s3_stubber.add_client_error(
+        method='head_object', expected_params=params, service_error_code='500', http_status_code=500
+    )
+    with pytest.raises(botocore.exceptions.ClientError):
+        process.s3_object_is_accessible(bucket, key)
+
+
+def test_get_s2_path(monkeypatch):
+    metadata = {'assets': {'B08': {'href': 's3://senintel-s2-l1c/foo/bar.jp2'}}}
+
+    with monkeypatch.context() as m:
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: False)
+        path = process.get_s2_path(metadata)
+        assert path == '/vsis3/senintel-s2-l1c/foo/bar.jp2'
+
+    with monkeypatch.context() as m:
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: True)
+        path = process.get_s2_path(metadata)
+        assert path == '/vsis3/s2-l1c-us-west-2/foo/bar.jp2'
+
+
+def test_ensure_same_s3_bucket():
+    process.ensure_same_s3_buckets('/vsis3/s2-l1c-us-west-2/foo/bar.jp2', '/vsis3/s2-l1c-us-west-2/fiz/buz.jp2')
+    process.ensure_same_s3_buckets('/vsis3/senintel-s2-l1c/foo/bar.jp2', '/vsis3/senintel-s2-l1c/fiz/buz.jp2')
+
+    with pytest.raises(ValueError):
+        process.ensure_same_s3_buckets('/vsis3/senintel-s2-l1c/foo/bar.jp2', '/vsis3/s2-l1c-us-west-2/fiz/buz.jp2')
+    with pytest.raises(ValueError):
+        process.ensure_same_s3_buckets('/vsis3/s2-l1c-us-west-2/foo/bar.jp2', '/vsis3/senintel-s2-l1c/fiz/buz.jp2')
 
 
 def test_get_datetime():
