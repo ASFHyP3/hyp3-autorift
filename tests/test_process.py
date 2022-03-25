@@ -150,16 +150,12 @@ def test_get_s2_paths(monkeypatch):
         assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
     with monkeypatch.context() as m:
-        def mock(bucket, key):
-            return key == 'foo/bar.jp2'
-        m.setattr(process, 's3_object_is_accessible', mock)
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: kwargs['key'] == 'foo/bar.jp2')
         paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
         assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
     with monkeypatch.context() as m:
-        def mock(bucket, key):
-            return key == 'fiz/buz.jp2'
-        m.setattr(process, 's3_object_is_accessible', mock)
+        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: kwargs['key'] == 'fiz/buz.jp2')
         paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
         assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
