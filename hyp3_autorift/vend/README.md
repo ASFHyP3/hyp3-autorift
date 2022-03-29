@@ -50,3 +50,5 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
 4. The changes listed in `CHANGES-L9.diff` were applied to allow Landsat-9
    Collection 2 scenes to be processed by autoRIFT. These changes should be
    included in the next autoRIFT release.
+5. The changes listed in `CHANGES-S2-WEST.diff` were applied to allow `testGeogrid_ISCE.py`
+   and `testGeogridOptical.py` to process scenes in the `s3://s2-l1c-us-west-2` bucket
