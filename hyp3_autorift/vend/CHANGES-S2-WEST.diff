@@ -1,0 +1,40 @@
+--- testGeogridOptical.py
++++ testGeogridOptical.py
+@@ -103,7 +103,7 @@ def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
+     if re.findall("L[CO]0[89]_",DS.GetDescription()).__len__() > 0:
+         nameString = os.path.basename(DS.GetDescription())
+         info.time = nameString.split('_')[3]
+-    elif 'sentinel-s2-l1c' in indir_m:
++    elif 'sentinel-s2-l1c' in indir_m or 's2-l1c-us-west-2' in indir_m:
+         s2_name = kwargs['reference_metadata']['id']
+         info.time = s2_name.split('_')[2]
+     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
+@@ -123,7 +123,7 @@ def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
+     if re.findall("L[CO]0[89]_",DS1.GetDescription()).__len__() > 0:
+         nameString1 = os.path.basename(DS1.GetDescription())
+         info1.time = nameString1.split('_')[3]
+-    elif 'sentinel-s2-l1c' in indir_s:
++    elif 'sentinel-s2-l1c' in indir_s or 's2-l1c-us-west-2' in indir_s:
+         s2_name = kwargs['secondary_metadata']['id']
+         info1.time = s2_name.split('_')[2]
+     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
+--- testGeogrid_ISCE.py
++++ testGeogrid_ISCE.py
+@@ -173,7 +173,7 @@ def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
+     if re.findall("L[CO]0[89]_",DS.GetDescription()).__len__() > 0:
+         nameString = os.path.basename(DS.GetDescription())
+         info.time = nameString.split('_')[3]
+-    elif 'sentinel-s2-l1c' in indir_m:
++    elif 'sentinel-s2-l1c' in indir_m or 's2-l1c-us-west-2' in indir_m:
+         s2_name = kwargs['reference_metadata']['id']
+         info.time = s2_name.split('_')[2]
+     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
+@@ -193,7 +193,7 @@ def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
+     if re.findall("L[CO]0[89]_",DS1.GetDescription()).__len__() > 0:
+         nameString1 = os.path.basename(DS1.GetDescription())
+         info1.time = nameString1.split('_')[3]
+-    elif 'sentinel-s2-l1c' in indir_s:
++    elif 'sentinel-s2-l1c' in indir_s or 's2-l1c-us-west-2' in indir_s:
+         s2_name = kwargs['secondary_metadata']['id']
+         info1.time = s2_name.split('_')[2]
+     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
