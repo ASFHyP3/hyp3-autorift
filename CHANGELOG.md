@@ -7,6 +7,11 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.8.4]
+
+### Fixed
+* A GDAL issue preventing Sentinel-1 processing introduced in v0.8.1
+
 ## [0.8.3]
 
 ### Fixed

@@ -206,13 +206,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
 
-    # Set config and env for new CXX threads in Geogrid/autoRIFT
-    gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
-    os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
-
-    gdal.SetConfigOption('AWS_REGION', 'us-west-2')
-    os.environ['AWS_REGION'] = 'us-west-2'
-
     platform = get_platform(reference)
     if platform == 'S1':
         for scene in [reference, secondary]:
@@ -230,6 +223,13 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
 
     elif platform == 'S2':
+        # Set config and env for new CXX threads in Geogrid/autoRIFT
+        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
+        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+
+        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+        os.environ['AWS_REGION'] = 'us-west-2'
+
         reference_metadata = get_s2_metadata(reference)
         secondary_metadata = get_s2_metadata(secondary)
 
@@ -248,6 +248,13 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lon_limits = (bbox[0], bbox[2])
 
     elif platform == 'L':
+        # Set config and env for new CXX threads in Geogrid/autoRIFT
+        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
+        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+
+        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+        os.environ['AWS_REGION'] = 'us-west-2'
+
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
