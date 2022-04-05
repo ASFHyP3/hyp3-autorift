@@ -27,14 +27,8 @@
 #
 # Author: Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-
-import pdb
-from osgeo import gdal, osr
-
-
+from osgeo import gdal
+from datetime import date, datetime, timedelta
 
 
 def runCmd(cmd):
@@ -131,7 +125,7 @@ def loadProductOptical(file_m, file_s):
 
 
 def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, optflag,
-                nodata, mpflag, geogrid_run_info=None):
+                nodata, mpflag, geogrid_run_info=None, preprocessing_methods=('hps', 'hps')):
     '''
     Wire and run geogrid.
     '''
@@ -282,7 +276,15 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     t1 = time.time()
     print("Pre-process Start!!!")
 #    obj.zeroMask = 1
-    obj.preprocess_filt_hps()
+
+    # TODO: Allow different filters to be applied images independently
+    # default to most stringent filtering
+    if 'wallis_fill' in preprocessing_methods:
+        obj.preprocess_filt_wal_nodata_fill()
+    elif 'wallis' in preprocessing_methods:
+        obj.preprocess_filt_wal()
+    else:
+        obj.preprocess_filt_hps()
 #    obj.I1 = np.abs(I1)
 #    obj.I2 = np.abs(I2)
     print("Pre-process Done!!!")
@@ -498,14 +500,23 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         import hyp3_autorift.vend.netcdf_output as no
         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
     else:
+        m_name = os.path.basename(indir_m)
+        s_name = os.path.basename(indir_s)
+
+        preprocessing_methods = ['hps', 'hps']
+        for ii, name in enumerate(m_name, s_name):
+            if name.startswith('L7'):
+                acquisition = datetime.strptime(name.spilt('_')[3], '%Y%m%d')
+                if acquisition >= date(2003, 5, 31):
+                    preprocessing_methods[ii] = 'wallis_fill'
+
         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = runAutorift(
             data_m, data_s, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0,
-            noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
+            noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info, preprocessing_methods=preprocessing_methods,
         )
         if nc_sensor is not None:
             import hyp3_autorift.vend.netcdf_output as no
             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
-
 
     if optical_flag == 0:
         Dy = -Dy
@@ -623,7 +634,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             if offset2va is not None:
                 offset2va[offset2va == nodata] = np.nan
 
-
             VX = offset2vx_1 * DX + offset2vx_2 * DY
             VY = offset2vy_1 * DX + offset2vy_2 * DY
             VX = VX.astype(np.float32)
@@ -650,7 +660,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
                     import hyp3_autorift.vend.netcdf_output as no
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
-
 
                 if geogrid_run_info is None:
                     vxrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[1]
@@ -815,7 +824,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
 
 
-                    from datetime import datetime, timedelta
 #                    d0 = datetime(np.int(master_split[5][0:4]),np.int(master_split[5][4:6]),np.int(master_split[5][6:8]))
 #                    d1 = datetime(np.int(slave_split[5][0:4]),np.int(slave_split[5][4:6]),np.int(slave_split[5][6:8]))
                     d0 = datetime.strptime(master_dt,"%Y%m%dT%H:%M:%S.%f")
@@ -911,9 +919,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                    from datetime import datetime, timedelta
                     d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
@@ -969,6 +977,106 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         parameter_file=kwargs['parameter_file'],
                     )
 
+                elif nc_sensor == "L7":
+                    if geogrid_run_info is None:
+                        chipsizex0 = float(str.split(runCmd('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
+                        gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
+                        XPixelSize = float(str.split(runCmd('fgrep "X-direction pixel size:" testGeogrid.txt'))[3])
+                        YPixelSize = float(str.split(runCmd('fgrep "Y-direction pixel size:" testGeogrid.txt'))[3])
+                        epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
+                    else:
+                        chipsizex0 = geogrid_run_info['chipsizex0']
+                        gridspacingx = geogrid_run_info['gridspacingx']
+                        XPixelSize = geogrid_run_info['XPixelSize']
+                        YPixelSize = geogrid_run_info['YPixelSize']
+                        epsg = geogrid_run_info['epsg']
+
+                    master_path = indir_m
+                    slave_path = indir_s
+
+                    master_filename = os.path.basename(master_path)
+                    slave_filename = os.path.basename(slave_path)
+
+                    master_split = str.split(master_filename,'_')
+                    slave_split = str.split(slave_filename,'_')
+
+#                    master_MTL_path = master_path[:-6]+'MTL.txt'
+#                    slave_MTL_path = slave_path[:-6]+'MTL.txt'
+#
+#                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
+#                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
+
+                    import netcdf_output as no
+                    pair_type = 'optical'
+                    detection_method = 'feature'
+                    coordinates = 'map'
+                    if np.sum(SEARCHLIMITX!=0)!=0:
+                        roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
+                    else:
+                        raise Exception('Input search range is all zero everywhere, thus no search conducted')
+    #                out_nc_filename = 'Jakobshavn_opt.nc'
+                    PPP = roi_valid_percentage * 100
+                    if ncname is None:
+                        out_nc_filename = f"./{master_filename[0:-7]}_X_{slave_filename[0:-7]}" \
+                                          f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                    else:
+                        out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                    CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                    d0 = datetime(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
+                    d1 = datetime(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
+                    date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                    date_dt = np.float64(date_dt_base)
+                    if date_dt < 0:
+                        raise Exception('Input image 1 must be older than input image 2')
+
+                    date_ct = d0 + (d1 - d0)/2
+                    date_center = date_ct.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+
+                    master_dt = d0.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+                    slave_dt = d1.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+
+                    IMG_INFO_DICT = {
+                        'acquisition_date_img1': master_dt,
+                        'acquisition_date_img2': slave_dt,
+                        'collection_category_img1': master_split[6],
+                        'collection_category_img2': slave_split[6],
+                        'collection_number_img1': np.float64(master_split[5]),
+                        'collection_number_img2': np.float64(slave_split[5]),
+                        'correction_level_img1': master_split[1],
+                        'correction_level_img2': slave_split[1],
+                        'mission_img1': master_split[0][0],
+                        'mission_img2': slave_split[0][0],
+                        'path_img1': np.float64(master_split[2][0:3]),
+                        'path_img2': np.float64(slave_split[2][0:3]),
+                        'processing_date_img1': master_split[4][0:8],
+                        'processing_date_img2': slave_split[4][0:8],
+                        'row_img1': np.float64(master_split[2][3:6]),
+                        'row_img2': np.float64(slave_split[2][3:6]),
+                        'satellite_img1': np.float64(master_split[0][2:4]),
+                        'satellite_img2': np.float64(slave_split[0][2:4]),
+                        'sensor_img1': master_split[0][1],
+                        'sensor_img2': slave_split[0][1],
+                        'time_standard_img1': 'UTC',
+                        'time_standard_img2': 'UTC',
+                        'date_center': date_center,
+                        'date_dt': date_dt,
+                        'latitude': cen_lat,
+                        'longitude': cen_lon,
+                        'roi_valid_percentage': PPP,
+                        'autoRIFT_software_version': version
+                    }
+
+                    error_vector = np.array([25.5,25.5])
+
+                    netcdf_file = no.netCDF_packaging(
+                        VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1, SX, SY,
+                        offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
+                        None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
+                        detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
+                    )
+
                 elif nc_sensor == "S2":
                     if geogrid_run_info is None:
                         chipsizex0 = float(str.split(runCmd('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
@@ -1009,7 +1117,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                    from datetime import datetime, timedelta
                     d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
                     d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
