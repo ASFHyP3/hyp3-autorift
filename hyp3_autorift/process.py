@@ -7,12 +7,11 @@ import json
 import logging
 import os
 import shutil
-from zipfile import ZipFile
-
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
 from typing import Tuple
+from zipfile import ZipFile
 
 import boto3
 import botocore.exceptions
