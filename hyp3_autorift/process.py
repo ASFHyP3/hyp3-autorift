@@ -93,7 +93,7 @@ def get_s2_metadata(scene_name):
         metadata_dir = Path(__file__).parent / 'metadata' / 's2_metadata.zip'
         with tempfile.TemporaryDirectory() as tmp_metadata_dir:
             shutil.unpack_archive(metadata_dir, tmp_metadata_dir)
-            tmp_metadata_path = tmp_metadata_dir / 's2_metadata.json'
+            tmp_metadata_path = Path(tmp_metadata_dir) / 's2_metadata.json'
             with open(tmp_metadata_path) as f:
                 s2_metadata = json.load(f)
         if scene_name not in s2_metadata:
