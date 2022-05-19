@@ -101,6 +101,11 @@ def test_get_s2_metadata_esa_id():
     assert process.get_s2_metadata('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == {"foo": "bar"}
 
 
+def test_get_s2_metadata_json():
+    header = process.get_s2_metadata('S2B_22WEB_20200612_0_L1C')['assets']['B08']['href']
+    assert header == 's3://sentinel-s2-l1c/tiles/22/W/EB/2020/6/12/0/B08.jp2'
+
+
 def test_s3_object_is_accessible(s3_stubber):
     bucket = 'MyBucket'
     key = 'MyKey'
