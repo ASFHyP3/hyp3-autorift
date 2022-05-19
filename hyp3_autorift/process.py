@@ -88,6 +88,7 @@ def get_s2_metadata(scene_name):
     }
     response = requests.post(S2_SEARCH_URL, json=payload)
     response.raise_for_status()
+
     if not response.json().get('numberReturned'):
         metadata_dir = Path(__file__).parent / 'metadata' / 's2_metadata.zip'
         with tempfile.TemporaryDirectory() as tmp_metadata_dir:
@@ -98,6 +99,7 @@ def get_s2_metadata(scene_name):
         if scene_name not in s2_metadata:
             raise ValueError(f'Scene could not be found: {scene_name}')
         return s2_metadata[scene_name]
+
     return response.json()['features'][0]
 
 
