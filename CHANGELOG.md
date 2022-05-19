@@ -7,6 +7,11 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.8.5]
+
+### Added
+* A check for s2 metadata from the Google Earth catalog saved in `s2_metadata.zip`
+
 ## [0.8.4]
 
 ### Fixed
