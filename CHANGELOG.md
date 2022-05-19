@@ -10,7 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.8.5]
 
 ### Added
-* A check for s2 metadata from the Google Earth catalog saved in `s2_metadata.zip`
+* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog. 
 
 ## [0.8.4]
 
