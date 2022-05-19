@@ -105,6 +105,7 @@ def test_get_s2_metadata_esa_id():
 @responses.activate
 def test_get_s2_metadata_json():
     responses.add(responses.GET, f'{process.S2_SEARCH_URL}/S2B_60CWT_20220130_0_L1C', status=404)
+
     responses.add(
         responses.POST, process.S2_SEARCH_URL,
         body='{"numberReturned": 0}', status=200,
