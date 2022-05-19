@@ -16,6 +16,7 @@ def test_get_platform():
     assert process.get_platform('S2A_1UCR_20210124_0_L1C') == 'S2'
     assert process.get_platform('S2B_22WEB_20200913_0_L2A') == 'S2'
     assert process.get_platform('S2A_11UNA_20201203_0_L2A') == 'S2'
+    assert process.get_platform('S2B_60CWT_20220130_0_L1C') == 'S2'
     assert process.get_platform('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == 'S2'
     assert process.get_platform('S2A_MSIL2A_20201203T190751_N0214_R013_T11UNA_20201203T195322') == 'S2'
     assert process.get_platform('LE07_L2SP_233095_20200102_20200822_02_T2') == 'L'
@@ -101,9 +102,16 @@ def test_get_s2_metadata_esa_id():
     assert process.get_s2_metadata('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == {"foo": "bar"}
 
 
+@responses.activate
 def test_get_s2_metadata_json():
-    header = process.get_s2_metadata('S2B_22WEB_20200612_0_L1C')['assets']['B08']['href']
-    assert header == 's3://sentinel-s2-l1c/tiles/22/W/EB/2020/6/12/0/B08.jp2'
+    responses.add(responses.GET, f'{process.S2_SEARCH_URL}/S2B_60CWT_20220130_0_L1C', status=404)
+    responses.add(
+        responses.POST, process.S2_SEARCH_URL,
+        body='{"numberReturned": 0}', status=200,
+    )
+
+    s3_path = process.get_s2_metadata('S2B_60CWT_20220130_0_L1C')['assets']['B08']['href']
+    assert s3_path == 's3://sentinel-s2-l1c/tiles/60/C/WT/2022/1/30/0/B08.jp2'
 
 
 def test_s3_object_is_accessible(s3_stubber):

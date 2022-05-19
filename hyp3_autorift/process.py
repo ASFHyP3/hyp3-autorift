@@ -7,7 +7,8 @@ import json
 import logging
 import os
 import shutil
-import tempfile
+from zipfile import ZipFile
+
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -91,10 +92,8 @@ def get_s2_metadata(scene_name):
 
     if not response.json().get('numberReturned'):
         metadata_dir = Path(__file__).parent / 'metadata' / 's2_metadata.zip'
-        with tempfile.TemporaryDirectory() as tmp_metadata_dir:
-            shutil.unpack_archive(metadata_dir, tmp_metadata_dir)
-            tmp_metadata_path = Path(tmp_metadata_dir) / 's2_metadata.json'
-            with open(tmp_metadata_path) as f:
+        with ZipFile(metadata_dir) as zf:
+            with zf.open('s2_metadata.json') as f:
                 s2_metadata = json.load(f)
         if scene_name not in s2_metadata:
             raise ValueError(f'Scene could not be found: {scene_name}')
