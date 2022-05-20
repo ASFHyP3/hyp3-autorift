@@ -187,6 +187,9 @@ def test_get_datetime():
     granule = 'S2B_22WEB_20200913_0_L2A'
     assert process.get_datetime(granule) == datetime(year=2020, month=9, day=13)
 
+    granule = 'S2B_22XEQ_20190610_11_L1C'
+    assert process.get_datetime(granule) == datetime(year=2019, month=6, day=10)
+
     granule = 'S2A_11UNA_20201203_0_L2A'
     assert process.get_datetime(granule) == datetime(year=2020, month=12, day=3)
 

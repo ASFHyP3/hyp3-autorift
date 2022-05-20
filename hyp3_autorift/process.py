@@ -142,7 +142,7 @@ def least_precise_orbit_of(orbits):
 def get_datetime(scene_name):
     if scene_name.startswith('S1'):
         return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
-    if scene_name.startswith('S2') and len(scene_name) > 24:  # ESA
+    if scene_name.startswith('S2') and len(scene_name) > 25:  # ESA
         return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S2'):  # COG
         return datetime.strptime(scene_name.split('_')[2], '%Y%m%d')
