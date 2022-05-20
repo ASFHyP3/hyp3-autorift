@@ -8,7 +8,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.6]
 ### Fixed
-The datetime information can now be correctly extracted from 25-charcater S2 Earth Search names. Fixes #152.
+The datetime information can now be correctly extracted from 25-character S2 Earth Search names. Fixes #152.
 
 ## [0.8.5]
 
