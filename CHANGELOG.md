@@ -6,14 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.6]
+
+## [0.8.7]
+
 ### Fixed
-The datetime information can now be correctly extracted from 25-character S2 Earth Search names. Fixes #152.
+* Updated the USGS STAC catalog API endpoint
+
+## [0.8.6]
+
+### Fixed
+* Datetime information can now be correctly extracted from 25-character S2 Earth Search names. Fixes #152
 
 ## [0.8.5]
 
 ### Added
-* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog. 
+* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog
 
 ## [0.8.4]
 
