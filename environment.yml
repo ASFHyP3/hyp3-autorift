@@ -6,7 +6,7 @@ channels:
 dependencies:
   - boto3
   - botocore
-  - python>=3.8
+  - python>=3.8,<3.10  # Top pin to fix ISCE2 incompatibility: https://github.com/isce-framework/isce2/issues/458
   - pip
   # For packaging, and testing
   - flake8
