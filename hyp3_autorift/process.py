@@ -63,9 +63,14 @@ def get_lc2_metadata(scene_name):
 
 
 def get_lc2_path(metadata):
-    band = metadata['assets'].get('B8.TIF')
-    if band is None:
-        band = metadata['assets']['pan']
+    if metadata['id'][3] == '4' or metadata['id'][3] == '5':
+        band = metadata['assets'].get('B2.TIF')
+        if band is None:
+            band = metadata['assets']['green']
+    elif metadata['id'][3] == '8' or metadata['id'][3] == '7':
+        band = metadata['assets'].get('B8.TIF')
+        if band is None:
+            band = metadata['assets']['pan']
 
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
@@ -180,8 +185,8 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
 def get_platform(scene: str) -> str:
     if scene.startswith('S1') or scene.startswith('S2'):
         return scene[0:2]
-    elif scene.startswith('L'):
-        return scene[0]
+    elif scene.startswith('L') and scene.startswith(('4', '5', '7', '8'), 3):
+        return scene[0] + scene[3]
     else:
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 

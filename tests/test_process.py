@@ -19,11 +19,16 @@ def test_get_platform():
     assert process.get_platform('S2B_60CWT_20220130_0_L1C') == 'S2'
     assert process.get_platform('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == 'S2'
     assert process.get_platform('S2A_MSIL2A_20201203T190751_N0214_R013_T11UNA_20201203T195322') == 'S2'
-    assert process.get_platform('LE07_L2SP_233095_20200102_20200822_02_T2') == 'L'
-    assert process.get_platform('LC08_L1TP_009011_20200703_20200913_02_T1') == 'L'
+    assert process.get_platform('LM04_L1GS_025009_19830519_20200903_02_T2') == 'L4'
+    assert process.get_platform('LT05_L1TP_091090_20060929_20200831_02_T1') == 'L5'
+    assert process.get_platform('LE07_L2SP_233095_20200102_20200822_02_T2') == 'L7'
+    assert process.get_platform('LC08_L1TP_009011_20200703_20200913_02_T1') == 'L8'
 
     with pytest.raises(NotImplementedError):
         process.get_platform('S3B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81')
+
+    with pytest.raises(NotImplementedError):
+        process.get_platform('LM02_L1GS_113057_19770914_20200907_02_T2')
 
     with pytest.raises(NotImplementedError):
         process.get_platform('foobar')
