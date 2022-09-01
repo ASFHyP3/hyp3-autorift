@@ -185,7 +185,7 @@ def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spa
 def get_platform(scene: str) -> str:
     if scene.startswith('S1') or scene.startswith('S2'):
         return scene[0:2]
-    elif scene.startswith('L') and scene.startswith(('4', '5', '7', '8'), 3):
+    elif scene.startswith('L') and scene[3] in ('4', '5', '7', '8'):
         return scene[0] + scene[3]
     else:
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
