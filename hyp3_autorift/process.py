@@ -63,7 +63,7 @@ def get_lc2_metadata(scene_name):
 
 
 def get_lc2_path(metadata):
-    if metadata['id'][3] == '4' or metadata['id'][3] == '5':
+    if metadata['id'][3] in ('4', '5'):
         band = metadata['assets'].get('B2.TIF')
         if band is None:
             band = metadata['assets']['red']
