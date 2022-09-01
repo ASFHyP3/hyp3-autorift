@@ -67,7 +67,7 @@ def get_lc2_path(metadata):
         band = metadata['assets'].get('B2.TIF')
         if band is None:
             band = metadata['assets']['red']
-    elif metadata['id'][3] == '8' or metadata['id'][3] == '7':
+    elif metadata['id'][3] in ('7', '8'):
         band = metadata['assets'].get('B8.TIF')
         if band is None:
             band = metadata['assets']['pan']
