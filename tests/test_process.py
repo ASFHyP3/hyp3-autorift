@@ -71,6 +71,25 @@ def test_get_lc2_metadata_fallback(s3_stubber):
         assert process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1') == {'foo': 'bar'}
 
 
+def test_get_lc2_path():
+    metadata = {'id': 'L--5',
+                'assets':
+                    {'B2.TIF': {'href': 'foo'}}}
+    assert process.get_lc2_path(metadata) == 'foo'
+
+    metadata = {'id': 'L--5',
+                'assets': {'red': {'href': 'foo'}}}
+    assert process.get_lc2_path(metadata) == 'foo'
+
+    metadata = {'id': 'L--8',
+                'assets': {'B8.TIF': {'href': 'foo'}}}
+    assert process.get_lc2_path(metadata) == 'foo'
+
+    metadata = {'id': 'L--8',
+                'assets': {'pan': {'href': 'foo'}}}
+    assert process.get_lc2_path(metadata) == 'foo'
+
+
 @responses.activate
 def test_get_s2_metadata_not_found():
     responses.add(responses.GET, f'{process.S2_SEARCH_URL}/foo', status=404)
@@ -203,6 +222,12 @@ def test_get_datetime():
 
     granule = 'S2A_MSIL2A_20201203T190751_N0214_R013_T11UNA_20201203T195322'
     assert process.get_datetime(granule) == datetime(year=2020, month=12, day=3, hour=19, minute=7, second=51)
+
+    granule = 'LM04_L1GS_025009_19830519_20200903_02_T2'
+    assert process.get_datetime(granule) == datetime(year=1983, month=5, day=19)
+
+    granule = 'LT05_L1TP_091090_20060929_20200831_02_T1'
+    assert process.get_datetime(granule) == datetime(year=2006, month=9, day=29)
 
     granule = 'LE07_L2SP_233095_20200102_20200822_02_T2'
     assert process.get_datetime(granule) == datetime(year=2020, month=1, day=2)
