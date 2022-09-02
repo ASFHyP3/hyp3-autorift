@@ -23,6 +23,7 @@ def test_get_platform():
     assert process.get_platform('LT05_L1TP_091090_20060929_20200831_02_T1') == 'L5'
     assert process.get_platform('LE07_L2SP_233095_20200102_20200822_02_T2') == 'L7'
     assert process.get_platform('LC08_L1TP_009011_20200703_20200913_02_T1') == 'L8'
+    assert process.get_platform('LC09_L1GT_024115_20220320_20220322_02_T2') == 'L9'
 
     with pytest.raises(NotImplementedError):
         process.get_platform('S3B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81')
@@ -97,7 +98,6 @@ def test_get_s2_metadata_not_found():
         responses.POST, process.S2_SEARCH_URL,
         body='{"numberReturned": 0}', status=200,
     )
-
     with pytest.raises(ValueError):
         process.get_s2_metadata('foo')
 
