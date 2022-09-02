@@ -10,7 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.8.9]
 
 ### Added
-* Added support for processing Landsat-4 and Landsat-5 Collection 2 scenes.
+* Added support for processing Landsat-4, Landsat-5, and Landsat-9 Collection 2 scenes.
 
 ## [0.8.8]
 
