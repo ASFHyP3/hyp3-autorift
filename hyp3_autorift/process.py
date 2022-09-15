@@ -261,7 +261,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    elif platform == 'L':
+    elif 'L' in platform:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
