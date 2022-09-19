@@ -986,7 +986,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         parameter_file=kwargs['parameter_file'],
                     )
 
-                elif nc_sensor == "L7":
+                elif (nc_sensor == "L7") | (nc_sensor == "L5") | (nc_sensor == "L4"):
                     if geogrid_run_info is None:
                         chipsizex0 = float(str.split(runCmd('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
                         gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
