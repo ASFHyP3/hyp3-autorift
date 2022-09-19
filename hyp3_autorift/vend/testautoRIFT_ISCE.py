@@ -1009,7 +1009,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 #                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
 #                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
 
-                    import netcdf_output as no
+                    import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
