@@ -7,6 +7,11 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.8.10]
+
+### Fixed
+* Fixed support for Landsat-4/5 by correcting bugs and moving fft preprocessing to process.py
+
 ## [0.8.9]
 
 ### Added

@@ -79,7 +79,7 @@ def test_get_lc2_path():
     assert process.get_lc2_path(metadata) == 'foo'
 
     metadata = {'id': 'L--5',
-                'assets': {'red': {'href': 'foo'}}}
+                'assets': {'green': {'href': 'foo'}}}
     assert process.get_lc2_path(metadata) == 'foo'
 
     metadata = {'id': 'L--8',
