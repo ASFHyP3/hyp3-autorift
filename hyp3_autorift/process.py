@@ -227,6 +227,8 @@ def write_geospatial(outfile: str, data, transform, projection, nodata, driver: 
 
 def write_fft_filtered_image(path: str, out_name:str):
     from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+    name, extension = Path(path).name.split('.')
+    out_name = name + '_fft.' + extension
     out_path = str(Path('.').resolve() / out_name)
 
     array, transform, projection, nodata = load_geospatial(path)
