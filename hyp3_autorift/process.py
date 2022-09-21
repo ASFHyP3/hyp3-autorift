@@ -15,6 +15,7 @@ from zipfile import ZipFile
 
 import boto3
 import botocore.exceptions
+import cv2
 import numpy as np
 import requests
 from hyp3lib.fetch import download_file
@@ -66,7 +67,7 @@ def get_lc2_path(metadata):
     if metadata['id'][3] in ('4', '5'):
         band = metadata['assets'].get('B2.TIF')
         if band is None:
-            band = metadata['assets']['red']
+            band = metadata['assets']['green']
     elif metadata['id'][3] in ('7', '8', '9'):
         band = metadata['assets'].get('B8.TIF')
         if band is None:
@@ -199,6 +200,49 @@ def get_s1_primary_polarization(granule_name):
         return 'hh'
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
+def load_geospatial(infile: str, band: int=1):
+    ds = gdal.Open(infile, gdal.GA_ReadOnly)
+
+    data = ds.GetRasterBand(band).ReadAsArray()
+    nodata = ds.GetRasterBand(band).GetNoDataValue()
+    projection = ds.GetProjection()
+    transform = ds.GetGeoTransform()
+    del ds
+    return data, transform, projection, nodata
+
+
+def write_geospatial(outfile: str, data, transform, projection, nodata, driver: str='GTiff'):
+    driver = gdal.GetDriverByName(driver)
+
+    rows, cols = data.shape
+    ds = driver.Create(outfile, cols, rows, 1, gdal.GDT_Float64)
+    ds.SetGeoTransform(transform)
+    ds.SetProjection(projection)
+
+    ds.GetRasterBand(1).SetNoDataValue(nodata)
+    ds.GetRasterBand(1).WriteArray(data)
+    del ds
+    return outfile
+
+
+def write_fft_filtered_image(path: str, out_name:str):
+    from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+    out_path = str(Path('.').resolve() / out_name)
+
+    array, transform, projection, nodata = load_geospatial(path)
+    valid_domain = array != nodata
+    array[~valid_domain] = 0
+    array = array.astype(float)
+
+    wallis = _wallis_filter(array, filter_width=5)
+    wallis[~valid_domain] = 0
+
+    filtered = _fft_filter(wallis, valid_domain, power_threshold=500)
+    filtered[~valid_domain] = 0
+
+    write_geospatial(out_path, filtered, transform, projection, nodata=0)
+    return out_path
+
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
@@ -281,7 +325,12 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
-
+        
+        if (platform == 'L4') | (platform == 'L5'):
+            print('Running FFT')
+            reference_path = write_fft_filtered_image(reference_path, 'reference_fft_filtered.tif')
+            secondary_path = write_fft_filtered_image(secondary_path, 'secondary_fft_filtered.tif')
+    
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
 

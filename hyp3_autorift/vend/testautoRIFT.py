@@ -287,8 +287,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     elif 'wallis' in preprocessing_methods:
         obj.preprocess_filt_wal()
     elif 'fft' in preprocessing_methods:
-        obj.preprocess_filt_wal()
-        obj.preprocess_filt_fft()
+        print('fft filtering must be done before processing with geogrid! Be careful when using this method')
     else:
         obj.preprocess_filt_hps()
 #    obj.I1 = np.abs(I1)
