@@ -1082,7 +1082,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
+                        parameter_file=kwargs['parameter_file'],
                     )
 
                 elif nc_sensor == "S2":
