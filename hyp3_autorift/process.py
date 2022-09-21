@@ -15,7 +15,6 @@ from zipfile import ZipFile
 
 import boto3
 import botocore.exceptions
-import cv2
 import numpy as np
 import requests
 from hyp3lib.fetch import download_file
@@ -200,7 +199,8 @@ def get_s1_primary_polarization(granule_name):
         return 'hh'
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
-def load_geospatial(infile: str, band: int=1):
+
+def load_geospatial(infile: str, band: int = 1):
     ds = gdal.Open(infile, gdal.GA_ReadOnly)
 
     data = ds.GetRasterBand(band).ReadAsArray()
@@ -211,7 +211,7 @@ def load_geospatial(infile: str, band: int=1):
     return data, transform, projection, nodata
 
 
-def write_geospatial(outfile: str, data, transform, projection, nodata, driver: str='GTiff'):
+def write_geospatial(outfile: str, data, transform, projection, nodata, driver: str = 'GTiff'):
     driver = gdal.GetDriverByName(driver)
 
     rows, cols = data.shape
@@ -225,7 +225,7 @@ def write_geospatial(outfile: str, data, transform, projection, nodata, driver: 
     return outfile
 
 
-def write_fft_filtered_image(path: str, out_name:str):
+def write_fft_filtered_image(path: str, out_name: str):
     from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
     name, extension = Path(path).name.split('.')
     out_name = name + '_fft.' + extension
@@ -327,12 +327,12 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
-        
+
         if (platform == 'L4') | (platform == 'L5'):
             print('Running FFT')
             reference_path = write_fft_filtered_image(reference_path, 'reference_fft_filtered.tif')
             secondary_path = write_fft_filtered_image(secondary_path, 'secondary_fft_filtered.tif')
-    
+
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
 
