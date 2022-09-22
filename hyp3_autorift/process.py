@@ -309,13 +309,13 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
             ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
             ref_filtered = apply_fft_filter(ref_array, ref_nodata)
-            reference_path = io.write_geospatial(create_fft_filepath(reference_path),
-                                                    ref_filtered, ref_transform, ref_projection, nodata=0)
+            ref_new_path = create_fft_filepath(reference_path)
+            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
 
             sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
             sec_filtered = apply_fft_filter(sec_array, sec_nodata)
-            secondary_path = io.write_geospatial(create_fft_filepath(secondary_path),
-                                                    sec_filtered, sec_transform, sec_projection, nodata=0)
+            sec_new_path = create_fft_filepath(reference_path)
+            secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
