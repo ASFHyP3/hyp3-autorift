@@ -200,38 +200,15 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def load_geospatial(infile: str, band: int = 1):
-    ds = gdal.Open(infile, gdal.GA_ReadOnly)
-
-    data = ds.GetRasterBand(band).ReadAsArray()
-    nodata = ds.GetRasterBand(band).GetNoDataValue()
-    projection = ds.GetProjection()
-    transform = ds.GetGeoTransform()
-    del ds
-    return data, transform, projection, nodata
-
-
-def write_geospatial(outfile: str, data, transform, projection, nodata, driver: str = 'GTiff'):
-    driver = gdal.GetDriverByName(driver)
-
-    rows, cols = data.shape
-    ds = driver.Create(outfile, cols, rows, 1, gdal.GDT_Float64)
-    ds.SetGeoTransform(transform)
-    ds.SetProjection(projection)
-
-    ds.GetRasterBand(1).SetNoDataValue(nodata)
-    ds.GetRasterBand(1).WriteArray(data)
-    del ds
-    return outfile
-
-
-def write_fft_filtered_image(path: str, out_name: str):
-    from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+def create_fft_filepath(path: str):
     name, extension = Path(path).name.split('.')
     out_name = name + '_fft.' + extension
     out_path = str(Path('.').resolve() / out_name)
+    return out_path
 
-    array, transform, projection, nodata = load_geospatial(path)
+
+def apply_fft_filter(array: np.ndarray, nodata: int):
+    from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
     valid_domain = array != nodata
     array[~valid_domain] = 0
     array = array.astype(float)
@@ -242,8 +219,7 @@ def write_fft_filtered_image(path: str, out_name: str):
     filtered = _fft_filter(wallis, valid_domain, power_threshold=500)
     filtered[~valid_domain] = 0
 
-    write_geospatial(out_path, filtered, transform, projection, nodata=0)
-    return out_path
+    return filtered
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
@@ -330,8 +306,16 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         if platform in ('L4', 'L5'):
             print('Running FFT')
-            reference_path = write_fft_filtered_image(reference_path, 'reference_fft_filtered.tif')
-            secondary_path = write_fft_filtered_image(secondary_path, 'secondary_fft_filtered.tif')
+
+            ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
+            ref_filtered = apply_fft_filter(ref_array, ref_nodata)
+            reference_path = io.write_geospatial(create_fft_filepath(reference_path),
+                                                    ref_filtered, ref_transform, ref_projection, nodata=0)
+
+            sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
+            sec_filtered = apply_fft_filter(sec_array, sec_nodata)
+            secondary_path = io.write_geospatial(create_fft_filepath(secondary_path),
+                                                    sec_filtered, sec_transform, sec_projection, nodata=0)
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
