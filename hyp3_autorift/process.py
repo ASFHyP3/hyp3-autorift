@@ -328,7 +328,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-        if (platform == 'L4') | (platform == 'L5'):
+        if platform in ('L4', 'L5'):
             print('Running FFT')
             reference_path = write_fft_filtered_image(reference_path, 'reference_fft_filtered.tif')
             secondary_path = write_fft_filtered_image(secondary_path, 'secondary_fft_filtered.tif')

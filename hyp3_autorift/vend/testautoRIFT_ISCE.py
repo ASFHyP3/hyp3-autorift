@@ -28,6 +28,7 @@
 # Author: Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import re
+import warnings
 from osgeo import gdal
 from datetime import datetime, timedelta
 
@@ -285,6 +286,8 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         obj.preprocess_filt_wal_nodata_fill()
     elif 'wallis' in preprocessing_methods:
         obj.preprocess_filt_wal()
+    elif 'fft' in preprocessing_methods:
+        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method', UserWarning)
     else:
         obj.preprocess_filt_hps()
 #    obj.I1 = np.abs(I1)
@@ -510,6 +513,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 acquisition = datetime.strptime(name.split('_')[3], '%Y%m%d')
                 if acquisition >= datetime(2003, 5, 31):
                     preprocessing_methods[ii] = 'wallis_fill'
+            elif len(re.findall("LT0[45]_", name)) > 0:
+                preprocessing_methods[ii] = 'fft'
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 
@@ -980,7 +985,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         parameter_file=kwargs['parameter_file'],
                     )
 
-                elif nc_sensor == "L7":
+                elif nc_sensor in ("L7", "L5", "L4"):
                     if geogrid_run_info is None:
                         chipsizex0 = float(str.split(runCmd('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
                         gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
@@ -1077,7 +1082,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, MM, VXref, VYref,
                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
+                        parameter_file=kwargs['parameter_file'],
                     )
 
                 elif nc_sensor == "S2":
