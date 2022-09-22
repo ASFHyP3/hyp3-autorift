@@ -28,6 +28,7 @@
 # Author: Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import re
+import warnings
 from osgeo import gdal
 from datetime import datetime, timedelta
 
