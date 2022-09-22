@@ -288,7 +288,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     elif 'wallis' in preprocessing_methods:
         obj.preprocess_filt_wal()
     elif 'fft' in preprocessing_methods:
-        warnings.warn('fft filtering must be done before processing with geogrid! Be careful when using this method', UserWarning)
+        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method', UserWarning)
     else:
         obj.preprocess_filt_hps()
 #    obj.I1 = np.abs(I1)
@@ -986,7 +986,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         parameter_file=kwargs['parameter_file'],
                     )
 
-                elif nc_sensor in ["L7", "L5", "L4"]:
+                elif nc_sensor in ("L7", "L5", "L4"):
                     if geogrid_run_info is None:
                         chipsizex0 = float(str.split(runCmd('fgrep "Smallest Allowable Chip Size in m:" testGeogrid.txt'))[-1])
                         gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
