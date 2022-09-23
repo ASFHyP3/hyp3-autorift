@@ -7,21 +7,14 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.8.10]
-
-### Fixed
-* Fixed support for Landsat-4/5 by correcting bugs and moving fft preprocessing to process.py
-
-## [0.8.9]
+## [0.9.0]
 
 ### Added
-* Added support for processing Landsat-4, Landsat-5, and Landsat-9 Collection 2 scenes.
-
-## [0.8.8]
+* Added support for processing Landsat-4, Landsat-5, and Landsat-9 Collection 2 scenes
 
 ### Fixed 
 * Pinned Python to `<3.10` as ISCE2 is currently [incompatible with Python 3.10](https://github.com/isce-framework/isce2/issues/458).
-  This restriction will be lifted once the conda-forge distribution of ISCE2 is compatable with Python 3.10.
+  This restriction will be lifted once the conda-forge distribution of ISCE2 is compatible with Python 3.10
 
 ## [0.8.7]
 
