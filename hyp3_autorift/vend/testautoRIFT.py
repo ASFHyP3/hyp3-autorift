@@ -288,6 +288,14 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     elif 'wallis' in preprocessing_methods:
         obj.preprocess_filt_wal()
     elif 'fft' in preprocessing_methods:
+        # FIXME: The Landsat 4/5 FFT preprocessor looks for the image corners to
+        #        determine the scene rotation, but Geogrid + autoRIFT rond the
+        #        corners when co-registering and chop the non-overlapping corners
+        #        when subsetting to the common image overlap. FFT filer needs to
+        #        be applied to the native images before they are processed by
+        #        Geogrid or autoRIFT.
+        # obj.preprocess_filt_wal()
+        # obj.preprocess_filt_fft()
         warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method', UserWarning)
     else:
         obj.preprocess_filt_hps()
