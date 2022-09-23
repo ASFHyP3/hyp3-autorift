@@ -66,7 +66,7 @@ def get_lc2_path(metadata):
     if metadata['id'][3] in ('4', '5'):
         band = metadata['assets'].get('B2.TIF')
         if band is None:
-            band = metadata['assets']['red']
+            band = metadata['assets']['green']
     elif metadata['id'][3] in ('7', '8', '9'):
         band = metadata['assets'].get('B8.TIF')
         if band is None:
@@ -200,6 +200,28 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
+def create_fft_filepath(path: str):
+    name, extension = Path(path).name.split('.')
+    out_name = name + '_fft.' + extension
+    out_path = str(Path('.').resolve() / out_name)
+    return out_path
+
+
+def apply_fft_filter(array: np.ndarray, nodata: int):
+    from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+    valid_domain = array != nodata
+    array[~valid_domain] = 0
+    array = array.astype(float)
+
+    wallis = _wallis_filter(array, filter_width=5)
+    wallis[~valid_domain] = 0
+
+    filtered = _fft_filter(wallis, valid_domain, power_threshold=500)
+    filtered[~valid_domain] = 0
+
+    return filtered
+
+
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -261,7 +283,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    elif platform == 'L':
+    elif 'L' in platform:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
@@ -281,6 +303,19 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
+
+        if platform in ('L4', 'L5'):
+            print('Running FFT')
+
+            ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
+            ref_filtered = apply_fft_filter(ref_array, ref_nodata)
+            ref_new_path = create_fft_filepath(reference_path)
+            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
+
+            sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
+            sec_filtered = apply_fft_filter(sec_array, sec_nodata)
+            sec_new_path = create_fft_filepath(reference_path)
+            secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')

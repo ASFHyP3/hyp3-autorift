@@ -150,3 +150,28 @@ def get_topsinsar_config():
         config_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
 
     return config_data
+
+
+def load_geospatial(infile: str, band: int = 1):
+    ds = gdal.Open(infile, gdal.GA_ReadOnly)
+
+    data = ds.GetRasterBand(band).ReadAsArray()
+    nodata = ds.GetRasterBand(band).GetNoDataValue()
+    projection = ds.GetProjection()
+    transform = ds.GetGeoTransform()
+    del ds
+    return data, transform, projection, nodata
+
+
+def write_geospatial(outfile: str, data, transform, projection, nodata, driver: str = 'GTiff'):
+    driver = gdal.GetDriverByName(driver)
+
+    rows, cols = data.shape
+    ds = driver.Create(outfile, cols, rows, 1, gdal.GDT_Float64)
+    ds.SetGeoTransform(transform)
+    ds.SetProjection(projection)
+
+    ds.GetRasterBand(1).SetNoDataValue(nodata)
+    ds.GetRasterBand(1).WriteArray(data)
+    del ds
+    return outfile
