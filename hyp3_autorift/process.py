@@ -202,8 +202,7 @@ def get_s1_primary_polarization(granule_name):
 
 def create_fft_filepath(path: str):
     parent = (Path.cwd() / 'fft').resolve()
-    if not parent.exists():
-        parent.mkdir()
+    parent.mkdir(exist_ok=True)
 
     out_path = parent / Path(path).name
     return str(out_path)
