@@ -201,10 +201,11 @@ def get_s1_primary_polarization(granule_name):
 
 
 def create_fft_filepath(path: str):
-    name, extension = Path(path).name.split('.')
-    out_name = name + '_fft.' + extension
-    out_path = str(Path('.').resolve() / out_name)
-    return out_path
+    parent = (Path.cwd() / 'fft').resolve()
+    parent.mkdir(exist_ok=True)
+
+    out_path = parent / Path(path).name
+    return str(out_path)
 
 
 def apply_fft_filter(array: np.ndarray, nodata: int):
