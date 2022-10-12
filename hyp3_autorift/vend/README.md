@@ -52,3 +52,6 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    included in the next autoRIFT release.
 5. The changes listed in `CHANGES-S2-WEST.diff` were applied to allow `testGeogrid_ISCE.py`
    and `testGeogridOptical.py` to process scenes in the `s3://s2-l1c-us-west-2` bucket
+6. The changes listed in `CHANGES-WALLLIS-WIDTH.diff` were applied to select the correct
+   Wallis filter width for Sentinel-1 scenes. These changes should be included in the next
+   autoRIFT release.
