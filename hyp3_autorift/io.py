@@ -52,6 +52,7 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                     'offset2vx': 'window_rdr_off2vel_x_vec.tif',
                     'offset2vy': 'window_rdr_off2vel_y_vec.tif',
                     'stable_surface_mask': 'window_stable_surface_mask.tif',
+                    'scale_factor': 'window_scale_factor.tif',
                     'mpflag': 0,
                 }
             }
