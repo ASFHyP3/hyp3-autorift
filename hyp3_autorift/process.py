@@ -352,7 +352,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform[0], optical_flag=False, ncname=None,
+            reference_path, secondary_path, nc_sensor=platform, optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
             parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
