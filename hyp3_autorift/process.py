@@ -319,19 +319,20 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             local_copy_location = (Path.cwd() / 'filtered').resolve()
             local_copy_location.mkdir(exist_ok=True)
 
+            image_filter = LOCAL_FILTER[platform]
+            print(f'Running {image_filter.__name__}')
+
             ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
             ref_new_path = local_filepath(reference_path, local_copy_location)
+            ref_filtered = image_filter(ref_array, ref_nodata)
+            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
+            del ref_array, ref_transform, ref_projection, ref_nodata, ref_new_path, ref_filtered
 
             sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
             sec_new_path = local_filepath(secondary_path, local_copy_location)
-
-            image_filter = LOCAL_FILTER[platform]
-            print(f'Running {image_filter.__name__}')
-            ref_filtered = image_filter(ref_array, ref_nodata)
             sec_filtered = image_filter(sec_array, sec_nodata)
-
-            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
             secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
+            del sec_array, sec_transform, sec_projection, sec_nodata, sec_new_path, sec_filtered
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
