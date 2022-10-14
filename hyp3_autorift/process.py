@@ -222,7 +222,7 @@ def apply_fft_filter(array: np.ndarray, nodata: int) -> np.ndarray:
 
 def apply_wallis_filter(array: np.ndarray, nodata: int) -> np.ndarray:
     from autoRIFT.autoRIFT import _wallis_filter_fill
-    filtered = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
+    filtered, _ = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
     return filtered
 
 
