@@ -223,7 +223,13 @@ def apply_fft_filter(array: np.ndarray, nodata: int) -> np.ndarray:
 
 def apply_wallis_filter(array: np.ndarray, nodata: int) -> np.ndarray:
     from autoRIFT.autoRIFT import _wallis_filter_fill
+
+    valid_domain = array != nodata
+    array[~valid_domain] = 0
+    array = array.astype(float)
+
     filtered, _ = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
+
     return filtered
 
 
