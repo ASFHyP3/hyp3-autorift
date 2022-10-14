@@ -3,6 +3,7 @@ Package for processing with autoRIFT
 """
 
 import argparse
+import gc
 import json
 import logging
 import os
@@ -327,12 +328,14 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             ref_filtered = image_filter(ref_array, ref_nodata)
             reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
             del ref_array, ref_transform, ref_projection, ref_nodata, ref_new_path, ref_filtered
+            gc.collect()
 
             sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
             sec_new_path = local_filepath(secondary_path, local_copy_location)
             sec_filtered = image_filter(sec_array, sec_nodata)
             secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
             del sec_array, sec_transform, sec_projection, sec_nodata, sec_new_path, sec_filtered
+            gc.collect()
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
