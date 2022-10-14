@@ -238,6 +238,7 @@ LOCAL_FILTER = {
     'L7': apply_wallis_filter,
 }
 
+
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
