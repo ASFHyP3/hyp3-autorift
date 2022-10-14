@@ -200,15 +200,12 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def create_fft_filepath(path: str):
-    parent = (Path.cwd() / 'fft').resolve()
-    parent.mkdir(exist_ok=True)
-
-    out_path = parent / Path(path).name
+def local_filepath(path: str, local_directory: Path) -> str:
+    out_path = local_directory / Path(path).name
     return str(out_path)
 
 
-def apply_fft_filter(array: np.ndarray, nodata: int):
+def apply_fft_filter(array: np.ndarray, nodata: int) -> np.ndarray:
     from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
     valid_domain = array != nodata
     array[~valid_domain] = 0
@@ -222,6 +219,24 @@ def apply_fft_filter(array: np.ndarray, nodata: int):
 
     return filtered
 
+
+def apply_wallis_filter(array: np.ndarray, nodata: int) -> np.ndarray:
+    from autoRIFT.autoRIFT import _wallis_filter
+    valid_domain = array != nodata
+    array[~valid_domain] = 0
+    array = array.astype(float)
+
+    filtered = _wallis_filter(array, filter_width=5)
+    filtered[~valid_domain] = 0
+
+    return filtered
+
+
+LOCAL_FILTER = {
+    'L4': apply_fft_filter,
+    'L5': apply_fft_filter,
+    'L7': apply_wallis_filter,
+}
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
@@ -305,17 +320,22 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-        if platform in ('L4', 'L5'):
-            print('Running FFT')
+        if platform in ('L4', 'L5', 'L7'):
+            local_copy_location = (Path.cwd() / 'filtered').resolve()
+            local_copy_location.mkdir(exist_ok=True)
 
             ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
-            ref_filtered = apply_fft_filter(ref_array, ref_nodata)
-            ref_new_path = create_fft_filepath(reference_path)
-            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
+            ref_new_path = local_filepath(reference_path, local_copy_location)
 
             sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
-            sec_filtered = apply_fft_filter(sec_array, sec_nodata)
-            sec_new_path = create_fft_filepath(secondary_path)
+            sec_new_path = local_filepath(secondary_path, local_copy_location)
+
+            image_filter = LOCAL_FILTER[platform]
+            print(f'Running {image_filter.__name__}')
+            ref_filtered = image_filter(ref_array, ref_nodata)
+            sec_filtered = image_filter(sec_array, sec_nodata)
+
+            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
             secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
 
     log.info(f'Reference scene path: {reference_path}')
