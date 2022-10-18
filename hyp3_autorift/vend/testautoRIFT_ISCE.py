@@ -528,7 +528,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         if nc_sensor == 'S1':
             preprocessing_filter_width = 21
 
-        print(f'Using preprocessing filter width {preprocessing_filter_width}')
+        print(f'Preprocessing filter width {preprocessing_filter_width}')
 
         preprocessing_methods = ['hps', 'hps']
         for ii, name in enumerate((m_name, s_name)):
