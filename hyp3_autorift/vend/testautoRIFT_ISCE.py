@@ -525,9 +525,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
         # FIXME: Filter width is a magic variable here and not exposed well.
         preprocessing_filter_width = 5
-        for ii, name in enumerate((m_name, s_name)):
-            if len(re.findall("S1[AB]_", name)) > 0:
-                preprocessing_filter_width = 21
+        if nc_sensor == 'S1':
+            preprocessing_filter_width = 21
 
         print(f'Using preprocessing filter width {preprocessing_filter_width}')
 
