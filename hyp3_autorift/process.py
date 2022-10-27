@@ -38,10 +38,11 @@ S2_WEST_BUCKET = 's2-l1c-us-west-2'
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
 LANDSAT_SENSOR_MAPPING = {
-    'L8': {'C': 'oli-tirs'},
+    'L9': {'C': 'oli-tirs', 'O': 'oli-tirs', 'T': 'oli-tirs'},
+    'L8': {'C': 'oli-tirs', 'O': 'oli-tirs', 'T': 'oli-tirs'},
     'L7': {'E': 'etm'},
-    'L5': {'T': 'tm'},
-    'L4': {'T': 'tm'},
+    'L5': {'T': 'tm', 'M': 'mss'},
+    'L4': {'T': 'tm', 'M': 'mss'},
 }
 
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
@@ -50,13 +51,14 @@ DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
 
 def get_lc2_stac_json_key(scene_name: str) -> str:
     platform = get_platform(scene_name)
+    level = scene_name[6]
     year = scene_name[17:21]
     path = scene_name[10:13]
     row = scene_name[13:16]
 
     sensor = LANDSAT_SENSOR_MAPPING[platform][scene_name[1]]
 
-    return f'collection02/level-1/standard/{sensor}/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
+    return f'collection02/level-{level}/standard/{sensor}/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
 
 
 def get_lc2_metadata(scene_name):
