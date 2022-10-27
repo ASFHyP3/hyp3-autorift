@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 * Added support for processing Landsat-4, Landsat-5, and Landsat-9 Collection 2 scenes
+* `hyp3_autorift.process.get_lc2_stac_json_key` will now work for landsat missions 4-9, for all levels, and for all sensors
 
 ### Fixed 
 * Pinned Python to `<3.10` as ISCE2 is currently [incompatible with Python 3.10](https://github.com/isce-framework/isce2/issues/458).
