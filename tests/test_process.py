@@ -53,7 +53,6 @@ def test_get_lc2_stac_json_key():
     assert process.get_lc2_stac_json_key('LT05_L1TP_060018_19860116_20200918_02_T2') == expected
 
 
-
 @responses.activate
 def test_get_lc2_metadata():
     responses.add(
