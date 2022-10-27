@@ -44,6 +44,15 @@ def test_get_lc2_stac_json_key():
                'LO08_L1TP_226012_20201108_20201120_02_T2_stac.json'
     assert process.get_lc2_stac_json_key('LO08_L1TP_226012_20201108_20201120_02_T2') == expected
 
+    expected = 'collection02/level-1/standard/etm/2001/063/017/LE07_L1TP_063017_20011208_20200917_02_T2/' \
+               'LE07_L1TP_063017_20011208_20200917_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LE07_L1TP_063017_20011208_20200917_02_T2') == expected
+
+    expected = 'collection02/level-1/standard/tm/1986/060/018/LT05_L1TP_060018_19860116_20200918_02_T2/' \
+               'LT05_L1TP_060018_19860116_20200918_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LT05_L1TP_060018_19860116_20200918_02_T2') == expected
+
+
 
 @responses.activate
 def test_get_lc2_metadata():
