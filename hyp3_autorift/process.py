@@ -87,6 +87,19 @@ def get_lc2_path(metadata):
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
 
+def check_lc2_projection(reference_metadata, secondary_metadata, secondary_path):
+    reference_epsg = reference_metadata['properties']['proj:epsg']
+    secondary_epsg = secondary_metadata['properties']['proj:epsg']
+    if reference_epsg != secondary_epsg:
+        reprojected_secondary_path = Path(Path.cwd() / secondary_path.split('/')[-1])
+        gdal.Warp(reprojected_secondary_path.name, str(secondary_path), dstSRS=f'EPSG:{reference_epsg}',
+                  outputBounds=secondary_metadata['bbox'],
+                  resampleAlg='nearest', format='GTiff')
+        return reprojected_secondary_path
+    else:
+        return secondary_path
+
+
 def get_s2_metadata(scene_name):
     response = requests.get(f'{S2_SEARCH_URL}/{scene_name}')
     try:
@@ -312,6 +325,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = get_lc2_path(secondary_metadata)
+
+        secondary_path = check_lc2_projection(reference_metadata, secondary_metadata, secondary_path)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
