@@ -36,21 +36,49 @@ def test_get_platform():
 
 
 def test_get_lc2_stac_json_key():
-    expected = 'collection02/level-1/standard/oli-tirs/2019/041/001/LC08_L1TP_041001_20191005_20200825_02_T1/' \
-               'LC08_L1TP_041001_20191005_20200825_02_T1_stac.json'
-    assert process.get_lc2_stac_json_key('LC08_L1TP_041001_20191005_20200825_02_T1') == expected
+    expected = 'collection02/level-1/standard/oli-tirs/2021/122/028/LC09_L1GT_122028_20211107_20220119_02_T2/' \
+               'LC09_L1GT_122028_20211107_20220119_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LC09_L1GT_122028_20211107_20220119_02_T2') == expected
 
-    expected = 'collection02/level-1/standard/oli-tirs/2020/226/012/LO08_L1TP_226012_20201108_20201120_02_T2/' \
-               'LO08_L1TP_226012_20201108_20201120_02_T2_stac.json'
-    assert process.get_lc2_stac_json_key('LO08_L1TP_226012_20201108_20201120_02_T2') == expected
+    expected = 'collection02/level-1/standard/oli-tirs/2022/060/002/LO09_L1TP_060002_20220316_20220316_02_T1/' \
+               'LO09_L1TP_060002_20220316_20220316_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LO09_L1TP_060002_20220316_20220316_02_T1') == expected
 
-    expected = 'collection02/level-1/standard/etm/2001/063/017/LE07_L1TP_063017_20011208_20200917_02_T2/' \
-               'LE07_L1TP_063017_20011208_20200917_02_T2_stac.json'
-    assert process.get_lc2_stac_json_key('LE07_L1TP_063017_20011208_20200917_02_T2') == expected
+    expected = 'collection02/level-1/standard/oli-tirs/2022/137/206/LT09_L1GT_137206_20220107_20220123_02_T2/' \
+               'LT09_L1GT_137206_20220107_20220123_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LT09_L1GT_137206_20220107_20220123_02_T2') == expected
 
-    expected = 'collection02/level-1/standard/tm/1986/060/018/LT05_L1TP_060018_19860116_20200918_02_T2/' \
-               'LT05_L1TP_060018_19860116_20200918_02_T2_stac.json'
-    assert process.get_lc2_stac_json_key('LT05_L1TP_060018_19860116_20200918_02_T2') == expected
+    expected = 'collection02/level-2/standard/oli-tirs/2022/028/042/LC08_L2SP_028042_20220831_20220910_02_T1/' \
+               'LC08_L2SP_028042_20220831_20220910_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LC08_L2SP_028042_20220831_20220910_02_T1') == expected
+
+    expected = 'collection02/level-1/standard/oli-tirs/2019/157/021/LO08_L1GT_157021_20191221_20200924_02_T2/' \
+               'LO08_L1GT_157021_20191221_20200924_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LO08_L1GT_157021_20191221_20200924_02_T2') == expected
+
+    expected = 'collection02/level-1/standard/oli-tirs/2014/141/212/LT08_L1GT_141212_20140902_20200925_02_T2/' \
+               'LT08_L1GT_141212_20140902_20200925_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LT08_L1GT_141212_20140902_20200925_02_T2') == expected
+
+    expected = 'collection02/level-1/standard/etm/2006/024/035/LE07_L1TP_024035_20061119_20200913_02_T1/' \
+               'LE07_L1TP_024035_20061119_20200913_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LE07_L1TP_024035_20061119_20200913_02_T1') == expected
+
+    expected = 'collection02/level-2/standard/tm/1987/224/075/LT05_L2SP_224075_19871031_20201014_02_T1/' \
+               'LT05_L2SP_224075_19871031_20201014_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LT05_L2SP_224075_19871031_20201014_02_T1') == expected
+
+    expected = 'collection02/level-1/standard/mss/1995/098/068/LM05_L1GS_098068_19950831_20200823_02_T2/' \
+               'LM05_L1GS_098068_19950831_20200823_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LM05_L1GS_098068_19950831_20200823_02_T2') == expected
+
+    expected = 'collection02/level-1/standard/tm/1988/183/062/LT04_L1TP_183062_19880706_20200917_02_T1/' \
+               'LT04_L1TP_183062_19880706_20200917_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LT04_L1TP_183062_19880706_20200917_02_T1') == expected
+
+    expected = 'collection02/level-1/standard/mss/1983/117/071/LM04_L1GS_117071_19830609_20200903_02_T2/' \
+               'LM04_L1GS_117071_19830609_20200903_02_T2_stac.json'
+    assert process.get_lc2_stac_json_key('LM04_L1GS_117071_19830609_20200903_02_T2') == expected
 
 
 @responses.activate
