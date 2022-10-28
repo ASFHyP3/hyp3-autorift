@@ -51,14 +51,13 @@ DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
 
 def get_lc2_stac_json_key(scene_name: str) -> str:
     platform = get_platform(scene_name)
-    level = scene_name[6]
     year = scene_name[17:21]
     path = scene_name[10:13]
     row = scene_name[13:16]
 
     sensor = LANDSAT_SENSOR_MAPPING[platform][scene_name[1]]
 
-    return f'collection02/level-{level}/standard/{sensor}/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
+    return f'collection02/level-1/standard/{sensor}/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
 
 
 def get_lc2_metadata(scene_name):
