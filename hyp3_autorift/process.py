@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -91,10 +92,11 @@ def check_lc2_projection(reference_metadata, secondary_metadata, secondary_path)
     reference_epsg = reference_metadata['properties']['proj:epsg']
     secondary_epsg = secondary_metadata['properties']['proj:epsg']
     if reference_epsg != secondary_epsg:
+        secondary_scene = gdal.Open(secondary_path)
         reprojected_secondary_path = Path(Path.cwd() / secondary_path.split('/')[-1])
-        gdal.Warp(reprojected_secondary_path.name, str(secondary_path), dstSRS=f'EPSG:{reference_epsg}',
-                  outputBounds=secondary_metadata['bbox'],
-                  resampleAlg='nearest', format='GTiff')
+        gdal.Warp(reprojected_secondary_path.name, secondary_scene, dstSRS=f'EPSG:{reference_epsg}',
+                  outputBounds=secondary_metadata['bbox'], resampleAlg='nearest', format='GTiff')
+        del secondary_scene
         return reprojected_secondary_path
     else:
         return secondary_path
