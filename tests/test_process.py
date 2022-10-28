@@ -48,9 +48,9 @@ def test_get_lc2_stac_json_key():
                'LT09_L1GT_137206_20220107_20220123_02_T2_stac.json'
     assert process.get_lc2_stac_json_key('LT09_L1GT_137206_20220107_20220123_02_T2') == expected
 
-    expected = 'collection02/level-1/standard/oli-tirs/2022/028/042/LC08_L2SP_028042_20220831_20220910_02_T1/' \
-               'LC08_L2SP_028042_20220831_20220910_02_T1_stac.json'
-    assert process.get_lc2_stac_json_key('LC08_L2SP_028042_20220831_20220910_02_T1') == expected
+    expected = 'collection02/level-1/standard/oli-tirs/2016/138/039/LC08_L1TP_138039_20161105_20200905_02_T1/' \
+               'LC08_L1TP_138039_20161105_20200905_02_T1_stac.json'
+    assert process.get_lc2_stac_json_key('LC08_L1TP_138039_20161105_20200905_02_T1') == expected
 
     expected = 'collection02/level-1/standard/oli-tirs/2019/157/021/LO08_L1GT_157021_20191221_20200924_02_T2/' \
                'LO08_L1GT_157021_20191221_20200924_02_T2_stac.json'
