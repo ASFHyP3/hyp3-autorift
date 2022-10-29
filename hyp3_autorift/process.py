@@ -92,18 +92,18 @@ def check_lc2_projection(reference_metadata, secondary_metadata, secondary_path)
     reference_epsg = reference_metadata['properties']['proj:epsg']
     secondary_epsg = secondary_metadata['properties']['proj:epsg']
     if reference_epsg != secondary_epsg:
-        log.info(f'Reference and secondary scenes projections differ. Reprojecting to {reference_epsg}...')
+        log.info(f'Reference and secondary scenes projections differ. Reprojecting to EPSG:{reference_epsg}...')
         lc2_key = secondary_path.split('/', 3)[-1]
         tif_name = secondary_path.split('/')[-1]
         reprojected_secondary_path = Path(Path.cwd() / tif_name)
         with tempfile.NamedTemporaryFile() as secondary_scene:
             S3_CLIENT.download_fileobj(LANDSAT_BUCKET, lc2_key, secondary_scene,
                                        ExtraArgs={'RequestPayer': 'requester'})
-            width, height = gdal.Info(secondary_scene.name, format='json')['size']
+            width, height = secondary_metadata['properties']['proj:shape']
             gdal.Warp(reprojected_secondary_path.name, secondary_scene.name, dstSRS=f'EPSG:{reference_epsg}',
-                      outputBounds=secondary_metadata['bbox'], width=width, height=height,resampleAlg='nearest',
+                      outputBounds=secondary_metadata['bbox'], width=width, height=height, resampleAlg='nearest',
                       format='GTiff')
-        return reprojected_secondary_path
+        return str(reprojected_secondary_path)
     else:
         return secondary_path
 
