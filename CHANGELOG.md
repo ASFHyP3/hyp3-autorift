@@ -7,6 +7,12 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.9.1]
+
+### Changed
+* [A patch](hyp3_autorift/vend/CHANGES-176.diff) was applied to update some netCDF variable attributes, as described
+  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ## [0.9.0]
 
 ### Added
@@ -34,7 +40,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.8.5]
 
 ### Added
-* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog
+* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the 
+  catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata
+  catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog
 
 ## [0.8.4]
 
