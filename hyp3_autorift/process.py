@@ -11,7 +11,6 @@ from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
 from typing import Tuple
-from zipfile import ZipFile
 
 import boto3
 import botocore.exceptions
@@ -22,6 +21,7 @@ from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
+import xml.etree.ElementTree as ET
 
 from hyp3_autorift import geometry
 from hyp3_autorift import image
@@ -34,6 +34,7 @@ gdal.UseExceptions()
 S3_CLIENT = boto3.client('s3')
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
 S2_WEST_BUCKET = 's2-l1c-us-west-2'
+S2_GRANULE_DIR = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/'
 
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
@@ -88,34 +89,56 @@ def get_lc2_path(metadata):
 
 
 def get_s2_metadata(scene_name):
-    response = requests.get(f'{S2_SEARCH_URL}/{scene_name}')
-    try:
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError:
-        if response.status_code != 404:
-            raise
+    # determine the path to the scene's directory in Google Earth Engine based on naming conventions
+    tile = f'{scene_name[39:41]}/{scene_name[41:42]}/{scene_name[42:44]}'
+    tile_path = f'{tile}/{scene_name}.SAFE'
 
-    payload = {
-        'query': {
-            'sentinel:product_id': {
-                'eq': scene_name,
-            }
-        }
-    }
-    response = requests.post(S2_SEARCH_URL, json=payload)
+    # retrieve the content of the manifest.safe file
+    manifest_url = f'{S2_GRANULE_DIR}/{tile_path}/manifest.safe'
+    response = requests.get(manifest_url)
     response.raise_for_status()
 
-    if not response.json().get('numberReturned'):
-        metadata_dir = Path(__file__).parent / 'metadata' / 's2_metadata.zip'
-        with ZipFile(metadata_dir) as zf:
-            with zf.open('s2_metadata.json') as f:
-                s2_metadata = json.load(f)
-        if scene_name not in s2_metadata:
-            raise ValueError(f'Scene could not be found: {scene_name}')
-        return s2_metadata[scene_name]
+    # parse the manifest.safe file for the relative path to the desired B08 image
+    root = ET.fromstring(response.text)
+    elements = root.findall(".//fileLocation[@locatorType='URL'][@href]")
+    hrefs = [element.attrib['href'] for element in elements if
+             element.attrib['href'].endswith('_B08.jp2') and '/IMG_DATA/' in element.attrib['href']]
+    if len(hrefs) == 1:
+        # post-2016-12-06 scene; only one tile
+        file_path = hrefs[0]
+    else:
+        # pre-2016-12-06 scene; choose the requested tile
+        tile_token = scene_name.split('_')[5]
+        file_path = [href for href in hrefs if href.endswith(f'_{tile_token}_B08.jp2')][0]
+    path = f'/vsicurl/{S2_GRANULE_DIR}/{file_path}'
 
-    return response.json()['features'][0]
+    # gdalinfo the image to determine its bounding box
+    gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
+    gdal.SetConfigOption('GDAL_GEOREF_SOURCES', 'INTERNAL')
+    info = gdal.Info(path, format='json')
+    coordinates = info['wgs84Extent']['coordinates'][0]
+    lons = [coord[0] for coord in coordinates]
+    lats = [coord[1] for coord in coordinates]
+    if max(lons) >= 170 and min(lons) <= -170:
+        lons = [lon - 360 if lon >= 170 else lon for lon in lons]
+    bbox = [
+        min(lons),
+        min(lats),
+        max(lons),
+        max(lats),
+    ]
+
+    # extract datetime from the scene name based on naming conventions
+    acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
+
+    return {
+        'path': path,
+        'bbox': bbox,
+        'id': scene_name,
+        'properties': {
+            'datetime': acquisition_start.isoformat(timespec='seconds') + 'Z',
+        },
+    }
 
 
 def s3_object_is_accessible(bucket, key):
@@ -133,19 +156,6 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str]:
     bucket = s3_location[0]
     key = '/'.join(s3_location[1:])
     return bucket, key
-
-
-def get_s2_paths(reference_s3_url: str, secondary_s3_url: str) -> Tuple[str, str]:
-    reference_bucket, reference_key = parse_s3_url(reference_s3_url)
-    secondary_bucket, secondary_key = parse_s3_url(secondary_s3_url)
-
-    reference_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=reference_key)
-    secondary_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=secondary_key)
-
-    if reference_in_west_bucket and secondary_in_west_bucket:
-        return f'/vsis3/{S2_WEST_BUCKET}/{reference_key}', f'/vsis3/{S2_WEST_BUCKET}/{secondary_key}'
-
-    return f'/vsis3/{reference_bucket}/{reference_key}', f'/vsis3/{secondary_bucket}/{secondary_key}'
 
 
 def least_precise_orbit_of(orbits):
@@ -282,15 +292,15 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         reference_metadata = get_s2_metadata(reference)
         secondary_metadata = get_s2_metadata(secondary)
 
-        reference_path, secondary_path = get_s2_paths(reference_metadata['assets']['B08']['href'],
-                                                      secondary_metadata['assets']['B08']['href'])
+        reference_path = reference_metadata['path']
+        secondary_path = secondary_metadata['path']
 
         if S2_WEST_BUCKET not in reference_path:
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
             os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-            gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
-            os.environ['AWS_REGION'] = 'eu-central-1'
+            gdal.SetConfigOption('AWS_REGION', 'us-west-2')
+            os.environ['AWS_REGION'] = 'us-west-2'
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
