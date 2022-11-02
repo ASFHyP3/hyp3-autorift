@@ -281,7 +281,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
-        
         gdal.SetConfigOption('GDAL_GEOREF_SOURCES', 'INTERNAL')
 
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
