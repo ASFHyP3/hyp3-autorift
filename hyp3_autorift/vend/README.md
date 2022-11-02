@@ -16,19 +16,12 @@ These modules are required for the expected autoRIFT workflow:
 and are included in the [autoRIFT source code](https://github.com/nasa-jpl/autoRIFT),
 but not distributed as part of the package. 
 
-The version located in this directory corresponds to release [`v1.4.0`](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.4.0).
+The version located in this directory corresponds to release [`v1.5.0`](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.5.0).
 Changes, as listed in `CHANGES.diff`, were done to: 
 * facilitate better packaging and distribution of these modules
-* correctly handle Sentinel-2 Level 1C products
-* use the full Sentinel-2 COG id in the output netCDF product filename to ensure unique names
+* correctly handle Sentinel-2 Level 1C products, including:
+  * process Sentinel-2 scenes in the `s3://s2-l1c-us-west-2` mirror bucket preferentially (cost savings)
+  * use the full Sentinel-2 COG id in the output netCDF product filename to ensure unique names
 
 **Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
 We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`. 
-
-## Additional Patches
-
-1. The changes listed in `CHANGES-S2-WEST.diff` were applied to allow `testGeogrid_ISCE.py`
-   and `testGeogridOptical.py` to process scenes in the `s3://s2-l1c-us-west-2` bucket
-6. The changes listed in `CHANGES-WALLLIS-WIDTH.diff` were applied to select the correct
-   Wallis filter width for Sentinel-1 scenes. These changes should be included in the next
-   autoRIFT release.
