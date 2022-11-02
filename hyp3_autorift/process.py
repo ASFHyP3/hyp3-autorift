@@ -291,7 +291,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         secondary_metadata = get_s2_metadata(secondary)
         reference_path = reference_metadata['path']
         secondary_path = secondary_metadata['path']
-
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
