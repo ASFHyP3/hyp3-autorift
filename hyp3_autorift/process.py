@@ -289,7 +289,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         reference_metadata = get_s2_metadata(reference)
         secondary_metadata = get_s2_metadata(secondary)
-
         reference_path = reference_metadata['path']
         secondary_path = secondary_metadata['path']
 
