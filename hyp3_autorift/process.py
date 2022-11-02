@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -21,7 +22,6 @@ from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
-import xml.etree.ElementTree as ET
 
 from hyp3_autorift import geometry
 from hyp3_autorift import image
@@ -32,8 +32,6 @@ log = logging.getLogger(__name__)
 gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
-S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
-S2_WEST_BUCKET = 's2-l1c-us-west-2'
 S2_GRANULE_DIR = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/'
 
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
@@ -113,8 +111,6 @@ def get_s2_metadata(scene_name):
     path = f'/vsicurl/{S2_GRANULE_DIR}/{file_path}'
 
     # gdalinfo the image to determine its bounding box
-    gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
-    gdal.SetConfigOption('GDAL_GEOREF_SOURCES', 'INTERNAL')
     info = gdal.Info(path, format='json')
     coordinates = info['wgs84Extent']['coordinates'][0]
     lons = [coord[0] for coord in coordinates]
@@ -285,6 +281,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+        
+        gdal.SetConfigOption('GDAL_GEOREF_SOURCES', 'INTERNAL')
 
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
         os.environ['AWS_REGION'] = 'us-west-2'
@@ -294,13 +292,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         reference_path = reference_metadata['path']
         secondary_path = secondary_metadata['path']
-
-        if S2_WEST_BUCKET not in reference_path:
-            gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
-            os.environ['AWS_REQUEST_PAYER'] = 'requester'
-
-            gdal.SetConfigOption('AWS_REGION', 'us-west-2')
-            os.environ['AWS_REGION'] = 'us-west-2'
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
