@@ -139,9 +139,9 @@ def test_get_s2_metadata():
     pass
 
 
-def test_get_s2_path(monkeypatch):
+def test_get_s2_path(test_data_directory):
     scene_name = 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500'
-    f = open(f'tests/data/{scene_name}.manifest.safe', 'r')
+    f = open(f'{test_data_directory.name}/{scene_name}.manifest.safe', 'r')
     manifest_text = f.read()
     path = process.get_s2_path(manifest_text, scene_name)
     assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles//./GRANULE' \
