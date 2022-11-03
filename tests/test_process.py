@@ -140,6 +140,15 @@ def test_get_s2_metadata():
     pass
 
 
+@responses.activate
+def test_get_s2_manifest():
+    url = f'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
+          f'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE/manifest.safe'
+    responses.add(responses.GET, url, body='foo', status=200)
+
+    assert process.get_s2_manifest('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == 'foo'
+
+
 def test_get_s2_path(test_data_directory):
     scene_name = 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500'
     with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
