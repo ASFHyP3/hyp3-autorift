@@ -7,6 +7,20 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.9.0]
+
+### Added
+* Added support for processing Landsat-4, -5, and -7 Collection 2 scenes
+* `hyp3_autorift.process.get_lc2_stac_json_key` will now work for landsat missions 4-9 and for all sensors
+
+### Changed
+* Upgraded autoRIFT to [v1.5.0](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.5.0) 
+  and [ISCE2 v2.6.1 built with autoRIFT v1.5.0](https://anaconda.org/hyp3/isce2)
+
+### Fixed 
+* Pinned Python to `<3.10` as ISCE2 is currently [incompatible with Python 3.10](https://github.com/isce-framework/isce2/issues/458).
+  This restriction will be lifted once the conda-forge distribution of ISCE2 is compatible with Python 3.10
+
 ## [0.8.7]
 
 ### Fixed

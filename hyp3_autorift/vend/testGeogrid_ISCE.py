@@ -173,6 +173,12 @@ def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
     if re.findall("L[CO]0[89]_",DS.GetDescription()).__len__() > 0:
         nameString = os.path.basename(DS.GetDescription())
         info.time = nameString.split('_')[3]
+    elif re.findall("L[EO]07_",DS.GetDescription()).__len__() > 0:
+        nameString = os.path.basename(DS.GetDescription())
+        info.time = nameString.split('_')[3]
+    elif re.findall("LT0[45]_",DS.GetDescription()).__len__() > 0:
+        nameString = os.path.basename(DS.GetDescription())
+        info.time = nameString.split('_')[3]
     elif 'sentinel-s2-l1c' in indir_m or 's2-l1c-us-west-2' in indir_m:
         s2_name = kwargs['reference_metadata']['id']
         info.time = s2_name.split('_')[2]
@@ -191,6 +197,12 @@ def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
     info1 = Dummy()
 
     if re.findall("L[CO]0[89]_",DS1.GetDescription()).__len__() > 0:
+        nameString1 = os.path.basename(DS1.GetDescription())
+        info1.time = nameString1.split('_')[3]
+    elif re.findall("L[EO]07_",DS1.GetDescription()).__len__() > 0:
+        nameString1 = os.path.basename(DS1.GetDescription())
+        info1.time = nameString1.split('_')[3]
+    elif re.findall("LT0[45]_",DS1.GetDescription()).__len__() > 0:
         nameString1 = os.path.basename(DS1.GetDescription())
         info1.time = nameString1.split('_')[3]
     elif 'sentinel-s2-l1c' in indir_s or 's2-l1c-us-west-2' in indir_s:
@@ -251,6 +263,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.winssmname = "window_stable_surface_mask.tif"
     obj.winro2vxname = "window_rdr_off2vel_x_vec.tif"
     obj.winro2vyname = "window_rdr_off2vel_y_vec.tif"
+    obj.winsfname = "window_scale_factor.tif"
     ##dt-varying search range scale (srs) rountine parameters
 #    obj.srs_dt_unity = 5
 #    obj.srs_max_scale = 10
@@ -335,6 +348,7 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     obj.winssmname = "window_stable_surface_mask.tif"
     obj.winro2vxname = "window_rdr_off2vel_x_vec.tif"
     obj.winro2vyname = "window_rdr_off2vel_y_vec.tif"
+    obj.winsfname = "window_scale_factor.tif"
     ##dt-varying search range scale (srs) rountine parameters
 #    obj.srs_dt_unity = 32
 #    obj.srs_max_scale = 10
