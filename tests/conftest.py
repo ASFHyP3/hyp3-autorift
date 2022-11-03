@@ -17,4 +17,4 @@ def s3_stubber():
 @pytest.fixture
 def test_data_directory():
     here = Path(os.path.dirname(__file__))
-    return here / 'data'
+    return here / 'tests/data'
