@@ -29,7 +29,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
 ## Additional Patches
 
 1. The changes listed in `CHANGES-176.diff` were applied in [ASFHyP3/hyp3-autorift#176](https://github.com/ASFHyP3/hyp3-autorift/pull/176)
-   to:
+   and [ASFHyP3/hyp3-autorift#180](https://github.com/ASFHyP3/hyp3-autorift/pull/180) to:
    * Ensure Landsat `satellite_img1` and `satellite_img2` netCDF attributes were string like `'4'` to match the
      convention of other missions
    * Set the fallback value of `stable_shift` netCDF attribute to `0` instead `np.nan`
