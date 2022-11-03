@@ -154,7 +154,7 @@ def test_get_s2_path(test_data_directory):
         manifest_text = f.read()
     path = process.get_s2_path(manifest_text, scene_name)
     assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles//./GRANULE' \
-                   '/L1C_T38EMQ_A016290_20200419T060719/IMG_DATA/T38EMQ_20200419T060719_B08.jp2 '
+                   '/L1C_T38EMQ_A016290_20200419T060719/IMG_DATA/T38EMQ_20200419T060719_B08.jp2'
 
 
 def test_get_raster_bbox(test_data_directory):
