@@ -86,18 +86,8 @@ def get_lc2_path(metadata):
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
 
-def get_s2_metadata(scene_name):
-    # determine the path to the scene's directory in Google Earth Engine based on naming conventions
-    tile = f'{scene_name[39:41]}/{scene_name[41:42]}/{scene_name[42:44]}'
-    tile_path = f'{tile}/{scene_name}.SAFE'
-
-    # retrieve the content of the manifest.safe file
-    manifest_url = f'{S2_GRANULE_DIR}/{tile_path}/manifest.safe'
-    response = requests.get(manifest_url)
-    response.raise_for_status()
-
-    # parse the manifest.safe file for the relative path to the desired B08 image
-    root = ET.fromstring(response.text)
+def get_s2_path(manifest_text: str, scene_name: str) -> str:
+    root = ET.fromstring(manifest_text)
     elements = root.findall(".//fileLocation[@locatorType='URL'][@href]")
     hrefs = [element.attrib['href'] for element in elements if
              element.attrib['href'].endswith('_B08.jp2') and '/IMG_DATA/' in element.attrib['href']]
@@ -108,23 +98,35 @@ def get_s2_metadata(scene_name):
         # pre-2016-12-06 scene; choose the requested tile
         tile_token = scene_name.split('_')[5]
         file_path = [href for href in hrefs if href.endswith(f'_{tile_token}_B08.jp2')][0]
-    path = f'/vsicurl/{S2_GRANULE_DIR}/{file_path}'
+    return f'/vsicurl/{S2_GRANULE_DIR}/{file_path}'
 
-    # gdalinfo the image to determine its bounding box
+
+def get_s2_bbox(path: str):
     info = gdal.Info(path, format='json')
     coordinates = info['wgs84Extent']['coordinates'][0]
     lons = [coord[0] for coord in coordinates]
     lats = [coord[1] for coord in coordinates]
     if max(lons) >= 170 and min(lons) <= -170:
         lons = [lon - 360 if lon >= 170 else lon for lon in lons]
-    bbox = [
+    return [
         min(lons),
         min(lats),
         max(lons),
         max(lats),
     ]
 
-    # extract datetime from the scene name based on naming conventions
+
+def get_s2_metadata(scene_name):
+    tile = f'{scene_name[39:41]}/{scene_name[41:42]}/{scene_name[42:44]}'
+    tile_path = f'{tile}/{scene_name}.SAFE'
+
+    manifest_url = f'{S2_GRANULE_DIR}/{tile_path}/manifest.safe'
+    response = requests.get(manifest_url)
+    response.raise_for_status()
+
+    path = get_s2_path(response.text, scene_name)
+    bbox = get_s2_bbox(path)
+
     acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
 
     return {
@@ -281,7 +283,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
-        gdal.SetConfigOption('GDAL_GEOREF_SOURCES', 'INTERNAL')
 
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
         os.environ['AWS_REGION'] = 'us-west-2'
