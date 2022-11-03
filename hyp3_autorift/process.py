@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
-S2_GRANULE_DIR = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/'
+S2_GRANULE_DIR = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles'
 
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
@@ -101,7 +101,7 @@ def get_s2_path(manifest_text: str, scene_name: str) -> str:
     return f'/vsicurl/{S2_GRANULE_DIR}/{file_path}'
 
 
-def get_s2_bbox(path: str):
+def get_raster_bbox(path: str):
     info = gdal.Info(path, format='json')
     coordinates = info['wgs84Extent']['coordinates'][0]
     lons = [coord[0] for coord in coordinates]
