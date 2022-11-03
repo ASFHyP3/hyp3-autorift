@@ -2,6 +2,7 @@ import io
 from datetime import datetime
 from re import match
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import botocore.exceptions
 import pytest
@@ -136,9 +137,28 @@ def test_get_s2_metadata_not_found():
 
 
 @responses.activate
-def test_get_s2_metadata():
-    # TODO implement me
-    pass
+@patch('hyp3_autorift.process.get_raster_bbox')
+@patch('hyp3_autorift.process.get_s2_path')
+@patch('hyp3_autorift.process.get_s2_manifest')
+def test_get_s2_metadata(mock_get_s2_manifest: MagicMock, mock_get_s2_path: MagicMock, mock_get_raster_bbox: MagicMock):
+    mock_get_s2_manifest.return_value = 'manifest content'
+    mock_get_s2_path.return_value = 's2 path'
+    mock_get_raster_bbox.return_value = [0, 0, 1, 1]
+
+    expected = {
+        'path': 's2 path',
+        'bbox': [0, 0, 1, 1],
+        'id': 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500',
+        'properties': {
+            'datetime': '2016-06-16T11:22:17Z',
+        },
+    }
+    assert process.get_s2_metadata('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == expected
+
+    mock_get_s2_manifest.assert_called_once_with('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
+    mock_get_s2_path.assert_called_once_with('manifest content',
+                                             'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
+    mock_get_raster_bbox.assert_called_once_with('s2 path')
 
 
 @responses.activate
