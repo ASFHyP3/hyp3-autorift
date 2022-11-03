@@ -86,6 +86,14 @@ def get_lc2_path(metadata):
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
 
+def get_s2_manifest(scene_name):
+    tile = f'{scene_name[39:41]}/{scene_name[41:42]}/{scene_name[42:44]}'
+    manifest_url = f'{S2_GRANULE_DIR}/{tile}/{scene_name}.SAFE/manifest.safe'
+    response = requests.get(manifest_url)
+    response.raise_for_status()
+    return response.text
+
+
 def get_s2_path(manifest_text: str, scene_name: str) -> str:
     root = ET.fromstring(manifest_text)
     elements = root.findall(".//fileLocation[@locatorType='URL'][@href]")
@@ -117,16 +125,9 @@ def get_raster_bbox(path: str):
 
 
 def get_s2_metadata(scene_name):
-    tile = f'{scene_name[39:41]}/{scene_name[41:42]}/{scene_name[42:44]}'
-    tile_path = f'{tile}/{scene_name}.SAFE'
-
-    manifest_url = f'{S2_GRANULE_DIR}/{tile_path}/manifest.safe'
-    response = requests.get(manifest_url)
-    response.raise_for_status()
-
-    path = get_s2_path(response.text, scene_name)
+    manifest = get_s2_manifest(scene_name)
+    path = get_s2_path(manifest, scene_name)
     bbox = get_raster_bbox(path)
-
     acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
 
     return {
