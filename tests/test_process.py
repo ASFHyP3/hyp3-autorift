@@ -129,8 +129,13 @@ def test_get_lc2_path():
 
 @responses.activate
 def test_get_s2_metadata_not_found():
-    # TODO implement me
-    pass
+    responses.add(responses.GET, f'{process.S2_GRANULE_DIR}/foo', status=404)
+    responses.add(
+        responses.POST, process.S2_GRANULE_DIR,
+        body='{"numberReturned": 0}', status=200,
+    )
+    with pytest.raises(ValueError):
+        process.get_s2_metadata('foo')
 
 
 @responses.activate
