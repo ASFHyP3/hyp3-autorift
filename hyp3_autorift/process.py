@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import shutil
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
@@ -86,26 +85,6 @@ def get_lc2_path(metadata):
             band = metadata['assets']['pan']
 
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
-
-
-def check_lc2_projection(reference_metadata, secondary_metadata, secondary_path):
-    reference_epsg = reference_metadata['properties']['proj:epsg']
-    secondary_epsg = secondary_metadata['properties']['proj:epsg']
-    if reference_epsg != secondary_epsg:
-        log.info(f'Reference and secondary scenes projections differ. Reprojecting to EPSG:{reference_epsg}...')
-        lc2_key = secondary_path.split('/', 3)[-1]
-        tif_name = secondary_path.split('/')[-1]
-        reprojected_secondary_path = Path(Path.cwd() / tif_name)
-        with tempfile.NamedTemporaryFile() as secondary_scene:
-            S3_CLIENT.download_fileobj(LANDSAT_BUCKET, lc2_key, secondary_scene,
-                                       ExtraArgs={'RequestPayer': 'requester'})
-            width, height = secondary_metadata['properties']['proj:shape']
-            gdal.Warp(reprojected_secondary_path.name, secondary_scene.name, dstSRS=f'EPSG:{reference_epsg}',
-                      outputBounds=secondary_metadata['bbox'], width=width, height=height, resampleAlg='nearest',
-                      format='GTiff')
-        return str(reprojected_secondary_path)
-    else:
-        return secondary_path
 
 
 def get_s2_metadata(scene_name):
@@ -334,14 +313,16 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = get_lc2_path(secondary_metadata)
 
-        secondary_path = check_lc2_projection(reference_metadata, secondary_metadata, secondary_path)
+        if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
+            log.info('Reference and secondary projections are different! Reprojecting.')
+            reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
         if platform in ('L4', 'L5'):
-            print('Running FFT')
+            log.info('Running FFT')
 
             ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
             ref_filtered = apply_fft_filter(ref_array, ref_nodata)
