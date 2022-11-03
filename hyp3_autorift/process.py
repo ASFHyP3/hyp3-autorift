@@ -125,7 +125,7 @@ def get_s2_metadata(scene_name):
     response.raise_for_status()
 
     path = get_s2_path(response.text, scene_name)
-    bbox = get_s2_bbox(path)
+    bbox = get_raster_bbox(path)
 
     acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
 
