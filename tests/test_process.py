@@ -149,10 +149,19 @@ def test_get_s2_path(test_data_directory):
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_N02.04/IMG_DATA' \
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_B08.jp2'
 
+    scene_name = 'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056'
+    with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
+        manifest_text = f.read()
+    path = process.get_s2_path(manifest_text, scene_name)
+    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles//./GRANULE' \
+                   '/L1C_T38EMQ_A016290_20200419T060719/IMG_DATA/T38EMQ_20200419T060719_B08.jp2 '
 
-def test_get_s2_bbox(test_data_directory):
-    bbox = process.get_s2_bbox(str(test_data_directory / 'T60CWU_20160414T200612_B08.jp2'))
+
+def test_get_raster_bbox(test_data_directory):
+    bbox = process.get_raster_bbox(str(test_data_directory / 'T60CWU_20160414T200612_B08.jp2'))
     assert bbox == [-183.0008956, -78.4606571, -178.0958227, -77.438842]
+    bbox = process.get_raster_bbox(str(test_data_directory / 'T55XEE_20200911T034541_B08.jp2'))
+    assert bbox == [146.999228, 75.5641782, 151.2301741, 76.5810287]
 
 
 def test_s3_object_is_accessible(s3_stubber):
