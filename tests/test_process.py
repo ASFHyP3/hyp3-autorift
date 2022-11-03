@@ -154,6 +154,11 @@ def test_get_s2_path(test_data_directory):
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_B08.jp2 '
 
 
+def test_get_s2_bbox(test_data_directory):
+    bbox = process.get_s2_bbox(str(test_data_directory / 'T60CWU_20160414T200612_B08.jp2'))
+    assert bbox == [-183.0008956, -78.4606571, -178.0958227, -77.438842]
+
+
 def test_s3_object_is_accessible(s3_stubber):
     bucket = 'MyBucket'
     key = 'MyKey'
