@@ -177,7 +177,8 @@ def test_get_s2_path(test_data_directory):
     with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
         manifest_text = f.read()
     path = process.get_s2_path(manifest_text, scene_name)
-    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/./GRANULE' \
+    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
+                   'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE/./GRANULE' \
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_N02.04/IMG_DATA' \
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_B08.jp2'
 
@@ -185,7 +186,8 @@ def test_get_s2_path(test_data_directory):
     with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
         manifest_text = f.read()
     path = process.get_s2_path(manifest_text, scene_name)
-    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/./GRANULE' \
+    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/38/E/MQ/' \
+                   'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056.SAFE/./GRANULE' \
                    '/L1C_T38EMQ_A016290_20200419T060719/IMG_DATA/T38EMQ_20200419T060719_B08.jp2'
 
 
