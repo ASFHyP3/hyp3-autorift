@@ -129,7 +129,8 @@ def test_get_lc2_path():
 
 @responses.activate
 def test_get_s2_metadata_not_found():
-    responses.add(responses.GET, f'{process.S2_GRANULE_DIR}// // / foo.SAFE / manifest.safe', status=404)
+    url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles////foo.SAFE/manifest.safe'
+    responses.add(responses.GET, url, status=404)
     with pytest.raises(ValueError):
         process.get_s2_metadata('foo')
 
