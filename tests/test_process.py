@@ -129,7 +129,7 @@ def test_get_lc2_path():
 
 @responses.activate
 def test_get_s2_metadata_not_found():
-    responses.add(responses.GET, f'{process.S2_GRANULE_DIR}/foo', status=404)
+    responses.add(responses.GET, f'{process.S2_GRANULE_DIR}////foo.SAFE/manifest.safe', status=404)
     responses.add(
         responses.POST, process.S2_GRANULE_DIR,
         body='{"numberReturned": 0}', status=200,
@@ -146,7 +146,7 @@ def test_get_s2_metadata():
 
 def test_get_s2_path(test_data_directory):
     scene_name = 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500'
-    f = open(f'{test_data_directory.name}/{scene_name}.manifest.safe', 'r')
+    f = open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r')
     manifest_text = f.read()
     path = process.get_s2_path(manifest_text, scene_name)
     assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles//./GRANULE' \
