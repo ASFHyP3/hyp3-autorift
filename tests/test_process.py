@@ -163,6 +163,16 @@ def test_get_s2_metadata(mock_get_s2_manifest: MagicMock, mock_get_s2_path: Magi
     mock_get_raster_bbox.assert_called_once_with('s2 path')
 
 
+def test_get_s2_safe_url():
+    expected = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
+               'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE'
+    assert process.get_s2_safe_url('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == expected
+
+    expected = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/38/E/MQ/' \
+               'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056.SAFE'
+    assert process.get_s2_safe_url('S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056') == expected
+
+
 @responses.activate
 def test_get_s2_manifest():
     url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \

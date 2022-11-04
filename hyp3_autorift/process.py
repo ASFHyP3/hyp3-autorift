@@ -32,7 +32,6 @@ log = logging.getLogger(__name__)
 gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
-S2_GRANULE_DIR = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles'
 
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
@@ -86,9 +85,15 @@ def get_lc2_path(metadata):
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
 
-def get_s2_manifest(scene_name):
+def get_s2_safe_url(scene_name):
+    root_url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles'
     tile = f'{scene_name[39:41]}/{scene_name[41:42]}/{scene_name[42:44]}'
-    manifest_url = f'{S2_GRANULE_DIR}/{tile}/{scene_name}.SAFE/manifest.safe'
+    return f'{root_url}/{tile}/{scene_name}.SAFE'
+
+
+def get_s2_manifest(scene_name):
+    safe_url = get_s2_safe_url(scene_name)
+    manifest_url = f'{safe_url}/manifest.safe'
     response = requests.get(manifest_url)
     response.raise_for_status()
     return response.text
@@ -106,7 +111,8 @@ def get_s2_path(manifest_text: str, scene_name: str) -> str:
         # pre-2016-12-06 scene; choose the requested tile
         tile_token = scene_name.split('_')[5]
         file_path = [href for href in hrefs if href.endswith(f'_{tile_token}_B08.jp2')][0]
-    return f'/vsicurl/{S2_GRANULE_DIR}/{file_path}'
+    safe_url = get_s2_safe_url(scene_name)
+    return f'/vsicurl/{safe_url}/{file_path}'
 
 
 def get_raster_bbox(path: str):
