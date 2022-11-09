@@ -35,6 +35,6 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    * Set the fallback value of `stable_shift` netCDF attribute to `0` instead `np.nan`
    These changes have been [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/73) and should be applied
    in the next `nasa-jpl/autoRIFT` release.
-1. The changes listed in `CHANGES-182.diff` were applied in [ASFHyP3/hyp3-autorift#182](https://github.com/ASFHyP3/hyp3-autorift/pull/182)
+1. The changes listed in `CHANGES-183.diff` were applied in [ASFHyP3/hyp3-autorift#182](https://github.com/ASFHyP3/hyp3-autorift/pull/183)
    to correctly set the netcdf `img_pair_info:correction_level_img` attribute values for Sentinel-2 scenes after the transition from
    Earth Search COG IDs to ESA IDs.
