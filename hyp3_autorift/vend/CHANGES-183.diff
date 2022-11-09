@@ -29,8 +29,8 @@ index 05e8f47..bbab057 100755
                          'satellite_img1': master_split[0][-2:],
 diff --git a/hyp3_autorift/vend/testautoRIFT_ISCE.py b/hyp3_autorift/vend/testautoRIFT_ISCE.py
 index b66806d..bd90f60 100755
---- a/hyp3_autorift/vend/testautoRIFT_ISCE.py
-+++ b/hyp3_autorift/vend/testautoRIFT_ISCE.py
+--- testautoRIFT_ISCE.py
++++ testautoRIFT_ISCE.py
 @@ -1076,8 +1076,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                      IMG_INFO_DICT = {
                          'acquisition_date_img1': master_dt,
