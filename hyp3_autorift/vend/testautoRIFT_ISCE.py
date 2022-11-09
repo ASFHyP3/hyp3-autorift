@@ -1076,8 +1076,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     IMG_INFO_DICT = {
                         'acquisition_date_img1': master_dt,
                         'acquisition_date_img2': slave_dt,
-                        'correction_level_img1': master_split[4][:3],
-                        'correction_level_img2': slave_split[4][:3],
+                        'correction_level_img1': master_split[1][3:],
+                        'correction_level_img2': slave_split[1][3:],
                         'mission_img1': master_split[0][-3],
                         'mission_img2': slave_split[0][-3],
                         'satellite_img1': master_split[0][-2:],
