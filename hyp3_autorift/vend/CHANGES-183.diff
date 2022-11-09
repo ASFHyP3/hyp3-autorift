@@ -1,0 +1,44 @@
+diff --git a/hyp3_autorift/vend/README.md b/hyp3_autorift/vend/README.md
+index d58b733..9ecb01e 100644
+--- a/hyp3_autorift/vend/README.md
++++ b/hyp3_autorift/vend/README.md
+@@ -34,4 +34,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
+      convention of other missions
+    * Set the fallback value of `stable_shift` netCDF attribute to `0` instead `np.nan`
+    These changes have been [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/73) and should be applied
+-   in the next `nasa-jpl/autoRIFT` release.
+\ No newline at end of file
++   in the next `nasa-jpl/autoRIFT` release.
++1. The changes listed in `CHANGES-183.diff` were applied in [ASFHyP3/hyp3-autorift#183](https://github.com/ASFHyP3/hyp3-autorift/pull/183)
++   to correctly set the netcdf `img_pair_info:correction_level_img` attribute values for Sentinel-2 scenes after the transition from
++   Earth Search COG IDs to ESA IDs.
+diff --git a/hyp3_autorift/vend/testautoRIFT.py b/hyp3_autorift/vend/testautoRIFT.py
+index 05e8f47..bbab057 100755
+--- a/hyp3_autorift/vend/testautoRIFT.py
++++ b/hyp3_autorift/vend/testautoRIFT.py
+@@ -1077,8 +1077,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+                     IMG_INFO_DICT = {
+                         'acquisition_date_img1': master_dt,
+                         'acquisition_date_img2': slave_dt,
+-                        'correction_level_img1': master_split[4][:3],
+-                        'correction_level_img2': slave_split[4][:3],
++                        'correction_level_img1': master_split[1][3:],
++                        'correction_level_img2': slave_split[1][3:],
+                         'mission_img1': master_split[0][-3],
+                         'mission_img2': slave_split[0][-3],
+                         'satellite_img1': master_split[0][-2:],
+diff --git a/hyp3_autorift/vend/testautoRIFT_ISCE.py b/hyp3_autorift/vend/testautoRIFT_ISCE.py
+index b66806d..bd90f60 100755
+--- a/hyp3_autorift/vend/testautoRIFT_ISCE.py
++++ b/hyp3_autorift/vend/testautoRIFT_ISCE.py
+@@ -1076,8 +1076,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+                     IMG_INFO_DICT = {
+                         'acquisition_date_img1': master_dt,
+                         'acquisition_date_img2': slave_dt,
+-                        'correction_level_img1': master_split[4][:3],
+-                        'correction_level_img2': slave_split[4][:3],
++                        'correction_level_img1': master_split[1][3:],
++                        'correction_level_img2': slave_split[1][3:],
+                         'mission_img1': master_split[0][-3],
+                         'mission_img2': slave_split[0][-3],
+                         'satellite_img1': master_split[0][-2:],
