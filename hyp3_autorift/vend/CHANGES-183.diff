@@ -12,10 +12,9 @@ index d58b733..9ecb01e 100644
 +1. The changes listed in `CHANGES-183.diff` were applied in [ASFHyP3/hyp3-autorift#183](https://github.com/ASFHyP3/hyp3-autorift/pull/183)
 +   to correctly set the netcdf `img_pair_info:correction_level_img` attribute values for Sentinel-2 scenes after the transition from
 +   Earth Search COG IDs to ESA IDs.
-diff --git a/hyp3_autorift/vend/testautoRIFT.py b/hyp3_autorift/vend/testautoRIFT.py
-index 05e8f47..bbab057 100755
---- a/hyp3_autorift/vend/testautoRIFT.py
-+++ b/hyp3_autorift/vend/testautoRIFT.py
+diff -u testautoRIFT.py estautoRIFT.py
+--- testautoRIFT.py
++++ testautoRIFT.py
 @@ -1077,8 +1077,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                      IMG_INFO_DICT = {
                          'acquisition_date_img1': master_dt,
