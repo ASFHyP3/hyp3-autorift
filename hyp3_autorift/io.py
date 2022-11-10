@@ -10,7 +10,7 @@ from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
 from osgeo import ogr
 
-from hyp3_autorift.geometry import flip_point_coordinates
+from hyp3_autorift.geometry import flip_point_coordinates, fix_point_for_antimeridian
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,8 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
     shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
     parameter_info = None
-    centroid = flip_point_coordinates(polygon.Centroid())
+    centroid = fix_point_for_antimeridian(polygon.Centroid())
+    centroid = flip_point_coordinates(centroid)
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
             parameter_info = {

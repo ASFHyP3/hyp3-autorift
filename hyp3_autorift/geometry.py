@@ -133,6 +133,16 @@ def flip_point_coordinates(point: ogr.Geometry):
     return flipped
 
 
+def fix_point_for_antimeridian(point: ogr.Geometry):
+    if not point.GetGeometryName() == 'POINT':
+        raise ValueError('Can only fix POINT geometries')
+
+    fix = lambda n: (n + 180) % 360 - 180
+    fixed = ogr.Geometry(ogr.wkbPoint)
+    fixed.AddPoint_2D(fix(point.GetX()), fix(point.GetY()))
+    return fixed
+
+
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
     if isce_dem is None:
         seamstress = createDemStitcher()
