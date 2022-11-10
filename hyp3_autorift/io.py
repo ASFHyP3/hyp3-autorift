@@ -10,7 +10,7 @@ from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
 from osgeo import ogr
 
-from hyp3_autorift.geometry import flip_point_coordinates, fix_point_for_antimeridian
+from hyp3_autorift.geometry import fix_point_for_antimeridian, flip_point_coordinates
 
 log = logging.getLogger(__name__)
 

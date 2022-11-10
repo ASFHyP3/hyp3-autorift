@@ -137,7 +137,9 @@ def fix_point_for_antimeridian(point: ogr.Geometry):
     if not point.GetGeometryName() == 'POINT':
         raise ValueError('Can only fix POINT geometries')
 
-    fix = lambda n: (n + 180) % 360 - 180
+    def fix(n):
+        return (n + 180) % 360 - 180
+
     fixed = ogr.Geometry(ogr.wkbPoint)
     fixed.AddPoint_2D(fix(point.GetX()), fix(point.GetY()))
     return fixed
