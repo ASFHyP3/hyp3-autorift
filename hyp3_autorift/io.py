@@ -20,8 +20,8 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
     shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
     parameter_info = None
-    centroid = fix_point_for_antimeridian(polygon.Centroid())
-    centroid = flip_point_coordinates(centroid)
+    centroid = flip_point_coordinates(polygon.Centroid())
+    centroid = fix_point_for_antimeridian(centroid)
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
             parameter_info = {
