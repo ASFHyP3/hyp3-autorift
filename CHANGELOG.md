@@ -7,6 +7,16 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.0]
+
+### Changed
+* Sentinel-2 scenes are now retrieved from [Google Cloud](https://cloud.google.com/storage/docs/public-datasets/sentinel-2),
+  rather than [AWS](https://registry.opendata.aws/sentinel-2/).
+
+### Removed
+* Sentinel-2 granules may no longer be specified using Element84 COG names, only
+  [ESA names](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/naming-convention).
+
 ## [0.9.1]
 
 ### Changed
