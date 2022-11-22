@@ -362,7 +362,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     # First set global attributes that GDAL uses when it reads netCFDF files
     nc_outfile.setncattr('GDAL_AREA_OR_POINT', 'Area')
-    nc_outfile.setncattr('Conventions', 'CF-1.6')
+    nc_outfile.setncattr('Conventions', 'CF-1.8')
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
