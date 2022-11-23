@@ -458,8 +458,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('grid_mapping_name', 'universal_transverse_mercator')
         zone = epsg - np.floor(epsg/100)*100
         var.setncattr('utm_zone_number', zone)
-        #var.setncattr('CoordinateTransformType', 'Projection')
-        #var.setncattr('CoordinateAxisTypes', 'GeoX GeoY')
         # var.setncattr('longitude_of_central_meridian', srs.GetProjParm('central_meridian'))
         # var.setncattr('false_easting', srs.GetProjParm('false_easting'))
         # var.setncattr('false_northing', srs.GetProjParm('false_northing'))
@@ -932,7 +930,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('description', 'x-direction velocity determined by projecting radar range measurements '
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected vx estimates are used')
-        # var.setncattr('units', 'm/y')
+        # var.setncattr('units', 'meter/year')
         # var.setncattr('grid_mapping', mapping_var_name)
         #
         # if stable_count_p != 0:
@@ -965,7 +963,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # else:
         #     var.setncattr('error_mask', np.nan)
         # var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing surfaces '
-        #                                         'with velocity < 15 m/yr identified from an external mask')
+        #                                         'with velocity < 15 meter/year identified from an external mask')
         #
         # var.setncattr('error_modeled', int(round(vxp_error_mod * 10)) / 10)
         # var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
@@ -985,7 +983,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('stable_shift_flag', stable_shift_applied_p)
         # var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
         #                                                '1 = correction from overlapping stable surface mask '
-        #                                                '(stationary or slow-flowing surfaces with velocity < 15 m/yr)'
+        #                                                '(stationary or slow-flowing surfaces with velocity < 15 meter/year)'
         #                                                '(top priority); 2 = correction from slowest 25% of overlapping '
         #                                                'velocities (second priority)')
         #
@@ -1012,7 +1010,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('description', 'y-direction velocity determined by projecting radar range measurements '
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected vy estimates are used')
-        # var.setncattr('units', 'm/y')
+        # var.setncattr('units', 'meter/year')
         # var.setncattr('grid_mapping', mapping_var_name)
         #
         # if stable_count_p != 0:
@@ -1045,7 +1043,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # else:
         #     var.setncattr('error_mask', np.nan)
         # var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing surfaces '
-        #                                         'with velocity < 15 m/yr identified from an external mask')
+        #                                         'with velocity < 15 meter/year identified from an external mask')
         #
         # var.setncattr('error_modeled', int(round(vyp_error_mod * 10)) / 10)
         # var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
@@ -1065,7 +1063,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('stable_shift_flag', stable_shift_applied_p)
         # var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
         #                                                '1 = correction from overlapping stable surface mask '
-        #                                                '(stationary or slow-flowing surfaces with velocity < 15 m/yr)'
+        #                                                '(stationary or slow-flowing surfaces with velocity < 15 meter/year)'
         #                                                '(top priority); 2 = correction from slowest 25% of overlapping '
         #                                                'velocities (second priority)')
         #
@@ -1092,7 +1090,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('description', 'velocity magnitude determined by projecting radar range measurements '
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected v estimates are used')
-        # var.setncattr('units', 'm/y')
+        # var.setncattr('units', 'meter/year')
         # var.setncattr('grid_mapping', mapping_var_name)
         #
         # VP[noDataMask] = NoDataValue
@@ -1106,7 +1104,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('description', 'velocity magnitude error determined by projecting radar range measurements '
         #                              'onto an a priori flow vector. Where projected errors are larger than those '
         #                              'determined from range and azimuth measurements, unprojected v_error estimates are used')
-        # var.setncattr('units', 'm/y')
+        # var.setncattr('units', 'meter/year')
         # var.setncattr('grid_mapping', mapping_var_name)
         #
         # vp_error = v_error_cal(vxp_error, vyp_error)
