@@ -10,8 +10,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.10.1]
 
 ### Changed
-* [A patch](hyp3_autorift/vend/CHANGES-189.diff) was applied to update some netCDF variable attributes, as described
-  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+* Patches [189](hyp3_autorift/vend/CHANGES-189.diff) and [191](hyp3_autorift/vend/CHANGES-191.diff) 
+  were applied to update some netCDF variable attributes, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
 
 ## [0.10.0]
 
