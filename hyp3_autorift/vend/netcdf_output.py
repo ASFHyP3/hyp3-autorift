@@ -385,10 +385,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('satellite', get_satellite_attribte(IMG_INFO_DICT))
     nc_outfile.setncattr('motion_detection_method', detection_method)
-    if coordinates == 'radar':
-        nc_outfile.setncattr('motion_coordinates', 'radar, map')
-    else:
-        nc_outfile.setncattr('motion_coordinates', coordinates)
+    nc_outfile.setncattr('motion_coordinates', coordinates)
     nc_outfile.setncattr('author', author)
     nc_outfile.setncattr('institution', institution)
     nc_outfile.setncattr('source', source)
@@ -418,9 +415,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name', 'projection_x_coordinate')
     var.setncattr('description', 'x coordinate of projection')
     var.setncattr('units', 'm')
-    # var.setncattr('scene_pair_type', pair_type)
-    # var.setncattr('motion_detection_method', detection_method)
-    # var.setncattr('motion_coordinates', coordinates)
     var[:] = x
 
 
@@ -428,9 +422,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('standard_name', 'projection_y_coordinate')
     var.setncattr('description', 'y coordinate of projection')
     var.setncattr('units', 'm')
-    # var.setncattr('scene_pair_type', pair_type)
-    # var.setncattr('motion_detection_method', detection_method)
-    # var.setncattr('motion_coordinates', coordinates)
     var[:] = y
 
 

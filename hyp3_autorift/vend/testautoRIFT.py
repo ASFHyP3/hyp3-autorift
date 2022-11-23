@@ -854,7 +854,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     import hyp3_autorift.vend.netcdf_output as no
                     pair_type = 'radar'
                     detection_method = 'feature'
-                    coordinates = 'radar'
+                    coordinates = 'radar, map'
                     if np.sum(SEARCHLIMITX!=0)!=0:
                         roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
                     else:
