@@ -438,13 +438,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('grid_mapping_name', 'universal_transverse_mercator')
         zone = epsg - np.floor(epsg/100)*100
         var.setncattr('utm_zone_number', zone)
-        var.setncattr('CoordinateTransformType', 'Projection')
-        var.setncattr('CoordinateAxisTypes', 'GeoX GeoY')
+        #var.setncattr('CoordinateTransformType', 'Projection')
+        #var.setncattr('CoordinateAxisTypes', 'GeoX GeoY')
         # var.setncattr('longitude_of_central_meridian', srs.GetProjParm('central_meridian'))
         # var.setncattr('false_easting', srs.GetProjParm('false_easting'))
         # var.setncattr('false_northing', srs.GetProjParm('false_northing'))
-        # var.setncattr('latitude_of_projection_origin', srs.GetProjParm('latitude_of_origin'))
-        # var.setncattr('scale_factor_at_central_meridian', srs.GetProjParm('scale_factor'))
+        var.setncattr('scale_factor_at_central_meridian', srs.GetProjParm('scale_factor'))
         # var.setncattr('longitude_of_prime_meridian', float(srs.GetAttrValue('GEOGCS|PRIMEM', 1)))
         var.setncattr('semi_major_axis', float(srs.GetAttrValue('GEOGCS|SPHEROID', 1)))
         var.setncattr('inverse_flattening', float(srs.GetAttrValue('GEOGCS|SPHEROID', 2)))
@@ -1202,8 +1201,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var = nc_outfile.createVariable('interp_mask', np.dtype('uint8'), ('y', 'x'), fill_value=0,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'interpolated_value_mask')
-    var.setncattr('description', 'light interpolation mask')
-    var.setncattr('units', 'binary')
+    var.setncattr('description', 'true where values have been interpolated')
+    var.setncattr('flag_values', '0UB, 1UB; // ubyte')
+    var.setncattr('flag_meanings', 'measured, interpolated')
     var.setncattr('grid_mapping', mapping_var_name)
 
     # var[:] = np.flipud(vx_nomask).astype('float32')
