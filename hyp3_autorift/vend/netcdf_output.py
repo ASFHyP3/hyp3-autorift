@@ -434,9 +434,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('false_northing', srs.GetProjParm('false_northing'))
         var.setncattr('latitude_of_projection_origin', np.sign(srs.GetProjParm('latitude_of_origin'))*90.0)  # could hardcode this to be -90 for landsat - just making it more general, maybe...
         var.setncattr('latitude_of_origin', srs.GetProjParm('latitude_of_origin'))
-        # var.setncattr('longitude_of_prime_meridian', float(srs.GetAttrValue('GEOGCS|PRIMEM', 1)))
         var.setncattr('semi_major_axis', float(srs.GetAttrValue('GEOGCS|SPHEROID', 1)))
-        # var.setncattr('semi_minor_axis', float(6356.752))
         var.setncattr('scale_factor_at_projection_origin', 1)
         var.setncattr('inverse_flattening', float(srs.GetAttrValue('GEOGCS|SPHEROID', 2)))
         var.setncattr('spatial_ref', srs.ExportToWkt())
@@ -449,15 +447,16 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('grid_mapping_name', 'universal_transverse_mercator')
         zone = epsg - np.floor(epsg/100)*100
         var.setncattr('utm_zone_number', zone)
-        # var.setncattr('longitude_of_central_meridian', srs.GetProjParm('central_meridian'))
-        # var.setncattr('false_easting', srs.GetProjParm('false_easting'))
-        # var.setncattr('false_northing', srs.GetProjParm('false_northing'))
-        var.setncattr('scale_factor_at_central_meridian', srs.GetProjParm('scale_factor'))
-        # var.setncattr('longitude_of_prime_meridian', float(srs.GetAttrValue('GEOGCS|PRIMEM', 1)))
+        var.setncattr('longitude_of_central_meridian', srs.GetProjParm('central_meridian'))
+        var.setncattr('false_easting', srs.GetProjParm('false_easting'))
+        var.setncattr('false_northing', srs.GetProjParm('false_northing'))
+        var.setncattr('latitude_of_projection_origin', srs.GetProjParm('latitude_of_origin'))
         var.setncattr('semi_major_axis', float(srs.GetAttrValue('GEOGCS|SPHEROID', 1)))
+        var.setncattr('scale_factor_at_central_meridian', srs.GetProjParm('scale_factor'))
         var.setncattr('inverse_flattening', float(srs.GetAttrValue('GEOGCS|SPHEROID', 2)))
         var.setncattr('spatial_ref', srs.ExportToWkt())
-        var.setncattr('spatial_proj4', srs.ExportToProj4())
+        var.setncattr('crs_wkt', srs.ExportToWkt())
+        var.setncattr('proj4text', srs.ExportToProj4())
         var.setncattr('spatial_epsg', epsg)
         var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))  # note this has pixel size in it - set  explicitly above
 
