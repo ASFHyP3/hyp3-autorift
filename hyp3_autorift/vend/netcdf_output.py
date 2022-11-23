@@ -369,7 +369,10 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('motion_detection_method', detection_method)
-    nc_outfile.setncattr('motion_coordinates', coordinates)
+    if coordinates == 'radar':
+        nc_outfile.setncattr('motion_coordinates', 'radar, map')
+    else:
+        nc_outfile.setncattr('motion_coordinates', coordinates)
     nc_outfile.setncattr('author', author)
     nc_outfile.setncattr('institution', institution)
     nc_outfile.setncattr('source', source)
@@ -377,6 +380,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
 
     var = nc_outfile.createVariable('img_pair_info', 'U1', (), fill_value=None)
+    var.setncattr('standard_name', 'image_pair_information')
+    var.setncattr('id_img1', 'x coordinate of projection')
     for key in IMG_INFO_DICT:
         if key == 'autoRIFT_software_version':
             continue
