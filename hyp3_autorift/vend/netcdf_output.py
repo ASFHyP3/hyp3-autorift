@@ -13,6 +13,21 @@ import pandas as pd
 import hyp3_autorift
 
 
+def get_satellite_attribte(info):
+    mission_mapping = {
+        'L': 'Landsat',
+        'S': 'Sentinel',
+    }
+
+    satellite_1 = f'{mission_mapping[info["mission_img1"]]} {info["satellite_img1"]}'
+    satellite_2 = f'{mission_mapping[info["mission_img2"]]} {info["satellite_img2"]}'
+
+    if satellite_1 != satellite_2:
+        return f'{satellite_1} and {satellite_2}'
+
+    return satellite_1
+
+
 def v_error_cal(vx_error, vy_error):
     vx = np.random.normal(0, vx_error, 1000000)
     vy = np.random.normal(0, vy_error, 1000000)
@@ -368,6 +383,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
     nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
     nc_outfile.setncattr('scene_pair_type', pair_type)
+    nc_outfile.setncattr('satellite', get_satellite_attribte(IMG_INFO_DICT))
     nc_outfile.setncattr('motion_detection_method', detection_method)
     if coordinates == 'radar':
         nc_outfile.setncattr('motion_coordinates', 'radar, map')
