@@ -459,12 +459,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     var = nc_outfile.createVariable('vx', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-    var.setncattr('standard_name', 'x_velocity')
+    var.setncattr('standard_name', 'land_ice_surface_x_velocity')
     if pair_type == 'radar':
         var.setncattr('description', 'velocity component in x direction from radar range and azimuth measurements')
     else:
         var.setncattr('description', 'velocity component in x direction')
-    var.setncattr('units', 'm/y')
+    var.setncattr('units', 'meter/year')
     var.setncattr('grid_mapping', mapping_var_name)
 
     if stable_count != 0:
@@ -498,11 +498,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                                        'correction as indicated in "stable_shift_flag"')
 
     if stable_count != 0:
-        var.setncattr('error_mask', int(round(vx_error_mask*10))/10)
+        var.setncattr('error_stationary', int(round(vx_error_mask*10))/10)
     else:
-        var.setncattr('error_mask', np.nan)
-    var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing '
-                                            'surfaces with velocity < 15 m/yr identified from an external mask')
+        var.setncattr('error_stationary', np.nan)
+    var.setncattr('error_stationary_description', 'RMSE over stable surfaces, stationary or slow-flowing '
+                                            'surfaces with velocity < 15 meter/year identified from an external mask')
 
     var.setncattr('error_modeled', int(round(vx_error_mod*10))/10)
     var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
@@ -522,15 +522,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('stable_shift_flag', stable_shift_applied)
     var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
                                                    '1 = correction from overlapping stable surface mask (stationary '
-                                                   'or slow-flowing surfaces with velocity < 15 m/yr)(top priority); '
+                                                   'or slow-flowing surfaces with velocity < 15 meter/year)(top priority); '
                                                    '2 = correction from slowest 25% of overlapping velocities '
                                                    '(second priority)')
 
     if stable_count != 0:
-        var.setncattr('stable_shift_mask', int(round(vx_mean_shift*10))/10)
+        var.setncattr('stable_shift_stationary', int(round(vx_mean_shift*10))/10)
     else:
-        var.setncattr('stable_shift_mask', np.nan)
-    var.setncattr('stable_count_mask', stable_count)
+        var.setncattr('stable_shift_stationary', np.nan)
+    var.setncattr('stable_count_stationary', stable_count)
 
     if stable_count1 != 0:
         var.setncattr('stable_shift_slow', int(round(vx_mean_shift1*10))/10)
@@ -545,12 +545,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     var = nc_outfile.createVariable('vy', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-    var.setncattr('standard_name', 'y_velocity')
+    var.setncattr('standard_name', 'land_ice_surface_y_velocity')
     if pair_type == 'radar':
         var.setncattr('description', 'velocity component in y direction from radar range and azimuth measurements')
     else:
         var.setncattr('description', 'velocity component in y direction')
-    var.setncattr('units', 'm/y')
+    var.setncattr('units', 'meter/year')
     var.setncattr('grid_mapping', mapping_var_name)
 
     if stable_count != 0:
@@ -583,11 +583,11 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                                        'in "stable_shift_flag"')
 
     if stable_count != 0:
-        var.setncattr('error_mask', int(round(vy_error_mask*10))/10)
+        var.setncattr('error_stationary', int(round(vy_error_mask*10))/10)
     else:
-        var.setncattr('error_mask', np.nan)
-    var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing surfaces '
-                                            'with velocity < 15 m/yr identified from an external mask')
+        var.setncattr('error_stationary', np.nan)
+    var.setncattr('error_stationary_description', 'RMSE over stable surfaces, stationary or slow-flowing surfaces '
+                                            'with velocity < 15 meter/year identified from an external mask')
 
     var.setncattr('error_modeled', int(round(vy_error_mod * 10)) / 10)
     var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
@@ -608,15 +608,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('stable_shift_flag', stable_shift_applied)
     var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
                                                    '1 = correction from overlapping stable surface mask (stationary '
-                                                   'or slow-flowing surfaces with velocity < 15 m/yr)(top priority); '
+                                                   'or slow-flowing surfaces with velocity < 15 meter/year)(top priority); '
                                                    '2 = correction from slowest 25% of overlapping velocities '
                                                    '(second priority)')
 
     if stable_count != 0:
-        var.setncattr('stable_shift_mask', int(round(vy_mean_shift*10))/10)
+        var.setncattr('stable_shift_stationary', int(round(vy_mean_shift*10))/10)
     else:
-        var.setncattr('stable_shift_mask', np.nan)
-    var.setncattr('stable_count_mask', stable_count)
+        var.setncattr('stable_shift_stationary', np.nan)
+        var.setncattr('stable_count_stationary', stable_count)
 
     if stable_count1 != 0:
         var.setncattr('stable_shift_slow', int(round(vy_mean_shift1*10))/10)
@@ -631,12 +631,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     var = nc_outfile.createVariable('v', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
-    var.setncattr('standard_name', 'velocity')
+    var.setncattr('standard_name', 'land_ice_surface_velocity')
     if pair_type == 'radar':
         var.setncattr('description', 'velocity magnitude from radar range and azimuth measurements')
     else:
         var.setncattr('description', 'velocity magnitude')
-    var.setncattr('units', 'm/y')
+    var.setncattr('units', 'meter/year')
     var.setncattr('grid_mapping', mapping_var_name)
 
     V[noDataMask] = NoDataValue
@@ -651,7 +651,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('description', 'velocity magnitude error from radar range and azimuth measurements')
     else:
         var.setncattr('description', 'velocity magnitude error')
-    var.setncattr('units', 'm/y')
+    var.setncattr('units', 'meter/year')
     var.setncattr('grid_mapping', mapping_var_name)
 
     v_error = v_error_cal(vx_error, vy_error)
@@ -668,7 +668,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
         var.setncattr('standard_name', 'range_velocity')
         var.setncattr('description', 'velocity in radar range direction')
-        var.setncattr('units', 'm/y')
+        var.setncattr('units', 'meter/year')
         var.setncattr('grid_mapping', mapping_var_name)
 
         if stable_count != 0:
@@ -703,7 +703,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         else:
             var.setncattr('error_mask', np.nan)
         var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing '
-                                                'surfaces with velocity < 15 m/yr identified from an external mask')
+                                                'surfaces with velocity < 15 meter/year identified from an external mask')
 
         var.setncattr('error_modeled', int(round(vr_error_mod*10))/10)
         var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
@@ -723,15 +723,15 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift_flag', stable_shift_applied)
         var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
                                                        '1 = correction from overlapping stable surface mask '
-                                                       '(stationary or slow-flowing surfaces with velocity < 15 m/yr)'
+                                                       '(stationary or slow-flowing surfaces with velocity < 15 meter/year)'
                                                        '(top priority); 2 = correction from slowest 25% of overlapping '
                                                        'velocities (second priority)')
 
         if stable_count != 0:
-            var.setncattr('stable_shift_mask', int(round(vr_mean_shift*10))/10)
+            var.setncattr('stable_shift_stationary', int(round(vr_mean_shift*10))/10)
         else:
-            var.setncattr('stable_shift_mask', np.nan)
-        var.setncattr('stable_count_mask', stable_count)
+            var.setncattr('stable_shift_stationary', np.nan)
+        var.setncattr('stable_count_stationary', stable_count)
 
         if stable_count1 != 0:
             var.setncattr('stable_shift_slow', int(round(vr_mean_shift1*10))/10)
@@ -748,7 +748,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                                         zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
         var.setncattr('standard_name', 'azimuth_velocity')
         var.setncattr('description', 'velocity in radar azimuth direction')
-        var.setncattr('units', 'm/y')
+        var.setncattr('units', 'meter/year')
         var.setncattr('grid_mapping', mapping_var_name)
 
         if stable_count != 0:
@@ -782,7 +782,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             var.setncattr('error_mask', int(round(va_error_mask*10))/10)
         else:
             var.setncattr('error_mask', np.nan)
-        var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 m/yr identified from an external mask')
+        var.setncattr('error_mask_description', 'RMSE over stable surfaces, stationary or slow-flowing surfaces with velocity < 15 meter/year identified from an external mask')
 
         var.setncattr('error_modeled', int(round(va_error_mod*10))/10)
         var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
@@ -802,7 +802,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift_flag', stable_shift_applied)
         var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
                                                        '1 = correction from overlapping stable surface mask '
-                                                       '(stationary or slow-flowing surfaces with velocity < 15 m/yr)'
+                                                       '(stationary or slow-flowing surfaces with velocity < 15 meter/yearr)'
                                                        '(top priority); 2 = correction from slowest 25% of overlapping '
                                                        'velocities (second priority)')
 
@@ -1103,7 +1103,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('standard_name', 'conversion_matrix_element_11')
         var.setncattr('description', 'conversion matrix element (1st row, 1st column) that can be multiplied with vx '
                                      'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
-        var.setncattr('units', 'pixel/(m/y)')
+        var.setncattr('units', 'pixel/(meter/year)')
         var.setncattr('grid_mapping', mapping_var_name)
         var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
         var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
@@ -1134,7 +1134,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('standard_name', 'conversion_matrix_element_12')
         var.setncattr('description', 'conversion matrix element (1st row, 2nd column) that can be multiplied with vy '
                                      'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)')
-        var.setncattr('units', 'pixel/(m/y)')
+        var.setncattr('units', 'pixel/(meter/year)')
         var.setncattr('grid_mapping', mapping_var_name)
 
         var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
