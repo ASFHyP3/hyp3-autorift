@@ -428,8 +428,9 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('semi_minor_axis', float(6356.752))
         var.setncattr('scale_factor_at_projection_origin', 1)
         var.setncattr('inverse_flattening', float(srs.GetAttrValue('GEOGCS|SPHEROID', 2)))
-        var.setncattr('spatial_ref_crs_wrt', srs.ExportToWkt())
-        var.setncattr('spatial_proj4text', srs.ExportToProj4())
+        var.setncattr('spatial_ref', srs.ExportToWkt())
+        var.setncattr('crs_wkt', srs.ExportToWkt())
+        var.setncattr('proj4text', srs.ExportToProj4())
         var.setncattr('spatial_epsg', epsg)
         var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))  # note this has pixel size in it - set  explicitly above
 
