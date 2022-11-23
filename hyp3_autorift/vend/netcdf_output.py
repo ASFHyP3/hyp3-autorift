@@ -397,7 +397,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
     var = nc_outfile.createVariable('img_pair_info', 'U1', (), fill_value=None)
     var.setncattr('standard_name', 'image_pair_information')
-    var.setncattr('id_img1', 'x coordinate of projection')
     for key in IMG_INFO_DICT:
         if key == 'autoRIFT_software_version':
             continue
