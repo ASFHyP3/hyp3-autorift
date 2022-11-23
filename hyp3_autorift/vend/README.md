@@ -38,5 +38,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
 2. The changes listed in `CHANGES-183.diff` were applied in [ASFHyP3/hyp3-autorift#183](https://github.com/ASFHyP3/hyp3-autorift/pull/183)
    to correctly set the netcdf `img_pair_info:correction_level_img` attribute values for Sentinel-2 scenes after the transition from
    Earth Search COG IDs to ESA IDs.
-3. The changes listed in `CHANGES-189.diff` were applied in [ASFHyP3/hyp3-autorift#189](https://github.com/ASFHyP3/hyp3-autorift/pull/189)
+3. The changes listed in `CHANGES-189.diff` and `CHANGES-191.diff` were applied in 
+   [ASFHyP3/hyp3-autorift#189](https://github.com/ASFHyP3/hyp3-autorift/pull/189)
+   and [ASFHyP3/hyp3-autorift#180](https://github.com/ASFHyP3/hyp3-autorift/pull/180)  
    after an extensive metadata review to prepare netCDF output for ingest to NSIDC DAAC.
