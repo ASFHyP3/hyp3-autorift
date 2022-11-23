@@ -1220,7 +1220,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'interpolated_value_mask')
     var.setncattr('description', 'true where values have been interpolated')
-    var.setncattr('flag_values', '0UB, 1UB; // ubyte')
+    var.setncattr('flag_values', [np.uint8(0), np.uint8(1)])
     var.setncattr('flag_meanings', 'measured, interpolated')
     var.setncattr('grid_mapping', mapping_var_name)
 
