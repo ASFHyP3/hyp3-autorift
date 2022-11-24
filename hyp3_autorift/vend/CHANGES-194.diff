@@ -1,6 +1,6 @@
-diff --git /netcdf_output.py /netcdf_output.py
---- /netcdf_output.py
-+++ /netcdf_output.py
+diff --git netcdf_output.py netcdf_output.py
+--- netcdf_output.py
++++ netcdf_output.py
 @@ -13,14 +13,14 @@
  import hyp3_autorift
  
