@@ -40,5 +40,5 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    Earth Search COG IDs to ESA IDs.
 3. The changes listed in `CHANGES-189.diff` and `CHANGES-191.diff` were applied in 
    [ASFHyP3/hyp3-autorift#189](https://github.com/ASFHyP3/hyp3-autorift/pull/189)
-   and [ASFHyP3/hyp3-autorift#180](https://github.com/ASFHyP3/hyp3-autorift/pull/180)  
+   and [ASFHyP3/hyp3-autorift#191](https://github.com/ASFHyP3/hyp3-autorift/pull/191)  
    after an extensive metadata review to prepare netCDF output for ingest to NSIDC DAAC.
