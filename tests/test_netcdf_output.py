@@ -12,24 +12,24 @@ def test_get_satellite_attribute():
 
     info_dict = {
         'mission_img1': 'S',
-        'satellite_img1': '2',
+        'satellite_img1': '2A',
         'mission_img2': 'S',
-        'satellite_img2': '2',
+        'satellite_img2': '2A',
     }
-    assert get_satellite_attribute(info_dict) == 'Sentinel-2'
+    assert get_satellite_attribute(info_dict) == 'Sentinel-2A'
 
     info_dict = {
         'mission_img1': 'L',
-        'satellite_img1': '4',
-        'mission_img2': 'S',
-        'satellite_img2': '1',
+        'satellite_img1': '5',
+        'mission_img2': 'L',
+        'satellite_img2': '4',
     }
-    assert get_satellite_attribute(info_dict) == 'Landsat 4 and Sentinel-1'
+    assert get_satellite_attribute(info_dict) == 'Landsat 5 and Landsat 4'
 
     info_dict = {
         'mission_img1': 'S',
-        'satellite_img1': '1',
+        'satellite_img1': '1A',
         'mission_img2': 'S',
-        'satellite_img2': '2',
+        'satellite_img2': '1B',
     }
-    assert get_satellite_attribute(info_dict) == 'Sentinel-1 and Sentinel-2'
+    assert get_satellite_attribute(info_dict) == 'Sentinel-1A and Sentinel-1B'
