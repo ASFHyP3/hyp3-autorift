@@ -7,6 +7,12 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.2]
+
+### Changed
+* Patch [196](hyp3_autorift/vend/CHANGES-189.diff) was applied to update the `flag_meanings` netCDF attribute to be
+  inline with CF-Convention 1.8, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ## [0.10.1]
 
 ### Changed
