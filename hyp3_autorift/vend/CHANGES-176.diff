@@ -1,0 +1,94 @@
+diff -u netcdf_output.py netcdf_output.py
+--- netcdf_output.py
++++ netcdf_output.py
+@@ -339,7 +339,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+     if IMG_INFO_DICT['mission_img1'].startswith('S'):
+         source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
+     if IMG_INFO_DICT['mission_img1'].startswith('L'):
+-        source += f'. Landsat-{IMG_INFO_DICT["satellite_img1"]:.0f} images courtesy of the U.S. Geological Survey'
++        source += f'. Landsat-{IMG_INFO_DICT["satellite_img1"]} images courtesy of the U.S. Geological Survey'
+ 
+     references = 'When using this data, please acknowledge the source (see global source attribute) and cite:\n' \
+                  '* Gardner, A. S., Moholdt, G., Scambos, T., Fahnestock, M., Ligtenberg, S., van den Broeke, M.,\n' \
+@@ -517,7 +517,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+     elif stable_shift_applied == 1:
+         var.setncattr('stable_shift', int(round(vx_mean_shift*10))/10)
+     else:
+-        var.setncattr('stable_shift', np.nan)
++        var.setncattr('stable_shift', 0)
+     var.setncattr('stable_shift_flag', stable_shift_applied)
+     var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
+                                                    '1 = correction from overlapping stable surface mask (stationary '
+@@ -602,7 +602,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+     elif stable_shift_applied == 1:
+         var.setncattr('stable_shift', int(round(vy_mean_shift*10))/10)
+     else:
+-        var.setncattr('stable_shift', np.nan)
++        var.setncattr('stable_shift', 0)
+ 
+     var.setncattr('stable_shift_flag', stable_shift_applied)
+     var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
+@@ -718,7 +718,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+         elif stable_shift_applied == 1:
+             var.setncattr('stable_shift', int(round(vr_mean_shift*10))/10)
+         else:
+-            var.setncattr('stable_shift', np.nan)
++            var.setncattr('stable_shift', 0)
+         var.setncattr('stable_shift_flag', stable_shift_applied)
+         var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
+                                                        '1 = correction from overlapping stable surface mask '
+@@ -797,7 +797,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+         elif stable_shift_applied == 1:
+             var.setncattr('stable_shift', int(round(va_mean_shift*10))/10)
+         else:
+-            var.setncattr('stable_shift', np.nan)
++            var.setncattr('stable_shift', 0)
+         var.setncattr('stable_shift_flag', stable_shift_applied)
+         var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
+                                                        '1 = correction from overlapping stable surface mask '
+@@ -961,7 +961,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+         # elif stable_shift_applied_p == 1:
+         #     var.setncattr('stable_shift', int(round(vxp_mean_shift*10))/10)
+         # else:
+-        #     var.setncattr('stable_shift', np.nan)
++        #     var.setncattr('stable_shift', 0)
+         # var.setncattr('stable_shift_flag', stable_shift_applied_p)
+         # var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
+         #                                                '1 = correction from overlapping stable surface mask '
+@@ -1041,7 +1041,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+         # elif stable_shift_applied_p == 1:
+         #     var.setncattr('stable_shift', int(round(vyp_mean_shift*10))/10)
+         # else:
+-        #     var.setncattr('stable_shift', np.nan)
++        #     var.setncattr('stable_shift', 0)
+         # var.setncattr('stable_shift_flag', stable_shift_applied_p)
+         # var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
+         #                                                '1 = correction from overlapping stable surface mask '
+diff -u testautoRIFT.py testautoRIFT.py
+--- testautoRIFT.py
++++ testautoRIFT.py
+@@ -996,8 +996,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+                         'processing_date_img2': slave_split[4][0:8],
+                         'row_img1': np.float64(master_split[2][3:6]),
+                         'row_img2': np.float64(slave_split[2][3:6]),
+-                        'satellite_img1': np.float64(master_split[0][2:4]),
+-                        'satellite_img2': np.float64(slave_split[0][2:4]),
++                        'satellite_img1': master_split[0][2:4].lstrip('0'),
++                        'satellite_img2': slave_split[0][2:4].lstrip('0'),
+                         'sensor_img1': master_split[0][1],
+                         'sensor_img2': slave_split[0][1],
+                         'time_standard_img1': 'UTC',
+diff -u testautoRIFT_ISCE.py testautoRIFT_ISCE.py
+--- testautoRIFT_ISCE.py
++++ testautoRIFT_ISCE.py
+@@ -995,8 +995,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
+                         'processing_date_img2': slave_split[4][0:8],
+                         'row_img1': np.float64(master_split[2][3:6]),
+                         'row_img2': np.float64(slave_split[2][3:6]),
+-                        'satellite_img1': np.float64(master_split[0][2:4]),
+-                        'satellite_img2': np.float64(slave_split[0][2:4]),
++                        'satellite_img1': master_split[0][2:4].lstrip('0'),
++                        'satellite_img2': slave_split[0][2:4].lstrip('0'),
+                         'sensor_img1': master_split[0][1],
+                         'sensor_img2': slave_split[0][1],
+                         'time_standard_img1': 'UTC',

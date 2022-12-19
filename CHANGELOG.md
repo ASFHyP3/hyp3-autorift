@@ -7,11 +7,43 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.2]
+
+### Changed
+* Patch [196](hyp3_autorift/vend/CHANGES-189.diff) was applied to update the `flag_meanings` netCDF attribute to be
+  inline with CF-Convention 1.8, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
+## [0.10.1]
+
+### Changed
+* Patches [189](hyp3_autorift/vend/CHANGES-189.diff),  [191](hyp3_autorift/vend/CHANGES-191.diff), and [194](hyp3_autorift/vend/CHANGES-194.diff) 
+  were applied to update some netCDF variable attributes, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
+## [0.10.0]
+
+### Changed
+* Sentinel-2 scenes are now retrieved from [Google Cloud](https://cloud.google.com/storage/docs/public-datasets/sentinel-2),
+  rather than [AWS](https://registry.opendata.aws/sentinel-2/).
+
+### Removed
+* Sentinel-2 granules may no longer be specified using Element84 COG names, only
+  [ESA names](https://sentinels.copernicus.eu/web/sentinel/user-guides/sentinel-2-msi/naming-convention).
+
+## [0.9.1]
+
+### Changed
+* [A patch](hyp3_autorift/vend/CHANGES-176.diff) was applied to update some netCDF variable attributes, as described
+  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+
 ## [0.9.0]
 
 ### Added
-* Added support for processing Landsat-4, Landsat-5, and Landsat-9 Collection 2 scenes
+* Added support for processing Landsat-4, -5, and -7 Collection 2 scenes
 * `hyp3_autorift.process.get_lc2_stac_json_key` will now work for landsat missions 4-9 and for all sensors
+
+### Changed
+* Upgraded autoRIFT to [v1.5.0](https://github.com/nasa-jpl/autoRIFT/releases/tag/v1.5.0) 
+  and [ISCE2 v2.6.1 built with autoRIFT v1.5.0](https://anaconda.org/hyp3/isce2)
 
 ### Fixed 
 * Pinned Python to `<3.10` as ISCE2 is currently [incompatible with Python 3.10](https://github.com/isce-framework/isce2/issues/458).
@@ -30,7 +62,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.8.5]
 
 ### Added
-* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog
+* The Earth Search STAC catalog is incomplete for Sentinel-2 L1C, with many more scenes in the AWS bucket than the 
+  catalog. When a S2 scene cannot be found in the STAC catalog, `hyp3-autorift` will fall back to a bundled S2 metadata
+  catalog derived from an inventory of scenes in the AWS bucket and the Google Earth catalog
 
 ## [0.8.4]
 

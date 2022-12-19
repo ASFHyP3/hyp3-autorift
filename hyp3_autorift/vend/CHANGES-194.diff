@@ -1,0 +1,32 @@
+diff --git netcdf_output.py netcdf_output.py
+--- netcdf_output.py
++++ netcdf_output.py
+@@ -13,14 +13,14 @@
+ import hyp3_autorift
+ 
+ 
+-def get_satellite_attribte(info):
++def get_satellite_attribute(info):
+     mission_mapping = {
+-        'L': 'Landsat',
+-        'S': 'Sentinel',
++        'L': 'Landsat ',
++        'S': 'Sentinel-',
+     }
+ 
+-    satellite_1 = f'{mission_mapping[info["mission_img1"]]} {info["satellite_img1"]}'
+-    satellite_2 = f'{mission_mapping[info["mission_img2"]]} {info["satellite_img2"]}'
++    satellite_1 = f'{mission_mapping[info["mission_img1"]]}{info["satellite_img1"]}'
++    satellite_2 = f'{mission_mapping[info["mission_img2"]]}{info["satellite_img2"]}'
+ 
+     if satellite_1 != satellite_2:
+         return f'{satellite_1} and {satellite_2}'
+@@ -383,7 +383,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
+     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
+     nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
+     nc_outfile.setncattr('scene_pair_type', pair_type)
+-    nc_outfile.setncattr('satellite', get_satellite_attribte(IMG_INFO_DICT))
++    nc_outfile.setncattr('satellite', get_satellite_attribute(IMG_INFO_DICT))
+     nc_outfile.setncattr('motion_detection_method', detection_method)
+     nc_outfile.setncattr('motion_coordinates', coordinates)
+     nc_outfile.setncattr('author', author)

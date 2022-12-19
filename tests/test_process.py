@@ -2,9 +2,11 @@ import io
 from datetime import datetime
 from re import match
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import botocore.exceptions
 import pytest
+import requests
 import responses
 
 from hyp3_autorift import process
@@ -129,50 +131,81 @@ def test_get_lc2_path():
 
 @responses.activate
 def test_get_s2_metadata_not_found():
-    responses.add(responses.GET, f'{process.S2_SEARCH_URL}/foo', status=404)
-    responses.add(
-        responses.POST, process.S2_SEARCH_URL,
-        body='{"numberReturned": 0}', status=200,
-    )
-    with pytest.raises(ValueError):
+    url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles////foo.SAFE/manifest.safe'
+    responses.add(responses.GET, url, status=404)
+    with pytest.raises(requests.exceptions.HTTPError) as http_error:
         process.get_s2_metadata('foo')
+    assert http_error.value.response.status_code == 404
 
 
 @responses.activate
-def test_get_s2_metadata_cog_id():
-    responses.add(
-        responses.GET, f'{process.S2_SEARCH_URL}/2FS2B_22WEB_20200913_0_L2A',
-        body='{"foo": "bar"}', status=200,
-    )
+@patch('hyp3_autorift.process.get_raster_bbox')
+@patch('hyp3_autorift.process.get_s2_path')
+@patch('hyp3_autorift.process.get_s2_manifest')
+def test_get_s2_metadata(mock_get_s2_manifest: MagicMock, mock_get_s2_path: MagicMock, mock_get_raster_bbox: MagicMock):
+    mock_get_s2_manifest.return_value = 'manifest content'
+    mock_get_s2_path.return_value = 's2 path'
+    mock_get_raster_bbox.return_value = [0, 0, 1, 1]
 
-    assert process.get_s2_metadata('2FS2B_22WEB_20200913_0_L2A') == {'foo': 'bar'}
+    expected = {
+        'path': 's2 path',
+        'bbox': [0, 0, 1, 1],
+        'id': 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500',
+        'properties': {
+            'datetime': '2016-06-16T11:22:17Z',
+        },
+    }
+    assert process.get_s2_metadata('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == expected
+
+    mock_get_s2_manifest.assert_called_once_with('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
+    mock_get_s2_path.assert_called_once_with('manifest content',
+                                             'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
+    mock_get_raster_bbox.assert_called_once_with('s2 path')
+
+
+def test_get_s2_safe_url():
+    expected = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
+               'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE'
+    assert process.get_s2_safe_url('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == expected
+
+    expected = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/38/E/MQ/' \
+               'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056.SAFE'
+    assert process.get_s2_safe_url('S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056') == expected
 
 
 @responses.activate
-def test_get_s2_metadata_esa_id():
-    responses.add(
-        responses.GET, f'{process.S2_SEARCH_URL}/S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530',
-        status=404,
-    )
-    responses.add(
-        responses.POST, process.S2_SEARCH_URL,
-        body='{"numberReturned": 1, "features": [{"foo": "bar"}]}', status=200,
-    )
+def test_get_s2_manifest():
+    url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
+          'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE/manifest.safe'
+    responses.add(responses.GET, url, body='foo', status=200)
 
-    assert process.get_s2_metadata('S2B_MSIL2A_20200913T151809_N0214_R068_T22WEB_20200913T180530') == {"foo": "bar"}
+    assert process.get_s2_manifest('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == 'foo'
 
 
-@responses.activate
-def test_get_s2_metadata_json():
-    responses.add(responses.GET, f'{process.S2_SEARCH_URL}/S2B_60CWT_20220130_0_L1C', status=404)
+def test_get_s2_path(test_data_directory):
+    scene_name = 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500'
+    with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
+        manifest_text = f.read()
+    path = process.get_s2_path(manifest_text, scene_name)
+    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
+                   'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE/./GRANULE' \
+                   '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_N02.04/IMG_DATA' \
+                   '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_B08.jp2'
 
-    responses.add(
-        responses.POST, process.S2_SEARCH_URL,
-        body='{"numberReturned": 0}', status=200,
-    )
+    scene_name = 'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056'
+    with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
+        manifest_text = f.read()
+    path = process.get_s2_path(manifest_text, scene_name)
+    assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/38/E/MQ/' \
+                   'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056.SAFE/./GRANULE' \
+                   '/L1C_T38EMQ_A016290_20200419T060719/IMG_DATA/T38EMQ_20200419T060719_B08.jp2'
 
-    s3_path = process.get_s2_metadata('S2B_60CWT_20220130_0_L1C')['assets']['B08']['href']
-    assert s3_path == 's3://sentinel-s2-l1c/tiles/60/C/WT/2022/1/30/0/B08.jp2'
+
+def test_get_raster_bbox(test_data_directory):
+    bbox = process.get_raster_bbox(str(test_data_directory / 'T60CWU_20160414T200612_B08.jp2'))
+    assert bbox == [-183.0008956, -78.4606571, -178.0958227, -77.438842]
+    bbox = process.get_raster_bbox(str(test_data_directory / 'T55XEE_20200911T034541_B08.jp2'))
+    assert bbox == [146.999228, 75.5641782, 151.2301741, 76.5810287]
 
 
 def test_s3_object_is_accessible(s3_stubber):
@@ -207,31 +240,6 @@ def test_s3_object_is_accessible(s3_stubber):
 def test_parse_s3_url():
     assert process.parse_s3_url('s3://sentinel-s2-l1c/foo/bar.jp2') == ('sentinel-s2-l1c', 'foo/bar.jp2')
     assert process.parse_s3_url('s3://s2-l1c-us-west/hello.jp2') == ('s2-l1c-us-west', 'hello.jp2')
-
-
-def test_get_s2_paths(monkeypatch):
-    ref_s3_url = 's3://sentinel-s2-l1c/foo/bar.jp2'
-    sec_s3_url = 's3://sentinel-s2-l1c/fiz/buz.jp2'
-
-    with monkeypatch.context() as m:
-        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: True)
-        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
-        assert paths == ('/vsis3/s2-l1c-us-west-2/foo/bar.jp2', '/vsis3/s2-l1c-us-west-2/fiz/buz.jp2')
-
-    with monkeypatch.context() as m:
-        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: False)
-        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
-        assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
-
-    with monkeypatch.context() as m:
-        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: kwargs['key'] == 'foo/bar.jp2')
-        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
-        assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
-
-    with monkeypatch.context() as m:
-        m.setattr(process, 's3_object_is_accessible', lambda **kwargs: kwargs['key'] == 'fiz/buz.jp2')
-        paths = process.get_s2_paths(ref_s3_url, sec_s3_url)
-        assert paths == ('/vsis3/sentinel-s2-l1c/foo/bar.jp2', '/vsis3/sentinel-s2-l1c/fiz/buz.jp2')
 
 
 def test_get_datetime():
