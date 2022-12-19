@@ -320,13 +320,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = get_lc2_path(secondary_metadata)
 
-<<<<<<< HEAD
-        secondary_path = check_lc2_projection(reference_metadata, secondary_metadata, secondary_path)
-=======
         if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
             log.info('Reference and secondary projections are different! Reprojecting.')
             reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
->>>>>>> 711ea0ed676b81ca4f4b99ddf06ee2a10a6278e4
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
