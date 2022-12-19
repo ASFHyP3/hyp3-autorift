@@ -8,7 +8,6 @@ import logging
 import os
 import shutil
 import xml.etree.ElementTree as ET
-
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
