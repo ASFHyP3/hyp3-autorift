@@ -4,11 +4,13 @@ import logging
 import sys
 import textwrap
 from pathlib import Path
+from typing import Tuple
 
 from hyp3lib import DemError
 from isce.applications.topsApp import TopsInSAR
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 
 from hyp3_autorift.geometry import fix_point_for_antimeridian, flip_point_coordinates
 
@@ -177,3 +179,35 @@ def write_geospatial(outfile: str, data, transform, projection, nodata, driver: 
     ds.GetRasterBand(1).WriteArray(data)
     del ds
     return outfile
+
+
+def get_epsg_code(info: dict) -> int:
+    """Get the EPSG code from a GDAL Info dictionary
+    Args:
+        info: The dictionary returned by a gdal.Info call
+    Returns:
+        epsg_code: The integer EPSG code
+    """
+    proj = osr.SpatialReference(info['coordinateSystem']['wkt'])
+    epsg_code = int(proj.GetAttrValue('AUTHORITY', 1))
+    return epsg_code
+
+
+def ensure_same_projection(reference_path: str, secondary_path: str) -> Tuple[str, str]:
+    reprojection_dir = Path('reprojected')
+    reprojection_dir.mkdir(exist_ok=True)
+
+    ref_info = gdal.Info(reference_path, format='json')
+    ref_epsg = get_epsg_code(ref_info)
+
+    reprojected_reference = str(reprojection_dir / Path(reference_path).name)
+    reprojected_secondary = str(reprojection_dir / Path(secondary_path).name)
+
+    gdal.Warp(reprojected_reference, reference_path, dstSRS=f'EPSG:{ref_epsg}',
+              xRes=ref_info['geoTransform'][1], yRes=ref_info['geoTransform'][5],
+              resampleAlg='lanczos', targetAlignedPixels=True)
+    gdal.Warp(reprojected_secondary, secondary_path, dstSRS=f'EPSG:{ref_epsg}',
+              xRes=ref_info['geoTransform'][1], yRes=ref_info['geoTransform'][5],
+              resampleAlg='lanczos', targetAlignedPixels=True)
+
+    return reprojected_reference, reprojected_secondary
