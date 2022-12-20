@@ -17,12 +17,13 @@ import boto3
 import botocore.exceptions
 import numpy as np
 import requests
-from hyp3_autorift import geometry, image, io
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
+
+from hyp3_autorift import geometry, image, io
 
 log = logging.getLogger(__name__)
 
@@ -275,7 +276,6 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray):
     return filtered, zero_mask
 
 
-
 def apply_hps_filter(array: np.ndarray):
     """
     Highpass filter for L8/9 preprocessing
@@ -285,19 +285,19 @@ def apply_hps_filter(array: np.ndarray):
     return filtered
 
 
-def apply_landsat_filtering(image: str) -> Tuple[Path, dict]: #FIXME typing
+def apply_landsat_filtering(image: str) -> Tuple[Path, dict]:  # FIXME typing
     image_platform = get_platform(image)
     image_metadata = get_lc2_metadata(image)
     image_path = get_lc2_path(image_metadata)
 
     if image_platform in ('L4', 'L5'):
-        # fft
+        # FFT filter
         image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
         image_filtered = apply_fft_filter(image_array, image_nodata)
         image_new_path = create_filtered_filepath(image_path)
         image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
     elif image_platform == 'L7':
-        # fill gap wallis
+        # fill gap and wallis filter
         image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
         image_filtered, zero_mask = apply_wallis_nodata_fill_filter(image_array)
         image_new_path = create_filtered_filepath(image_path)
@@ -305,13 +305,13 @@ def apply_landsat_filtering(image: str) -> Tuple[Path, dict]: #FIXME typing
         zero_new_path = f'{Path(image_path).stem}_zeroMask.{Path(image_path).suffix}'
         _ = io.write_geospatial(zero_new_path, zero_mask, image_transform, image_projection, nodata=-1)
     elif image_platform in ('L8', 'L9'):
-        # high pass
+        # high pass filter
         image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
         image_filtered = apply_hps_filter(image_array)
         image_new_path = create_filtered_filepath(image_path)
         image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
     else:
-        raise NotImplemented(f'Unsupported Satellite Platform: {image_platform}')
+        raise NotImplementedError(f'Unsupported Satellite Platform: {image_platform}')
 
     return image_path, image_metadata
 
@@ -392,11 +392,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
                 _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
 
             elif Path(reference_zero_path).exists() & Path(reference_zero_path).exists():
-                raise NotImplemented('AutoRIFT not availabe for image pairs with different'
-                                     'preprocessing methods')
+                raise NotImplementedError('AutoRIFT not availabe for image pairs with different preprocessing methods')
 
             reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
-            
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
