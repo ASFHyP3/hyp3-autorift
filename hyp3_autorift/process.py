@@ -17,15 +17,12 @@ import boto3
 import botocore.exceptions
 import numpy as np
 import requests
+from hyp3_autorift import geometry, image, io
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
-
-from hyp3_autorift import geometry
-from hyp3_autorift import image
-from hyp3_autorift import io
 
 log = logging.getLogger(__name__)
 
@@ -227,12 +224,30 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def create_fft_filepath(path: str):
-    parent = (Path.cwd() / 'fft').resolve()
+def create_filtered_filepath(path: str):
+    parent = (Path.cwd() / 'filtered').resolve()
     parent.mkdir(exist_ok=True)
 
     out_path = parent / Path(path).name
     return str(out_path)
+
+
+def _hps_filter(array: np.ndarray, filter_width=5):
+    """
+    Do the pre processing using (orig - low-pass filter) = high-pass filter filter (3.9/5.3 min).
+    This function was extracted from line 268 of autoRIFT.py since the hps filter is not its own
+    importable function in autoRIFT. Eventually, this function should be refactored within
+    autoRIFT.
+    """
+    import cv2
+    import numpy as np
+
+    kernel = -np.ones((filter_width, filter_width), dtype=np.float32)
+    kernel[int((filter_width - 1) / 2), int((filter_width - 1) / 2)] = kernel.size - 1
+    kernel = kernel / kernel.size
+
+    filtered = cv2.filter2D(array.astype(float), -1, kernel, borderType=cv2.BORDER_CONSTANT)
+    return filtered
 
 
 def apply_fft_filter(array: np.ndarray, nodata: int):
@@ -250,22 +265,51 @@ def apply_fft_filter(array: np.ndarray, nodata: int):
     return filtered
 
 
+def apply_wallis_nodata_fill_filter(array: np.ndarray):
+    """
+    Wallis filter with nodata infill for L7 SLC Off preprocessing
+    """
+    from autoRIFT.autoRIFT import _wallis_filter_fill
+    filtered, zero_mask = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
+
+    return filtered, zero_mask
+
+
+
+def apply_hps_filter(array: np.ndarray):
+    """
+    Highpass filter for L8/9 preprocessing
+    """
+    filtered = _hps_filter(array, filter_width=5)
+
+    return filtered
+
+
 def apply_landsat_filtering(image: str) -> Tuple[Path, dict]: #FIXME typing
     image_platform = get_platform(image)
     image_metadata = get_lc2_metadata(image)
     image_path = get_lc2_path(image_metadata)
-    
+
     if image_platform in ('L4', 'L5'):
+        # fft
         image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
         image_filtered = apply_fft_filter(image_array, image_nodata)
-        image_new_path = create_fft_filepath(image_path)
+        image_new_path = create_filtered_filepath(image_path)
         image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
     elif image_platform == 'L7':
-        # fill gap fft
-        pass
+        # fill gap wallis
+        image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+        image_filtered, zero_mask = apply_wallis_nodata_fill_filter(image_array)
+        image_new_path = create_filtered_filepath(image_path)
+        image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
+        zero_new_path = f'{Path(image_path).stem}_zeroMask.{Path(image_path).suffix}'
+        _ = io.write_geospatial(zero_new_path, zero_mask, image_transform, image_projection, nodata=-1)
     elif image_platform in ('L8', 'L9'):
         # high pass
-        pass
+        image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+        image_filtered = apply_hps_filter(image_array)
+        image_new_path = create_filtered_filepath(image_path)
+        image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
     else:
         Exception('Unsupported Platform')
 
@@ -369,7 +413,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         for slc in [reference_path, secondary_path]:
             gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
 
-        from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogrid_ISCE import (loadMetadata,
+                                                         runGeogrid)
         meta_r = loadMetadata('fine_coreg')
         meta_s = loadMetadata('secondary')
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
@@ -378,7 +423,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         #       I've got no idea why, or if there are other affects...
         gdal.AllRegister()
 
-        from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
+        from hyp3_autorift.vend.testautoRIFT_ISCE import \
+            generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform, optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
@@ -386,7 +432,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         )
 
     else:
-        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogridOptical import (
+            coregisterLoadMetadata, runGeogrid)
         meta_r, meta_s = coregisterLoadMetadata(
             reference_path, secondary_path,
             reference_metadata=reference_metadata,
