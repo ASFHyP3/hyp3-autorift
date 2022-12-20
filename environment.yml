@@ -30,6 +30,6 @@ dependencies:
   - boto3
   - matplotlib-base
   - netCDF4
-  - numpy<1.24
+  - numpy
   - requests
   - scipy
