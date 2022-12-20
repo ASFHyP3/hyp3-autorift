@@ -250,6 +250,28 @@ def apply_fft_filter(array: np.ndarray, nodata: int):
     return filtered
 
 
+def apply_landsat_filtering(image: str) -> Tuple[Path, dict]: #FIXME typing
+    image_platform = get_platform(image)
+    image_metadata = get_lc2_metadata(image)
+    image_path = get_lc2_path(image_metadata)
+    
+    if image_platform in ('L4', 'L5'):
+        image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+        image_filtered = apply_fft_filter(image_array, image_nodata)
+        image_new_path = create_fft_filepath(image_path)
+        image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
+    elif image_platform == 'L7':
+        # fill gap fft
+        pass
+    elif image_platform in ('L8', 'L9'):
+        # high pass
+        pass
+    else:
+        Exception('Unsupported Platform')
+
+    return image_path, image_metadata
+
+
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
             naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -313,11 +335,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-        reference_metadata = get_lc2_metadata(reference)
-        reference_path = get_lc2_path(reference_metadata)
-
-        secondary_metadata = get_lc2_metadata(secondary)
-        secondary_path = get_lc2_path(secondary_metadata)
+        reference_path, reference_metadata = apply_landsat_filtering(reference)
+        secondary_path, secondary_metadata = apply_landsat_filtering(secondary)
 
         if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
             log.info('Reference and secondary projections are different! Reprojecting.')
@@ -326,19 +345,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
-
-        if platform in ('L4', 'L5'):
-            log.info('Running FFT')
-
-            ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
-            ref_filtered = apply_fft_filter(ref_array, ref_nodata)
-            ref_new_path = create_fft_filepath(reference_path)
-            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
-
-            sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
-            sec_filtered = apply_fft_filter(sec_array, sec_nodata)
-            sec_new_path = create_fft_filepath(secondary_path)
-            secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
