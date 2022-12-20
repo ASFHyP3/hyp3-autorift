@@ -311,7 +311,7 @@ def apply_landsat_filtering(image: str) -> Tuple[Path, dict]: #FIXME typing
         image_new_path = create_filtered_filepath(image_path)
         image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
     else:
-        Exception('Unsupported Platform')
+        raise NotImplemented(f'Unsupported Satellite Platform: {image_platform}')
 
     return image_path, image_metadata
 
@@ -384,7 +384,19 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
             log.info('Reference and secondary projections are different! Reprojecting.')
+
+            # Reproject zero masks if nessecary
+            reference_zero_path = f'{Path(reference_path).stem}_zeroMask.{Path(reference_path).suffix}'
+            secondary_zero_path = f'{Path(secondary_path).stem}_zeroMask.{Path(secondary_path).suffix}'
+            if Path(reference_zero_path).exists() & Path(reference_zero_path).exists():
+                _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
+
+            elif Path(reference_zero_path).exists() & Path(reference_zero_path).exists():
+                raise NotImplemented('AutoRIFT not availabe for image pairs with different'
+                                     'preprocessing methods')
+
             reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
+            
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
