@@ -284,17 +284,22 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 
 
     ######## preprocessing
-    t1 = time.time()
-    print("Pre-process Start!!!")
-    print(f"Using Wallis Filter Width: {obj.WallisFilterWidth}")
+#    t1 = time.time()
+#    print("Pre-process Start!!!")
+#    print(f"Using Wallis Filter Width: {obj.WallisFilterWidth}")
 #    obj.zeroMask = 1
 
-    # TODO: Allow different filters to be applied images independently
-    # default to most stringent filtering
+    # TODO: Allow different filters to be applied images independently default to most stringent filtering FIXME:
+    #  Ensuring landsat images are projected correctly requires filtering before processing with geogrid or Autorift.
+    #  This now occurs in in hyp3-autorift/process.py
     if 'wallis_fill' in preprocessing_methods:
-        obj.preprocess_filt_wal_nodata_fill()
+        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
+                      UserWarning)
+#        obj.preprocess_filt_wal_nodata_fill()
     elif 'wallis' in preprocessing_methods:
-        obj.preprocess_filt_wal()
+        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method'
+                      , UserWarning)
+#        obj.preprocess_filt_wal()
     elif 'fft' in preprocessing_methods:
         # FIXME: The Landsat 4/5 FFT preprocessor looks for the image corners to
         #        determine the scene rotation, but Geogrid + autoRIFT rond the
@@ -304,13 +309,15 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         #        Geogrid or autoRIFT.
         # obj.preprocess_filt_wal()
         # obj.preprocess_filt_fft()
-        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method', UserWarning)
+        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
+                      UserWarning)
     else:
-        obj.preprocess_filt_hps()
+        warnings.warn('Highpass filtering must be done before processing with geogrid!', UserWarning)
+       #obj.preprocess_filt_hps()
 #    obj.I1 = np.abs(I1)
 #    obj.I2 = np.abs(I2)
-    print("Pre-process Done!!!")
-    print(time.time()-t1)
+#    print("Pre-process Done!!!")
+   # print(time.time()-t1)
 
     t1 = time.time()
 #    obj.DataType = 0
