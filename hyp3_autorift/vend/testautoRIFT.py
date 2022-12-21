@@ -132,7 +132,7 @@ def loadProductOptical(file_m, file_s):
 
 def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0, noDataMask, optflag,
                 nodata, mpflag, geogrid_run_info=None, preprocessing_methods=('hps', 'hps'),
-                preprocessing_filter_width=5):
+                preprocessing_filter_width=5, zero_mask=None):
     '''
     Wire and run geogrid.
     '''
@@ -295,11 +295,13 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     if 'wallis_fill' in preprocessing_methods:
         warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
                       UserWarning)
-#        obj.preprocess_filt_wal_nodata_fill()
+        obj.zeroMask = zero_mask
+        # obj.preprocess_filt_wal_nodata_fill()
     elif 'wallis' in preprocessing_methods:
-        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method'
-                      , UserWarning)
-#        obj.preprocess_filt_wal()
+        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
+                      UserWarning)
+        obj.zeroMask = zero_mask
+        # obj.preprocess_filt_wal()
     elif 'fft' in preprocessing_methods:
         # FIXME: The Landsat 4/5 FFT preprocessor looks for the image corners to
         #        determine the scene rotation, but Geogrid + autoRIFT rond the
@@ -313,11 +315,12 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
                       UserWarning)
     else:
         warnings.warn('Highpass filtering must be done before processing with geogrid!', UserWarning)
-       #obj.preprocess_filt_hps()
-#    obj.I1 = np.abs(I1)
-#    obj.I2 = np.abs(I2)
-#    print("Pre-process Done!!!")
-   # print(time.time()-t1)
+        # obj.preprocess_filt_hps()
+
+    # obj.I1 = np.abs(I1)
+    # obj.I2 = np.abs(I2)
+    # print("Pre-process Done!!!")
+    # print(time.time()-t1)
 
     t1 = time.time()
 #    obj.DataType = 0
@@ -547,6 +550,17 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             elif len(re.findall("LT0[45]_", name)) > 0:
                 preprocessing_methods[ii] = 'fft'
 
+        zero_mask = None
+        if ('wallis' in preprocessing_methods[0]) or ('wallis' in preprocessing_methods[1]):
+            indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
+            ds = gdal.Open(indir_m_zero, gdal.GA_ReadOnly)
+            m_zero = ds.GetRasterBand(1).ReadAsArray()
+
+            indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
+            ds = gdal.Open(indir_s_zero, gdal.GA_ReadOnly)
+            s_zero = ds.GetRasterBand(1).ReadAsArray()
+            zero_mask = m_zero | s_zero
+
         print(f'Using preprocessing methods {preprocessing_methods}')
 
         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = \
@@ -554,7 +568,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 data_m, data_s, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CSMAXx0, CSMAXy0,
                 noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
                 preprocessing_methods=preprocessing_methods, preprocessing_filter_width=preprocessing_filter_width,
-        )
+                zero_mask=zero_mask
+            )
         if nc_sensor is not None:
             import hyp3_autorift.vend.netcdf_output as no
             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
