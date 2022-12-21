@@ -302,7 +302,7 @@ def apply_landsat_filtering(image: str) -> Tuple[Path, dict]:  # FIXME typing
         image_filtered, zero_mask = apply_wallis_nodata_fill_filter(image_array)
         image_new_path = create_filtered_filepath(image_path)
         image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
-        zero_new_path = f'{Path(image_path).stem}_zeroMask.{Path(image_path).suffix}'
+        zero_new_path = f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}'
         _ = io.write_geospatial(zero_new_path, zero_mask, image_transform, image_projection, nodata=-1)
     elif image_platform in ('L8', 'L9'):
         # high pass filter
@@ -386,8 +386,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             log.info('Reference and secondary projections are different! Reprojecting.')
 
             # Reproject zero masks if nessecary
-            reference_zero_path = f'{Path(reference_path).stem}_zeroMask.{Path(reference_path).suffix}'
-            secondary_zero_path = f'{Path(secondary_path).stem}_zeroMask.{Path(secondary_path).suffix}'
+            reference_zero_path = f'{Path(reference_path).stem}_zeroMask{Path(reference_path).suffix}'
+            secondary_zero_path = f'{Path(secondary_path).stem}_zeroMask{Path(secondary_path).suffix}'
             if Path(reference_zero_path).exists() & Path(reference_zero_path).exists():
                 _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
 
