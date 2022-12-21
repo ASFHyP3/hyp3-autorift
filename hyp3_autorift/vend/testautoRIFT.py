@@ -551,12 +551,12 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 preprocessing_methods[ii] = 'fft'
 
         zero_mask = None
-        if ('wallis' in preprocessing_methods[0]) or ('wallis' in preprocessing_methods[1]):
-            indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
+        indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
+        indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
+        if os.path.exists(indir_m_zero) or os.path.exists(indir_m_zero):
             ds = gdal.Open(indir_m_zero, gdal.GA_ReadOnly)
             m_zero = ds.GetRasterBand(1).ReadAsArray()
 
-            indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
             ds = gdal.Open(indir_s_zero, gdal.GA_ReadOnly)
             s_zero = ds.GetRasterBand(1).ReadAsArray()
             zero_mask = m_zero | s_zero
