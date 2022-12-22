@@ -291,7 +291,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 
     # TODO: Allow different filters to be applied images independently default to most stringent filtering FIXME:
     #  Ensuring landsat images are projected correctly requires filtering before processing with geogrid or Autorift.
-    #  This now occurs in in hyp3-autorift/process.py
+    #  This now occurs in hyp3-autorift/process.py
     if 'wallis_fill' in preprocessing_methods:
         warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
                       UserWarning)

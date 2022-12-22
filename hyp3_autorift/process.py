@@ -251,13 +251,16 @@ def _hps_filter(array: np.ndarray, filter_width=5):
     return filtered
 
 
+def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
+    valid_domain = array != nodata
+    array[~valid_domain] = 0
+    return array.astype(float), valid_domain
+
+
 def apply_fft_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
     from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
 
-    valid_domain = array != nodata
-    array[~valid_domain] = 0
-    array = array.astype(float)
-
+    array, valid_domain = prepare_array_for_filtering(array, nodata)
     wallis = _wallis_filter(array, filter_width=5)
     wallis[~valid_domain] = 0
 
@@ -273,19 +276,18 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
     """
     from autoRIFT.autoRIFT import _wallis_filter_fill
 
-    valid_domain = array != nodata
-    array[~valid_domain] = 0
-    array = array.astype(float)
-
+    array, _ = prepare_array_for_filtering(array, nodata)
     filtered, zero_mask = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
 
     return filtered, zero_mask
 
 
-def apply_hps_filter(array: np.ndarray) -> Tuple[np.ndarray, None]:
+def apply_hps_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
     """
     Highpass filter for L8/9 preprocessing
     """
+
+    varray, _ = prepare_array_for_filtering(array, nodata)
     filtered = _hps_filter(array, filter_width=5)
 
     return filtered, None
