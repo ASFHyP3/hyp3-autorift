@@ -235,7 +235,7 @@ def create_filtered_filepath(path: str):
 
 def _hps_filter(array: np.ndarray, filter_width=5):
     """
-    Do the pre processing using (orig - low-pass filter) = high-pass filter filter (3.9/5.3 min).
+    Do the pre-processing using (orig - low-pass filter) = high-pass filter filter (3.9/5.3 min).
     This function was extracted from line 268 of autoRIFT.py since the hps filter is not its own
     importable function in autoRIFT. Eventually, this function should be refactored within
     autoRIFT.
@@ -251,8 +251,9 @@ def _hps_filter(array: np.ndarray, filter_width=5):
     return filtered
 
 
-def apply_fft_filter(array: np.ndarray, nodata: int):
+def apply_fft_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
     from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+
     valid_domain = array != nodata
     array[~valid_domain] = 0
     array = array.astype(float)
@@ -263,55 +264,59 @@ def apply_fft_filter(array: np.ndarray, nodata: int):
     filtered = _fft_filter(wallis, valid_domain, power_threshold=500)
     filtered[~valid_domain] = 0
 
-    return filtered
+    return filtered, None
 
 
-def apply_wallis_nodata_fill_filter(array: np.ndarray):
+def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Wallis filter with nodata infill for L7 SLC Off preprocessing
     """
     from autoRIFT.autoRIFT import _wallis_filter_fill
+
+    valid_domain = array != nodata
+    array[~valid_domain] = 0
+    array = array.astype(float)
+
     filtered, zero_mask = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
 
     return filtered, zero_mask
 
 
-def apply_hps_filter(array: np.ndarray):
+def apply_hps_filter(array: np.ndarray) -> Tuple[np.ndarray, None]:
     """
     Highpass filter for L8/9 preprocessing
     """
     filtered = _hps_filter(array, filter_width=5)
 
-    return filtered
+    return filtered, None
 
 
-def apply_landsat_filtering(image: str) -> Tuple[Path, dict]:  # FIXME typing
+def apply_landsat_filtering(image: str) -> Tuple[Path, dict]:
     image_platform = get_platform(image)
     image_metadata = get_lc2_metadata(image)
     image_path = get_lc2_path(image_metadata)
 
-    if image_platform in ('L4', 'L5'):
-        # FFT filter
-        image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
-        image_filtered = apply_fft_filter(image_array, image_nodata)
-        image_new_path = create_filtered_filepath(image_path)
-        image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
-    elif image_platform == 'L7':
-        # fill gap and wallis filter
-        image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
-        image_filtered, zero_mask = apply_wallis_nodata_fill_filter(image_array)
-        image_new_path = create_filtered_filepath(image_path)
-        image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
+    LOCAL_FILTER = {
+        'L4': apply_fft_filter,
+        'L5': apply_fft_filter,
+        'L7': apply_wallis_nodata_fill_filter,
+        'L8': apply_hps_filter,
+        'L9': apply_hps_filter,
+    }
+
+    image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+
+    try:
+        image_filtered, zero_mask = LOCAL_FILTER[image_platform](image_array, image_nodata)
+    except KeyError:
+        raise NotImplementedError(f'Unsupported Satellite Platform: {image_platform}')
+
+    image_new_path = create_filtered_filepath(image_path)
+    image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
+
+    if zero_mask is not None:
         zero_new_path = f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}'
         _ = io.write_geospatial(zero_new_path, zero_mask, image_transform, image_projection, nodata=-1)
-    elif image_platform in ('L8', 'L9'):
-        # high pass filter
-        image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
-        image_filtered = apply_hps_filter(image_array)
-        image_new_path = create_filtered_filepath(image_path)
-        image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
-    else:
-        raise NotImplementedError(f'Unsupported Satellite Platform: {image_platform}')
 
     return image_path, image_metadata
 
