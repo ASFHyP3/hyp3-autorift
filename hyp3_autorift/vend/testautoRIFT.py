@@ -553,12 +553,13 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         zero_mask = None
         indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
         indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
-        if os.path.exists(indir_m_zero) or os.path.exists(indir_m_zero):
+        if os.path.exists(indir_m_zero) or os.path.exists(indir_s_zero):
             ds = gdal.Open(indir_m_zero, gdal.GA_ReadOnly)
             m_zero = ds.GetRasterBand(1).ReadAsArray()
 
             ds = gdal.Open(indir_s_zero, gdal.GA_ReadOnly)
             s_zero = ds.GetRasterBand(1).ReadAsArray()
+
             zero_mask = m_zero | s_zero
 
         print(f'Using preprocessing methods {preprocessing_methods}')
