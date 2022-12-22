@@ -392,8 +392,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
             log.info('Reference and secondary projections are different! Reprojecting.')
 
-            reference_path, secondary_path = io.ensure_same_projection(str(reference_path), str(secondary_path))
-
             # Reproject zero masks if necessary
             reference_zero_path = f'{Path(reference_path).stem}_zeroMask{Path(reference_path).suffix}'
             secondary_zero_path = f'{Path(secondary_path).stem}_zeroMask{Path(secondary_path).suffix}'
@@ -402,6 +400,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
             elif Path(reference_zero_path).exists() != Path(secondary_zero_path).exists():
                 raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
+
+            reference_path, secondary_path = io.ensure_same_projection(str(reference_path), str(secondary_path))
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
