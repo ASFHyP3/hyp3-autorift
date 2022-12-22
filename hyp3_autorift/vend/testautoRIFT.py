@@ -560,6 +560,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             ds = gdal.Open(indir_s_zero, gdal.GA_ReadOnly)
             s_zero = ds.GetRasterBand(1).ReadAsArray()
 
+            # FIXME: Or? Wallis uses or, wallis_fill uses and here.
             zero_mask = m_zero | s_zero
 
         print(f'Using preprocessing methods {preprocessing_methods}')
