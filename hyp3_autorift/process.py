@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Tuple
+from typing import Optional, Tuple
 
 import boto3
 import botocore.exceptions
@@ -56,7 +56,7 @@ def get_lc2_stac_json_key(scene_name: str) -> str:
     return f'collection02/level-1/standard/{sensor}/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
 
 
-def get_lc2_metadata(scene_name):
+def get_lc2_metadata(scene_name: str) -> dict:
     response = requests.get(f'{LC2_SEARCH_URL}/{scene_name}')
     try:
         response.raise_for_status()
@@ -70,7 +70,7 @@ def get_lc2_metadata(scene_name):
     return json.load(obj['Body'])
 
 
-def get_lc2_path(metadata):
+def get_lc2_path(metadata: dict) -> str:
     if metadata['id'][3] in ('4', '5'):
         band = metadata['assets'].get('B2.TIF')
         if band is None:
@@ -79,6 +79,8 @@ def get_lc2_path(metadata):
         band = metadata['assets'].get('B8.TIF')
         if band is None:
             band = metadata['assets']['pan']
+    else:
+        raise NotImplementedError(f'autoRIFT processing not available for this platform. {metadata["id"][:3]}')
 
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
@@ -233,24 +235,6 @@ def create_filtered_filepath(path: str):
     return str(out_path)
 
 
-def _hps_filter(array: np.ndarray, filter_width=5):
-    """
-    Do the pre-processing using (orig - low-pass filter) = high-pass filter filter (3.9/5.3 min).
-    This function was extracted from line 268 of autoRIFT.py since the hps filter is not its own
-    importable function in autoRIFT. Eventually, this function should be refactored within
-    autoRIFT.
-    """
-    import cv2
-    import numpy as np
-
-    kernel = -np.ones((filter_width, filter_width), dtype=np.float32)
-    kernel[int((filter_width - 1) / 2), int((filter_width - 1) / 2)] = kernel.size - 1
-    kernel = kernel / kernel.size
-
-    filtered = cv2.filter2D(array.astype(float), -1, kernel, borderType=cv2.BORDER_CONSTANT)
-    return filtered
-
-
 def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
     valid_domain = array != nodata
     array[~valid_domain] = 0
@@ -282,45 +266,31 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
     return filtered, zero_mask
 
 
-def apply_hps_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
-    """
-    Highpass filter for L8/9 preprocessing
-    """
+def apply_landsat_filtering(image_path: str, image_platform: str) -> Tuple[Path, Optional[Path]]:
+    image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
 
-    varray, _ = prepare_array_for_filtering(array, nodata)
-    filtered = _hps_filter(array, filter_width=5)
-
-    return filtered, None
-
-
-def apply_landsat_filtering(image: str) -> Tuple[Path, dict]:
-    image_platform = get_platform(image)
-    image_metadata = get_lc2_metadata(image)
-    image_path = get_lc2_path(image_metadata)
-
-    LOCAL_FILTER = {
+    platform_filter_dispatch = {
         'L4': apply_fft_filter,
         'L5': apply_fft_filter,
         'L7': apply_wallis_nodata_fill_filter,
-        'L8': apply_hps_filter,
-        'L9': apply_hps_filter,
     }
 
-    image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
-
     try:
-        image_filtered, zero_mask = LOCAL_FILTER[image_platform](image_array, image_nodata)
+        image_filtered, zero_mask = platform_filter_dispatch[image_platform](image_array, image_nodata)
     except KeyError:
-        raise NotImplementedError(f'Unsupported Satellite Platform: {image_platform}')
+        raise NotImplementedError(f'Unknown pre-processing filter for satellite platform: {image_platform}')
 
     image_new_path = create_filtered_filepath(image_path)
-    image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection, nodata=0)
+    image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
+                                     nodata=0, dtype=gdal.GDT_Float32)
 
+    zero_new_path = None
     if zero_mask is not None:
-        zero_new_path = f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}'
-        _ = io.write_geospatial(zero_new_path, zero_mask, image_transform, image_projection, nodata=-1)
+        zero_new_path = Path.cwd() / f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}'
+        _ = io.write_geospatial(str(zero_new_path), zero_mask, image_transform, image_projection,
+                                nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
 
-    return image_path, image_metadata
+    return image_path, zero_new_path
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
@@ -339,6 +309,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     secondary_path = None
     reference_metadata = None
     secondary_metadata = None
+    reference_zero_path = None
+    secondary_zero_path = None
     reference_state_vec = None
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
@@ -386,22 +358,27 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
         os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-        reference_path, reference_metadata = apply_landsat_filtering(reference)
-        secondary_path, secondary_metadata = apply_landsat_filtering(secondary)
+        reference_metadata = get_lc2_metadata(reference)
+        reference_path = get_lc2_path(reference_metadata)
+
+        secondary_metadata = get_lc2_metadata(secondary)
+        secondary_path = get_lc2_path(secondary_metadata)
+
+        if platform in ('L4', 'L5', 'L7'):
+            reference_path, reference_zero_path = apply_landsat_filtering(reference_path, platform)
+            secondary_path, secondary_zero_path = apply_landsat_filtering(secondary_path, platform)
 
         if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
             log.info('Reference and secondary projections are different! Reprojecting.')
 
             # Reproject zero masks if necessary
-            reference_zero_path = f'{Path(reference_path).stem}_zeroMask{Path(reference_path).suffix}'
-            secondary_zero_path = f'{Path(secondary_path).stem}_zeroMask{Path(secondary_path).suffix}'
-            if Path(reference_zero_path).exists() & Path(secondary_zero_path).exists():
+            if reference_zero_path and secondary_zero_path:
                 _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
 
-            elif Path(reference_zero_path).exists() != Path(secondary_zero_path).exists():
+            elif not isinstance(reference_zero_path, type(secondary_zero_path)):
                 raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
 
-            reference_path, secondary_path = io.ensure_same_projection(str(reference_path), str(secondary_path))
+            reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
