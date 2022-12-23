@@ -238,7 +238,7 @@ def create_filtered_filepath(path: str):
 def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
     valid_domain = array != nodata
     array[~valid_domain] = 0
-    return array.astype(float), valid_domain
+    return array.astype(np.float32), valid_domain
 
 
 def apply_fft_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:

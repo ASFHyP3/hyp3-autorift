@@ -152,9 +152,9 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     obj.WallisFilterWidth = preprocessing_filter_width
     print(f'Setting Wallis Filter Width to {preprocessing_filter_width}')
 
-#    ##########     uncomment if starting from preprocessed images
-#    I1 = I1.astype(np.uint8)
-#    I2 = I2.astype(np.uint8)
+    ##########     uncomment if starting from preprocessed images
+    I1 = I1.astype(np.uint8)
+    I2 = I2.astype(np.uint8)
 
     obj.MultiThread = mpflag
 
