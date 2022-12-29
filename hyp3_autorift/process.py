@@ -284,13 +284,13 @@ def apply_landsat_filtering(image_path: str, image_platform: str) -> Tuple[Path,
     image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
                                      nodata=0, dtype=gdal.GDT_Float32)
 
-    zero_new_path = None
+    zero_path = None
     if zero_mask is not None:
-        zero_new_path = Path.cwd() / f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}'
-        _ = io.write_geospatial(str(zero_new_path), zero_mask, image_transform, image_projection,
+        zero_path = create_filtered_filepath(f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}')
+        _ = io.write_geospatial(str(zero_path), zero_mask, image_transform, image_projection,
                                 nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
 
-    return image_path, zero_new_path
+    return image_path, zero_path
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
