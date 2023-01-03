@@ -285,7 +285,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     print(f"Using Wallis Filter Width: {obj.WallisFilterWidth}")
     # obj.zeroMask = 1
 
-    # TODO: Allow different filters to be applied images independently default to most stringent filtering
+    # TODO: Allow different filters to be applied images independently; default to most stringent filtering
     if 'wallis_fill' in preprocessing_methods:
         # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
         #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
@@ -312,10 +312,6 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
                       UserWarning)
     else:
-
-        ##########     uncomment if starting from preprocessed images
-        obj.I1 = obj.I1.astype(np.uint8)
-        obj.I2 = obj.I2.astype(np.uint8)
         obj.preprocess_filt_hps()
 
     # obj.I1 = np.abs(I1)
