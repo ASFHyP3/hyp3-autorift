@@ -268,6 +268,7 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
 def apply_landsat_filtering(image_path: str, image_platform: str) -> Tuple[Path, Optional[Path]]:
     image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+    image_array = image_array.astype(np.float32)
 
     platform_filter_dispatch = {
         'L4': apply_fft_filter,
