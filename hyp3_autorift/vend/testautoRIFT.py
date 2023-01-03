@@ -152,10 +152,6 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     obj.WallisFilterWidth = preprocessing_filter_width
     print(f'Setting Wallis Filter Width to {preprocessing_filter_width}')
 
-    ##########     uncomment if starting from preprocessed images
-    # I1 = I1.astype(np.uint8)
-    # I2 = I2.astype(np.uint8)
-
     obj.MultiThread = mpflag
 
     # take the amplitude only for the radar images
@@ -316,6 +312,10 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
                       UserWarning)
     else:
+
+        ##########     uncomment if starting from preprocessed images
+        obj.I1 = obj.I1.astype(np.uint8)
+        obj.I2 = obj.I2.astype(np.uint8)
         obj.preprocess_filt_hps()
 
     # obj.I1 = np.abs(I1)
@@ -559,8 +559,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             m_zero = m_zero.astype(np.uint8)
             s_zero = s_zero.astype(np.uint8)
 
-            # FIXME: Or? Wallis uses "or" here, while wallis_fill uses "and" here.
-            zero_mask = m_zero | s_zero
+            # FIXME: AND? Wallis uses "or" here, while wallis_fill uses "and" here.
+            zero_mask = m_zero & s_zero
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 
