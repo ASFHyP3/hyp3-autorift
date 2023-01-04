@@ -46,3 +46,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    after an extensive metadata review to prepare netCDF output for ingest to NSIDC DAAC. These changes have been
    [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/74) and should be applied in the next
    `nasa-jpl/autoRIFT` release.
+4. The changes listed in `CHANGES-173.diff` were applied in [ASFHyP3/hyp3-autorift#173](https://github.com/ASFHyP3/hyp3-autorift/pull/173)
+   to handle Landsat scene pairs in differing projections. These changes are *not* expected to be applied upstream to
+   `nasa-jpl/autoRIFT` because they are a significant departure of the "expected" upstream workflow and there's no easy
+   way to communicated or document those changes upstream.
