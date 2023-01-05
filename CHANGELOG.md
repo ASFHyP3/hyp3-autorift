@@ -7,6 +7,11 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.4]
+
+### Added
+* `--omp-num-threads` parameter to the `main()` entrypoint to limit the number of threads used by ISCE during multiprocessing.
+
 ## [0.10.3]
 
 ### Changed
