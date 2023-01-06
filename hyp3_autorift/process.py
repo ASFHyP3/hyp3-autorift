@@ -284,9 +284,10 @@ def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[
     return image_new_path, zero_path
 
 
-def apply_landsat_filtering(reference: str, secondary: str) -> Tuple[Path, Optional[Path], Path, Optional[Path]]:
-    reference_platform = get_platform(reference)
-    secondary_platform = get_platform(secondary)
+def apply_landsat_filtering(reference_path: str, secondary_path: str) \
+        -> Tuple[Path, Optional[Path], Path, Optional[Path]]:
+    reference_platform = get_platform(Path(reference_path).name)
+    secondary_platform = get_platform(Path(secondary_path).name)
     if reference_platform > 'L7' and secondary_platform > 'L7':
         raise NotImplementedError(
             f'{reference_platform}+{secondary_platform} pairs should be highpass filtered in autoRIFT instead'
@@ -307,8 +308,8 @@ def apply_landsat_filtering(reference: str, secondary: str) -> Tuple[Path, Optio
     if reference_filter != secondary_filter:
         raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
 
-    reference_path, reference_zero_path = _apply_filter_function(reference, reference_filter)
-    secondary_path, secondary_zero_path = _apply_filter_function(secondary, secondary_filter)
+    reference_path, reference_zero_path = _apply_filter_function(reference_path, reference_filter)
+    secondary_path, secondary_zero_path = _apply_filter_function(secondary_path, secondary_filter)
 
     return reference_path, reference_zero_path, secondary_path, secondary_zero_path
 
