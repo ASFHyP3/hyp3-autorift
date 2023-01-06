@@ -302,7 +302,7 @@ def apply_landsat_filtering(reference: str, secondary: str) -> Tuple[Path, Optio
         reference_filter = platform_filter_dispatch[reference_platform]
         secondary_filter = platform_filter_dispatch[secondary_platform]
     except KeyError:
-        raise NotImplementedError(f'Unknown pre-processing filter for satellite platform')
+        raise NotImplementedError('Unknown pre-processing filter for satellite platform')
 
     if reference_filter != secondary_filter:
         raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
