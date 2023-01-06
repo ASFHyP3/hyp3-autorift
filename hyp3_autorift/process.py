@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Tuple
+from typing import Optional, Tuple
 
 import boto3
 import botocore.exceptions
@@ -23,9 +23,7 @@ from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
 
-from hyp3_autorift import geometry
-from hyp3_autorift import image
-from hyp3_autorift import io
+from hyp3_autorift import geometry, image, io
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +56,7 @@ def get_lc2_stac_json_key(scene_name: str) -> str:
     return f'collection02/level-1/standard/{sensor}/{year}/{path}/{row}/{scene_name}/{scene_name}_stac.json'
 
 
-def get_lc2_metadata(scene_name):
+def get_lc2_metadata(scene_name: str) -> dict:
     response = requests.get(f'{LC2_SEARCH_URL}/{scene_name}')
     try:
         response.raise_for_status()
@@ -72,7 +70,7 @@ def get_lc2_metadata(scene_name):
     return json.load(obj['Body'])
 
 
-def get_lc2_path(metadata):
+def get_lc2_path(metadata: dict) -> str:
     if metadata['id'][3] in ('4', '5'):
         band = metadata['assets'].get('B2.TIF')
         if band is None:
@@ -81,6 +79,8 @@ def get_lc2_path(metadata):
         band = metadata['assets'].get('B8.TIF')
         if band is None:
             band = metadata['assets']['pan']
+    else:
+        raise NotImplementedError(f'autoRIFT processing not available for this platform. {metadata["id"][:3]}')
 
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
@@ -227,27 +227,71 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def create_fft_filepath(path: str):
-    parent = (Path.cwd() / 'fft').resolve()
+def create_filtered_filepath(path: str):
+    parent = (Path.cwd() / 'filtered').resolve()
     parent.mkdir(exist_ok=True)
 
     out_path = parent / Path(path).name
     return str(out_path)
 
 
-def apply_fft_filter(array: np.ndarray, nodata: int):
-    from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
     valid_domain = array != nodata
     array[~valid_domain] = 0
-    array = array.astype(float)
+    return array.astype(np.float32), valid_domain
 
+
+def apply_fft_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
+    from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
+
+    array, valid_domain = prepare_array_for_filtering(array, nodata)
     wallis = _wallis_filter(array, filter_width=5)
     wallis[~valid_domain] = 0
 
     filtered = _fft_filter(wallis, valid_domain, power_threshold=500)
     filtered[~valid_domain] = 0
 
-    return filtered
+    return filtered, None
+
+
+def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Wallis filter with nodata infill for L7 SLC Off preprocessing
+    """
+    from autoRIFT.autoRIFT import _wallis_filter_fill
+
+    array, _ = prepare_array_for_filtering(array, nodata)
+    filtered, zero_mask = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
+
+    return filtered, zero_mask
+
+
+def apply_landsat_filtering(image_path: str, image_platform: str) -> Tuple[Path, Optional[Path]]:
+    image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+    image_array = image_array.astype(np.float32)
+
+    platform_filter_dispatch = {
+        'L4': apply_fft_filter,
+        'L5': apply_fft_filter,
+        'L7': apply_wallis_nodata_fill_filter,
+    }
+
+    try:
+        image_filtered, zero_mask = platform_filter_dispatch[image_platform](image_array, image_nodata)
+    except KeyError:
+        raise NotImplementedError(f'Unknown pre-processing filter for satellite platform: {image_platform}')
+
+    image_new_path = create_filtered_filepath(image_path)
+    image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
+                                     nodata=0, dtype=gdal.GDT_Float32)
+
+    zero_path = None
+    if zero_mask is not None:
+        zero_path = create_filtered_filepath(f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}')
+        _ = io.write_geospatial(str(zero_path), zero_mask, image_transform, image_projection,
+                                nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
+
+    return image_path, zero_path
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
@@ -266,6 +310,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     secondary_path = None
     reference_metadata = None
     secondary_metadata = None
+    reference_zero_path = None
+    secondary_zero_path = None
     reference_state_vec = None
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
@@ -319,22 +365,25 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = get_lc2_path(secondary_metadata)
 
+        if platform in ('L4', 'L5', 'L7'):
+            reference_path, reference_zero_path = apply_landsat_filtering(reference_path, platform)
+            secondary_path, secondary_zero_path = apply_landsat_filtering(secondary_path, platform)
+
+        if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
+            log.info('Reference and secondary projections are different! Reprojecting.')
+
+            # Reproject zero masks if necessary
+            if reference_zero_path and secondary_zero_path:
+                _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
+
+            elif not isinstance(reference_zero_path, type(secondary_zero_path)):
+                raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
+
+            reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
+
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
-
-        if platform in ('L4', 'L5'):
-            print('Running FFT')
-
-            ref_array, ref_transform, ref_projection, ref_nodata = io.load_geospatial(reference_path)
-            ref_filtered = apply_fft_filter(ref_array, ref_nodata)
-            ref_new_path = create_fft_filepath(reference_path)
-            reference_path = io.write_geospatial(ref_new_path, ref_filtered, ref_transform, ref_projection, nodata=0)
-
-            sec_array, sec_transform, sec_projection, sec_nodata = io.load_geospatial(secondary_path)
-            sec_filtered = apply_fft_filter(sec_array, sec_nodata)
-            sec_new_path = create_fft_filepath(secondary_path)
-            secondary_path = io.write_geospatial(sec_new_path, sec_filtered, sec_transform, sec_projection, nodata=0)
 
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
@@ -359,7 +408,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         for slc in [reference_path, secondary_path]:
             gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
 
-        from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogrid_ISCE import (loadMetadata,
+                                                         runGeogrid)
         meta_r = loadMetadata('fine_coreg')
         meta_s = loadMetadata('secondary')
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
@@ -368,7 +418,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         #       I've got no idea why, or if there are other affects...
         gdal.AllRegister()
 
-        from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
+        from hyp3_autorift.vend.testautoRIFT_ISCE import \
+            generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform, optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
@@ -376,7 +427,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         )
 
     else:
-        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogridOptical import (
+            coregisterLoadMetadata, runGeogrid)
         meta_r, meta_s = coregisterLoadMetadata(
             reference_path, secondary_path,
             reference_metadata=reference_metadata,
