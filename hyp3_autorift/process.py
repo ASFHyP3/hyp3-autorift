@@ -272,12 +272,12 @@ def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
 
     image_new_path = create_filtered_filepath(image_path)
-    image_path = io.write_geospatial(str(image_new_path), image_filtered, image_transform, image_projection,
-                                     nodata=0, dtype=gdal.GDT_Float32)
+    _ = io.write_geospatial(str(image_new_path), image_filtered, image_transform, image_projection,
+                            nodata=0, dtype=gdal.GDT_Float32)
 
     zero_path = None
     if zero_mask is not None:
-        zero_path = create_filtered_filepath(f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}')
+        zero_path = create_filtered_filepath(f'{image_new_path.stem}_zeroMask{image_new_path.suffix}')
         _ = io.write_geospatial(str(zero_path), zero_mask, image_transform, image_projection,
                                 nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
 
