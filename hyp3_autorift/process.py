@@ -227,11 +227,11 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def create_filtered_filepath(path: str) -> Path:
+def create_filtered_filepath(path: str) -> str:
     parent = (Path.cwd() / 'filtered').resolve()
     parent.mkdir(exist_ok=True)
 
-    return parent / Path(path).name
+    return str(parent / Path(path).name)
 
 
 def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -265,27 +265,27 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
     return filtered, zero_mask
 
 
-def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[Path, Optional[Path]]:
+def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
     image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
 
     image_new_path = create_filtered_filepath(image_path)
-    _ = io.write_geospatial(str(image_new_path), image_filtered, image_transform, image_projection,
+    _ = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
                             nodata=0, dtype=gdal.GDT_Float32)
 
     zero_path = None
     if zero_mask is not None:
-        zero_path = create_filtered_filepath(f'{image_new_path.stem}_zeroMask{image_new_path.suffix}')
-        _ = io.write_geospatial(str(zero_path), zero_mask, image_transform, image_projection,
+        zero_path = create_filtered_filepath(f'{Path(image_new_path).stem}_zeroMask{Path(image_new_path).suffix}')
+        _ = io.write_geospatial(zero_path, zero_mask, image_transform, image_projection,
                                 nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
 
     return image_new_path, zero_path
 
 
 def apply_landsat_filtering(reference_path: str, secondary_path: str) \
-        -> Tuple[Path, Optional[Path], Path, Optional[Path]]:
+        -> Tuple[str, Optional[str], str, Optional[str]]:
     reference_platform = get_platform(Path(reference_path).name)
     secondary_platform = get_platform(Path(secondary_path).name)
     if reference_platform > 'L7' and secondary_platform > 'L7':
