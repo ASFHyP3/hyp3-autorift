@@ -1,5 +1,6 @@
 import io
 from datetime import datetime
+from pathlib import Path
 from re import match
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -358,3 +359,67 @@ def test_get_s1_primary_polarization():
         process.get_s1_primary_polarization('S1A_IW_SLC__1SVH_20150706T015744_20150706T015814_006684_008EF7_9B69')
     with pytest.raises(ValueError):
         process.get_s1_primary_polarization('S1A_IW_GRDH_1SVV_20150706T015720_20150706T015749_006684_008EF7_54BA')
+
+
+def test_apply_landsat_filtering(monkeypatch):
+    def mock_apply_filter_function(scene, _):
+        if process.get_platform(scene) < 'L7':
+            return Path(scene), None
+        return Path(scene), Path('zero_mask')
+
+    monkeypatch.setattr(process, '_apply_filter_function', mock_apply_filter_function)
+
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC09', 'LC09')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC09', 'LC08')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC09', 'LE07')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC09', 'LT05')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC09', 'LT04')
+
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC08', 'LC09')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC08', 'LC08')
+    assert process.apply_landsat_filtering('LC08', 'LE07') == \
+           (Path('LC08'), Path('zero_mask'), Path('LE07'), Path('zero_mask'))
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC08', 'LT05')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LC08', 'LT04')
+
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LE07', 'LC09')
+    assert process.apply_landsat_filtering('LE07', 'LC08') == \
+           (Path('LE07'), Path('zero_mask'), Path('LC08'), Path('zero_mask'))
+    assert process.apply_landsat_filtering('LE07', 'LE07') == \
+           (Path('LE07'), Path('zero_mask'), Path('LE07'), Path('zero_mask'))
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LE07', 'LT05')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LE07', 'LT04')
+
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LT05', 'LC09')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LT05', 'LC08')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LT05', 'LE07')
+    assert process.apply_landsat_filtering('LT05', 'LT05') == \
+           (Path('LT05'), None, Path('LT05'), None)
+    assert process.apply_landsat_filtering('LT05', 'LT04') == \
+           (Path('LT05'), None, Path('LT04'), None)
+
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LT04', 'LC09')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LT04', 'LC08')
+    with pytest.raises(NotImplementedError):
+        process.apply_landsat_filtering('LT04', 'LE07')
+    assert process.apply_landsat_filtering('LT04', 'LT05') == \
+           (Path('LT04'), None, Path('LT05'), None)
+    assert process.apply_landsat_filtering('LT04', 'LT04') == \
+           (Path('LT04'), None, Path('LT04'), None)

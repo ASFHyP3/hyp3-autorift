@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import boto3
 import botocore.exceptions
@@ -227,12 +227,11 @@ def get_s1_primary_polarization(granule_name):
     raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
 
-def create_filtered_filepath(path: str):
+def create_filtered_filepath(path: str) -> Path:
     parent = (Path.cwd() / 'filtered').resolve()
     parent.mkdir(exist_ok=True)
 
-    out_path = parent / Path(path).name
-    return str(out_path)
+    return parent / Path(path).name
 
 
 def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -266,32 +265,52 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
     return filtered, zero_mask
 
 
-def apply_landsat_filtering(image_path: str, image_platform: str) -> Tuple[Path, Optional[Path]]:
+def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[Path, Optional[Path]]:
     image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
+
+    image_filtered, zero_mask = filter_function(image_array, image_nodata)
+
+    image_new_path = create_filtered_filepath(image_path)
+    _ = io.write_geospatial(str(image_new_path), image_filtered, image_transform, image_projection,
+                            nodata=0, dtype=gdal.GDT_Float32)
+
+    zero_path = None
+    if zero_mask is not None:
+        zero_path = create_filtered_filepath(f'{image_new_path.stem}_zeroMask{image_new_path.suffix}')
+        _ = io.write_geospatial(str(zero_path), zero_mask, image_transform, image_projection,
+                                nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
+
+    return image_new_path, zero_path
+
+
+def apply_landsat_filtering(reference: str, secondary: str) -> Tuple[Path, Optional[Path], Path, Optional[Path]]:
+    reference_platform = get_platform(reference)
+    secondary_platform = get_platform(secondary)
+    if reference_platform > 'L7' and secondary_platform > 'L7':
+        raise NotImplementedError(
+            f'{reference_platform}+{secondary_platform} pairs should be highpass filtered in autoRIFT instead'
+        )
 
     platform_filter_dispatch = {
         'L4': apply_fft_filter,
         'L5': apply_fft_filter,
         'L7': apply_wallis_nodata_fill_filter,
+        'L8': apply_wallis_nodata_fill_filter,  # sometimes paired w/ L7 scenes, so use same filter
     }
-
     try:
-        image_filtered, zero_mask = platform_filter_dispatch[image_platform](image_array, image_nodata)
+        reference_filter = platform_filter_dispatch[reference_platform]
+        secondary_filter = platform_filter_dispatch[secondary_platform]
     except KeyError:
-        raise NotImplementedError(f'Unknown pre-processing filter for satellite platform: {image_platform}')
+        raise NotImplementedError('Unknown pre-processing filter for satellite platform')
 
-    image_new_path = create_filtered_filepath(image_path)
-    image_path = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
-                                     nodata=0, dtype=gdal.GDT_Float32)
+    if reference_filter != secondary_filter:
+        raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
 
-    zero_path = None
-    if zero_mask is not None:
-        zero_path = create_filtered_filepath(f'{Path(image_path).stem}_zeroMask{Path(image_path).suffix}')
-        _ = io.write_geospatial(str(zero_path), zero_mask, image_transform, image_projection,
-                                nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
+    reference_path, reference_zero_path = _apply_filter_function(reference, reference_filter)
+    secondary_path, secondary_zero_path = _apply_filter_function(secondary, secondary_filter)
 
-    return image_path, zero_path
+    return reference_path, reference_zero_path, secondary_path, secondary_zero_path
 
 
 def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
@@ -365,9 +384,10 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         secondary_metadata = get_lc2_metadata(secondary)
         secondary_path = get_lc2_path(secondary_metadata)
 
-        if platform in ('L4', 'L5', 'L7'):
-            reference_path, reference_zero_path = apply_landsat_filtering(reference_path, platform)
-            secondary_path, secondary_zero_path = apply_landsat_filtering(secondary_path, platform)
+        filter_platform = min([platform, get_platform(secondary)])
+        if filter_platform in ('L4', 'L5', 'L7'):
+            reference_path, reference_zero_path, secondary_path, secondary_zero_path = \
+                apply_landsat_filtering(reference_path, secondary_path)
 
         if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
             log.info('Reference and secondary projections are different! Reprojecting.')
@@ -375,9 +395,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
             # Reproject zero masks if necessary
             if reference_zero_path and secondary_zero_path:
                 _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
-
-            elif not isinstance(reference_zero_path, type(secondary_zero_path)):
-                raise NotImplementedError('AutoRIFT not available for image pairs with different preprocessing methods')
 
             reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
 
