@@ -168,7 +168,7 @@ def load_geospatial(infile: str, band: int = 1):
 
 
 def write_geospatial(outfile: str, data, transform, projection, nodata,
-                     driver: str = 'GTiff', dtype: int = gdal.GDT_Float64):
+                     driver: str = 'GTiff', dtype: int = gdal.GDT_Float64) -> str:
     driver = gdal.GetDriverByName(driver)
 
     rows, cols = data.shape
