@@ -12,19 +12,19 @@ on:
 
 jobs:
   call-pytest-workflow:
-    uses: ASFHyP3/actions/.github/workflows/reusable-pytest.yml@v0.4.0
+    uses: ASFHyP3/actions/.github/workflows/reusable-pytest.yml@v0.7.1
     with:
       local_package_name: hyp3_autorift
       conda_env_name: hyp3-autorift
 
   call-version-info-workflow:
-    uses: ASFHyP3/actions/.github/workflows/reusable-version-info.yml@v0.4.0
+    uses: ASFHyP3/actions/.github/workflows/reusable-version-info.yml@v0.7.1
     with:
       conda_env_name: hyp3-autorift
 
   call-docker-ghcr-workflow:
     needs: call-version-info-workflow
-    uses: ASFHyP3/actions/.github/workflows/reusable-docker-ghcr.yml@v0.4.0
+    uses: ASFHyP3/actions/.github/workflows/reusable-docker-ghcr.yml@v0.7.1
     with:
       version_tag: ${{ needs.call-version-info-workflow.outputs.version_tag }}
     secrets:
