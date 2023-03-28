@@ -7,7 +7,11 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.12.1]
+## [0.13.0]
+
+### Changed
+* Upgraded to ASFHyP3/actions v0.7.1
+* `hyp3-autorift` now only uses `pyproject.toml` for package creation now that `setuptools` recommends [not using setup.py](https://setuptools.pypa.io/en/latest/userguide/quickstart.html#setuppy-discouraged).
 
 ### Fixed
 * Patch [235](hyp3_autorift/vend/CHANGES-227.diff) was applied  to make it easier for users to correct for ionosphere
