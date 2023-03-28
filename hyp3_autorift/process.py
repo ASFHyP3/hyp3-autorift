@@ -261,6 +261,7 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
     array, _ = prepare_array_for_filtering(array, nodata)
     filtered, zero_mask = _wallis_filter_fill(array, filter_width=5, std_cutoff=0.25)
+    filtered[zero_mask] = 0
 
     return filtered, zero_mask
 
@@ -273,7 +274,7 @@ def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[
 
     image_new_path = create_filtered_filepath(image_path)
     _ = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
-                            nodata=0, dtype=gdal.GDT_Float32)
+                            nodata=None, dtype=gdal.GDT_Float32)
 
     zero_path = None
     if zero_mask is not None:
