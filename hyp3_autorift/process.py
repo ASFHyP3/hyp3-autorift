@@ -11,10 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
 from typing import Callable, Optional, Tuple
-from zipfile import ZipFile
 
 import boto3
-import botocore.exceptions
 import numpy as np
 import requests
 from hyp3lib.fetch import download_file
