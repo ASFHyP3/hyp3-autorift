@@ -63,21 +63,3 @@ def test_flip_point_coordinates():
     point = ogr.Geometry(ogr.wkbPoint)
     point.AddPoint(2, 3, 4)
     assert str(geometry.flip_point_coordinates(point)) == 'POINT (3 2)'
-
-
-def test_fix_point_for_antimeridian():
-    point = ogr.Geometry(ogr.wkbPoint)
-    point.AddPoint_2D(5, 10)
-    assert str(geometry.fix_point_for_antimeridian(point)) == 'POINT (5 10)'
-
-    point = ogr.Geometry(ogr.wkbPoint)
-    point.AddPoint_2D(-100, -60)
-    assert str(geometry.fix_point_for_antimeridian(point)) == 'POINT (-100 -60)'
-
-    point = ogr.Geometry(ogr.wkbPoint)
-    point.AddPoint(-180, 180)
-    assert str(geometry.fix_point_for_antimeridian(point)) == 'POINT (-180 -180)'
-
-    point = ogr.Geometry(ogr.wkbPoint)
-    point.AddPoint(181, -181)
-    assert str(geometry.fix_point_for_antimeridian(point)) == 'POINT (-179 179)'

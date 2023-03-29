@@ -7,6 +7,11 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.11.0]
+
+### Changed
+* Sentinel-2 scenes are again retrieved from [AWS](https://registry.opendata.aws/sentinel-2/), rather than [Google Cloud](https://cloud.google.com/storage/docs/public-datasets/sentinel-2).
+
 ## [0.10.5]
 
 ### Fixed
