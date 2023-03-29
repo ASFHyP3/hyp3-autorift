@@ -546,7 +546,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     preprocessing_methods[ii] = 'wallis_fill'
             elif len(re.findall("LT0[45]_", name)) > 0:
                 preprocessing_methods[ii] = 'fft'
-        
+
         zero_mask = None
         indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
         indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
@@ -1058,8 +1058,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         YPixelSize = geogrid_run_info['YPixelSize']
                         epsg = geogrid_run_info['epsg']
 
-                    master_id = kwargs['reference_metadata']['id']
-                    slave_id = kwargs['secondary_metadata']['id']
+                    master_id = kwargs['reference_metadata']['properties']['sentinel:product_id']
+                    slave_id = kwargs['secondary_metadata']['properties']['sentinel:product_id']
 
                     master_split = master_id.split('_')
                     slave_split = slave_id.split('_')

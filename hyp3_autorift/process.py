@@ -31,7 +31,6 @@ gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
-S2_WEST_BUCKET = 's2-l1c-us-west-2'
 
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
@@ -88,14 +87,6 @@ def get_lc2_path(metadata: dict) -> str:
 
 
 def get_s2_metadata(scene_name):
-    response = requests.get(f'{S2_SEARCH_URL}/{scene_name}')
-    try:
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError:
-        if response.status_code != 404:
-            raise
-
     payload = {
         'query': {
             'sentinel:product_id': {
@@ -107,25 +98,9 @@ def get_s2_metadata(scene_name):
     response.raise_for_status()
 
     if not response.json().get('numberReturned'):
-        metadata_dir = Path(__file__).parent / 'metadata' / 's2_metadata.zip'
-        with ZipFile(metadata_dir) as zf:
-            with zf.open('s2_metadata.json') as f:
-                s2_metadata = json.load(f)
-        if scene_name not in s2_metadata:
-            raise ValueError(f'Scene could not be found: {scene_name}')
-        return s2_metadata[scene_name]
+        raise ValueError(f'Scene could not be found: {scene_name}')
 
     return response.json()['features'][0]
-
-
-def s3_object_is_accessible(bucket, key):
-    try:
-        S3_CLIENT.head_object(Bucket=bucket, Key=key)
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] in ['403', '404']:
-            return False
-        raise
-    return True
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str]:
@@ -138,13 +113,6 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str]:
 def get_s2_paths(reference_s3_url: str, secondary_s3_url: str) -> Tuple[str, str]:
     reference_bucket, reference_key = parse_s3_url(reference_s3_url)
     secondary_bucket, secondary_key = parse_s3_url(secondary_s3_url)
-
-    reference_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=reference_key)
-    secondary_in_west_bucket = s3_object_is_accessible(bucket=S2_WEST_BUCKET, key=secondary_key)
-
-    if reference_in_west_bucket and secondary_in_west_bucket:
-        return f'/vsis3/{S2_WEST_BUCKET}/{reference_key}', f'/vsis3/{S2_WEST_BUCKET}/{secondary_key}'
-
     return f'/vsis3/{reference_bucket}/{reference_key}', f'/vsis3/{secondary_bucket}/{secondary_key}'
 
 
@@ -343,21 +311,16 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
 
-        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
-        os.environ['AWS_REGION'] = 'us-west-2'
+        gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
+        os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
+        gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
+        os.environ['AWS_REGION'] = 'eu-central-1'
         reference_metadata = get_s2_metadata(reference)
         secondary_metadata = get_s2_metadata(secondary)
 
         reference_path, secondary_path = get_s2_paths(reference_metadata['assets']['B08']['href'],
                                                       secondary_metadata['assets']['B08']['href'])
-
-        if S2_WEST_BUCKET not in reference_path:
-            gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
-            os.environ['AWS_REQUEST_PAYER'] = 'requester'
-
-            gdal.SetConfigOption('AWS_REGION', 'eu-central-1')
-            os.environ['AWS_REGION'] = 'eu-central-1'
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])

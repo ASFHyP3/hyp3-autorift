@@ -1057,8 +1057,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         YPixelSize = geogrid_run_info['YPixelSize']
                         epsg = geogrid_run_info['epsg']
 
-                    master_id = kwargs['reference_metadata']['id']
-                    slave_id = kwargs['secondary_metadata']['id']
+                    master_id = kwargs['reference_metadata']['properties']['sentinel:product_id']
+                    slave_id = kwargs['secondary_metadata']['properties']['sentinel:product_id']
 
                     master_split = master_id.split('_')
                     slave_split = slave_id.split('_')
