@@ -88,13 +88,14 @@ def get_lc2_path(metadata: dict) -> str:
 
 def get_s2_path(scene_name: str) -> str:
     year = scene_name[11:15]
-    month = scene_name[15:17]
+    month = int(scene_name[15:17])
     day = int(scene_name[17:19])
     mgrs_zone = int(scene_name[39:41])
     mgrs_band = scene_name[41]
     mgrs_square = scene_name[42:44]
 
     return f'/vsis3/{S2_BUCKET}/tiles/{mgrs_zone}/{mgrs_band}/{mgrs_square}/{year}/{month}/{day}/0/B08.jp2'
+
 
 def get_raster_bbox(path: str):
     info = gdal.Info(path, format='json')
@@ -120,6 +121,11 @@ def get_s2_metdata_from_bucket(scene_name: str) -> dict:
         'path': path,
         'bbox': bbox,
         'id': scene_name,
+        'assets': {
+            'B08': {
+                'href': path.replace('/vsis3/', 's3://')
+            }
+        },
         'properties': {
             'datetime': acquisition_start.isoformat(timespec='seconds') + 'Z',
         },
