@@ -28,7 +28,9 @@ log = logging.getLogger(__name__)
 gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
+
 S2_SEARCH_URL = 'https://earth-search.aws.element84.com/v0/collections/sentinel-s2-l1c/items'
+S2_BUCKET = 'sentinel-s2-l1c'
 
 LC2_SEARCH_URL = 'https://landsatlook.usgs.gov/stac-server/collections/landsat-c2l1/items'
 LANDSAT_BUCKET = 'usgs-landsat'
@@ -84,6 +86,46 @@ def get_lc2_path(metadata: dict) -> str:
     return band['href'].replace('https://landsatlook.usgs.gov/data/', f'/vsis3/{LANDSAT_BUCKET}/')
 
 
+def get_s2_path(scene_name: str) -> str:
+    year = scene_name[11:15]
+    month = scene_name[15:17]
+    day = int(scene_name[17:19])
+    mgrs_zone = int(scene_name[39:41])
+    mgrs_band = scene_name[41]
+    mgrs_square = scene_name[42:44]
+
+    return f'/vsis3/{S2_BUCKET}/tiles/{mgrs_zone}/{mgrs_band}/{mgrs_square}/{year}/{month}/{day}/0/B08.jp2'
+
+def get_raster_bbox(path: str):
+    info = gdal.Info(path, format='json')
+    coordinates = info['wgs84Extent']['coordinates'][0]
+    lons = [coord[0] for coord in coordinates]
+    lats = [coord[1] for coord in coordinates]
+    if max(lons) >= 170 and min(lons) <= -170:
+        lons = [lon - 360 if lon >= 170 else lon for lon in lons]
+    return [
+        min(lons),
+        min(lats),
+        max(lons),
+        max(lats),
+    ]
+
+
+def get_s2_metdata_from_bucket(scene_name: str) -> dict:
+    path = get_s2_path(scene_name)
+    bbox = get_raster_bbox(path)
+    acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
+
+    return {
+        'path': path,
+        'bbox': bbox,
+        'id': scene_name,
+        'properties': {
+            'datetime': acquisition_start.isoformat(timespec='seconds') + 'Z',
+        },
+    }
+
+
 def get_s2_metadata(scene_name):
     payload = {
         'query': {
@@ -96,7 +138,7 @@ def get_s2_metadata(scene_name):
     response.raise_for_status()
 
     if not response.json().get('numberReturned'):
-        raise ValueError(f'Scene could not be found: {scene_name}')
+        return get_s2_metdata_from_bucket(scene_name)
 
     return response.json()['features'][0]
 
