@@ -554,8 +554,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             m_zero = m_zero.astype(np.uint8)
             s_zero = s_zero.astype(np.uint8)
 
-            # FIXME: AND? Wallis uses "or" here, while wallis_fill uses "and" here.
-            zero_mask = m_zero & s_zero
+            zero_mask = m_zero | s_zero
+            zero_mask = zero_mask.astype(np.uint8)
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 

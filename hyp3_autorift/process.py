@@ -388,6 +388,9 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         filter_platform = min([platform, get_platform(secondary)])
         if filter_platform in ('L4', 'L5', 'L7'):
+            # Log path here before we transform it
+            log.info(f'Reference scene path: {reference_path}')
+            log.info(f'Secondary scene path: {secondary_path}')
             reference_path, reference_zero_path, secondary_path, secondary_zero_path = \
                 apply_landsat_filtering(reference_path, secondary_path)
 
