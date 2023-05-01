@@ -10,7 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.10.5]
 
 ### Fixed
-* The zero mask and nodata value for wallis-filtered Landsat-7 images will set appropriately
+* The zero mask and nodata value for wallis-filtered Landsat-7 images are now set appropriately
 
 ## [0.10.4]
 
