@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 * The zero mask and nodata value for wallis-filtered Landsat-7 images are now set appropriately
+* Early (SLC-On) Landsat-7 images are no longer incorrectly filtered a second time with the high-pass filter
 
 ## [0.10.4]
 
