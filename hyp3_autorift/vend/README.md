@@ -50,6 +50,9 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    to handle Landsat scene pairs in differing projections. These changes are *not* expected to be applied upstream to
    `nasa-jpl/autoRIFT` because they are a significant departure of the "expected" upstream workflow and there's no easy
    way to communicated or document those changes upstream.
-5. The changes listed in `CHANGES-211.idff` were applied in [ASFHyP3/hyp3-autorift#173](https://github.com/ASFHyP3/hyp3-autorift/pull/173)
+5. The changes listed in `CHANGES-211.diff` were applied in [ASFHyP3/hyp3-autorift#211](https://github.com/ASFHyP3/hyp3-autorift/pull/211)
    to fix bug in the zero mask used for Landsat 7 scenes. Like (4), these changes are *not* expected to be applied
+   upstream to `nasa-jpl/autoRIFT`.
+6. The changes listed in `CHANGES-213.diff` were applied in [ASFHyP3/hyp3-autorift#213](https://github.com/ASFHyP3/hyp3-autorift/pull/213)
+   to fix bug where early (SLC-On) Landsat 7 scenes would be filtered twice. Like (4), these changes are *not* expected to be applied
    upstream to `nasa-jpl/autoRIFT`.
