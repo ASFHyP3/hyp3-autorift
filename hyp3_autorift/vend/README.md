@@ -56,3 +56,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
 6. The changes listed in `CHANGES-213.diff` were applied in [ASFHyP3/hyp3-autorift#213](https://github.com/ASFHyP3/hyp3-autorift/pull/213)
    to fix bug where early (SLC-On) Landsat 7 scenes would be filtered twice. Like (4), these changes are *not* expected to be applied
    upstream to `nasa-jpl/autoRIFT`.
+7. The changes listed in `CHANGES-214.diff` were applied in [ASFHyP3/hyp3-autorift#214](https://github.com/ASFHyP3/hyp3-autorift/pull/214)
+   to fix the `noDataMask` used for the search range and %-valid pixel calculations. Unfortunately, this bug exists
+   upstream but this fix is dependent on changes in (4) which are not easily applied upstream. Therefore, these changes
+   are *not* expected to be applied upstream to `nasa-jpl/autoRIFT` without a significant refactor upstream.
