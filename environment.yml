@@ -6,7 +6,7 @@ channels:
 dependencies:
   - boto3
   - botocore
-  - python>=3.8,<3.10  # Top pin to fix ISCE2 incompatibility: https://github.com/isce-framework/isce2/issues/458
+  - python>=3.8
   - pip
   # For packaging, and testing
   - flake8
@@ -24,12 +24,12 @@ dependencies:
   # For running
   - gdal>=3
   - hyp3lib=1.7.0
-  - isce2=2.6.1.dev7
-  - autorift=1.5.0
+  - isce2=2.6.2.dev1
+  - autorift=1.5.0.dev1
   - opencv
   - boto3
   - matplotlib-base
   - netCDF4
-  - numpy<1.24 # https://github.com/isce-framework/isce2/pull/639
+  - numpy
   - requests
   - scipy

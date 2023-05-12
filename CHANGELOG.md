@@ -9,6 +9,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.10.5]
 
+### Changed
+* Upgraded [autoRIFT to v1.5.0.dev1](https://anaconda.org/hyp3/autorift) which includes [`nasa-jpl/autoRIFT#79](https://github.com/nasa-jpl/autoRIFT/pull/79)
+* Upgraded [ISCE2 to v2.6.3.dev1 built with autoRIFT v1.5.0.dev1](https://anaconda.org/hyp3/isce2)
+
 ### Fixed
 * The zero mask and nodata value for wallis-filtered Landsat-7 images are now set appropriately
 * Early (SLC-On) Landsat-7 images are no longer incorrectly filtered a second time with the high-pass filter
