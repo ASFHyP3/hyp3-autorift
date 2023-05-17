@@ -199,6 +199,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     #        We should not mask based on zero values in the L7 images as this percolates into SearchLimit{X,Y}
     #        and prevents autoRIFT from looking at large parts of the images, but untangling the logic here
     #        has proved too difficult, so lets just turn it off if `wallis_fill` preprocessing is going to be used.
+    #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     if 'wallis_fill' not in preprocessing_methods:
         for ii in range(obj.xGrid.shape[0]):
@@ -206,6 +207,11 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
                 if (obj.yGrid[ii,jj] != nodata)&(obj.xGrid[ii,jj] != nodata):
                     if (I1[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0)|(I2[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0):
                         noDataMask[ii,jj] = True
+    elif zero_mask is not None:
+        for ii in range(obj.xGrid.shape[0]):
+            for jj in range(obj.xGrid.shape[1]):
+                if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
+                    noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
 
     ######### mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
 
@@ -541,12 +547,10 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
         preprocessing_methods = ['hps', 'hps']
         for ii, name in enumerate((m_name, s_name)):
             if len(re.findall("L[EO]07_", name)) > 0:
-                acquisition = datetime.strptime(name.split('_')[3], '%Y%m%d')
-                if acquisition >= datetime(2003, 5, 31):
-                    preprocessing_methods[ii] = 'wallis_fill'
+                preprocessing_methods[ii] = 'wallis_fill'
             elif len(re.findall("LT0[45]_", name)) > 0:
                 preprocessing_methods[ii] = 'fft'
-        
+
         zero_mask = None
         indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
         indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
@@ -555,8 +559,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
             m_zero = m_zero.astype(np.uint8)
             s_zero = s_zero.astype(np.uint8)
 
-            # FIXME: AND? Wallis uses "or" here, while wallis_fill uses "and" here.
-            zero_mask = m_zero & s_zero
+            zero_mask = m_zero | s_zero
+            zero_mask = zero_mask.astype(np.uint8)
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 

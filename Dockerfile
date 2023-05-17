@@ -19,7 +19,7 @@ LABEL org.opencontainers.image.documentation="https://hyp3-docs.asf.alaska.edu"
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=true
 
-RUN apt-get update && apt-get install -y --no-install-recommends libgl1-mesa-glx unzip vim && \
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1-mesa-glx unzip vim patch wget && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CONDA_UID=1000
@@ -42,6 +42,12 @@ RUN mamba env create -f /hyp3-autorift/environment.yml && \
     conda activate hyp3-autorift && \
     sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
     python -m pip install --no-cache-dir /hyp3-autorift
+
+RUN wget https://github.com/nasa-jpl/autoRIFT/pull/79.diff && \
+    export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
+    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 79.diff && \
+    patch -d ${PYTHON_SITE_PACKAGES}/isce/components/contrib/geo_autoRIFT/autoRIFT < 79.diff && \
+    rm 79.diff
 
 ENTRYPOINT ["/hyp3-autorift/hyp3_autorift/etc/entrypoint.sh"]
 CMD ["-h"]

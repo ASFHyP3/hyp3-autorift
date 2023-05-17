@@ -176,7 +176,8 @@ def write_geospatial(outfile: str, data, transform, projection, nodata,
     ds.SetGeoTransform(transform)
     ds.SetProjection(projection)
 
-    ds.GetRasterBand(1).SetNoDataValue(nodata)
+    if nodata is not None:
+        ds.GetRasterBand(1).SetNoDataValue(nodata)
     ds.GetRasterBand(1).WriteArray(data)
     del ds
     return outfile
