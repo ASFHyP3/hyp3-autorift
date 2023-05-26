@@ -150,7 +150,7 @@ def loadMetadata(indir,buffer=0):
 
     return info
 
-def loadParsedata(indir,buffer=0):
+def loadParsedata(indir, orbit_dir, aux_dir, buffer=0):
     '''
     Input file.
     '''
@@ -167,8 +167,8 @@ def loadParsedata(indir,buffer=0):
 #        rdr.safe=['./S1A_IW_SLC__1SDH_20180401T100057_20180401T100124_021272_024972_8CAF.zip']
         rdr.safe=[indir]
         rdr.output='reference'
-        rdr.orbitDir='/Users/yanglei/orbit/S1A/precise'
-        rdr.auxDir='/Users/yanglei/orbit/S1A/aux'
+        rdr.orbitDir=orbit_dir
+        rdr.auxDir=aux_dir
         rdr.swathNumber=swath
         rdr.polarization='hh'
         rdr.parse()
