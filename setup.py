@@ -63,7 +63,7 @@ setup(
 
     entry_points={'console_scripts': [
         'hyp3_autorift = hyp3_autorift.process:main',
-        's1_correction = hyp3_autorift.s1_correction:main'
+        's1_correction = hyp3_autorift.s1_correction:main',
         ]
     },
 
