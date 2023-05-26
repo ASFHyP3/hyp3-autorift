@@ -333,7 +333,7 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     secondary_path = None
     reference_metadata = None
     secondary_metadata = None
-    rcdeference_zero_path = None
+    reference_zero_path = None
     secondary_zero_path = None
     reference_state_vec = None
     secondary_state_vec = None
@@ -532,4 +532,3 @@ def main():
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         thumbnail_file = create_thumbnail(browse_file)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
-
