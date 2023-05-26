@@ -517,7 +517,6 @@ def main():
                              'Path to shapefile must be understood by GDAL')
     parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD', 'ASF'],
                         help='Naming scheme to use for product files')
-    parser.add_argument('--omp-num-threads', type=int, help='The number of OpenMP threads to use for parallel regions')
     parser.add_argument('granules', type=str.split, nargs='+',
                         help='Granule pair to process')
     args = parser.parse_args()
@@ -526,9 +525,6 @@ def main():
     args.granules = [item for sublist in args.granules for item in sublist]
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
-
-    if args.omp_num_threads:
-        os.environ['OMP_NUM_THREADS'] = str(args.omp_num_threads)
 
     if username and password:
         write_credentials_to_netrc_file(username, password)
