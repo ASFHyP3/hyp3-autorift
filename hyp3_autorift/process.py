@@ -494,16 +494,6 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     return product_file, browse_file
 
 
-def check_earthdata_credentials(username, password):
-    if username is None:
-        username = os.getenv('EARTHDATA_USERNAME')
-
-    if password is None:
-        password = os.getenv('EARTHDATA_PASSWORD')
-
-    return username, password
-
-
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
