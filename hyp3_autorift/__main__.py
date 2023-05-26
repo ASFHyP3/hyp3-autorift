@@ -6,7 +6,11 @@ AutoRIFT processing for HyP3
 import argparse
 import os
 import sys
+import warnings
 from importlib.metadata import entry_points
+from pathlib import Path
+
+from hyp3lib.fetch import write_credentials_to_netrc_file
 
 
 def main():
@@ -21,6 +25,14 @@ def main():
 
     if args.omp_num_threads:
         os.environ['OMP_NUM_THREADS'] = str(args.omp_num_threads)
+
+    username = os.getenv('EARTHDATA_USERNAME')
+    password = os.getenv('EARTHDATA_PASSWORD')
+    if username and password:
+        write_credentials_to_netrc_file(username, password, append=False)
+
+    if not (Path.home() / '.netrc').exists():
+        warnings.warn('Earthdata credentials must be present as environment variables, or in your netrc.', UserWarning)
 
     eps = entry_points()['console_scripts']
     (process_entry_point,) = {process for process in eps if process.name == args.process}

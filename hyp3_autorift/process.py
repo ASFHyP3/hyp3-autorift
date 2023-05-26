@@ -18,7 +18,7 @@ import botocore.exceptions
 import numpy as np
 import requests
 from hyp3lib.aws import upload_file_to_s3
-from hyp3lib.fetch import download_file, write_credentials_to_netrc_file
+from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.image import create_thumbnail
 from hyp3lib.scene import get_download_url
@@ -508,8 +508,6 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('--username', help='NASA Earthdata Login username for fetching Sentinel-1 scenes')
-    parser.add_argument('--password', help='NASA Earthdata Login password for fetching Sentinel-1 scenes')
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
@@ -520,14 +518,10 @@ def main():
     parser.add_argument('granules', type=str.split, nargs='+',
                         help='Granule pair to process')
     args = parser.parse_args()
-    username, password = check_earthdata_credentials(args.username, args.password)
 
     args.granules = [item for sublist in args.granules for item in sublist]
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
-
-    if username and password:
-        write_credentials_to_netrc_file(username, password)
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
