@@ -62,8 +62,8 @@ setup(
     packages=find_packages(),
 
     entry_points={'console_scripts': [
-        'hyp3_autorift = hyp3_autorift.__main__:main',
-        'autorift_proc_pair = hyp3_autorift.process:main',
+        'hyp3_autorift = hyp3_autorift.process:main',
+        's1_correction = hyp3_autorift.s1_correction:main',
         ]
     },
 
