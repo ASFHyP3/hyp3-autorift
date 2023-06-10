@@ -1,7 +1,6 @@
-diff --git a/testGeogrid_ISCE.py b/testGeogrid_ISCE.py
-index 22ecdcf..bc9cb06 100755
---- a/testGeogrid_ISCE.py
-+++ b/testGeogrid_ISCE.py
+diff --git testGeogrid_ISCE.py testGeogrid_ISCE.py
+--- testGeogrid_ISCE.py
++++ testGeogrid_ISCE.py
 @@ -67,6 +67,10 @@ def cmdLineParse():
              help='Input stable surface mask')
      parser.add_argument('-fo', '--flag_optical', dest='optical_flag', type=bool, required=False, default=0,
