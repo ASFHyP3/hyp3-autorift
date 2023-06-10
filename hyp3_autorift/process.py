@@ -17,8 +17,10 @@ import boto3
 import botocore.exceptions
 import numpy as np
 import requests
+from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
+from hyp3lib.image import create_thumbnail
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
@@ -493,19 +495,30 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
 
 def main():
-    """Main entrypoint"""
     parser = argparse.ArgumentParser(
-        prog=os.path.basename(__file__),
-        description=__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('reference', type=os.path.abspath,
-                        help='Reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
-    parser.add_argument('secondary', type=os.path.abspath,
-                        help='Secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene')
+    parser.add_argument('--bucket', help='AWS bucket to upload product files to')
+    parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
+    parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
+                        help='Shapefile for determining the correct search parameters by geographic location. '
+                             'Path to shapefile must be understood by GDAL')
+    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD', 'ASF'],
+                        help='Naming scheme to use for product files')
+    parser.add_argument('granules', type=str.split, nargs='+',
+                        help='Granule pair to process')
     args = parser.parse_args()
 
-    process(**args.__dict__)
+    args.granules = [item for sublist in args.granules for item in sublist]
+    if len(args.granules) != 2:
+        parser.error('Must provide exactly two granules')
 
+    g1, g2 = sorted(args.granules, key=get_datetime)
 
-if __name__ == "__main__":
-    main()
+    product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
+
+    if args.bucket:
+        upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
+        upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
+        thumbnail_file = create_thumbnail(browse_file)
+        upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)

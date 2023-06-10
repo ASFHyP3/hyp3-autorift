@@ -60,3 +60,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    to fix the `noDataMask` used for the search range and %-valid pixel calculations. Unfortunately, this bug exists
    upstream but this fix is dependent on changes in (4) which are not easily applied upstream. Therefore, these changes
    are *not* expected to be applied upstream to `nasa-jpl/autoRIFT` without a significant refactor upstream.
+8. The changes listed in `CHANGES-UPSTREAM-78.diff` were applied from upstream ([nasa-jpl/autorift#78](https://github.com/nasa-jpl/autorift/pull/78))
+   in [ASFHyP3/hyp3-autorift#218](https://github.com/ASFHyP3/hyp3-autorift/pull/218) to run a Geogrid-only workflow to
+   create the GeoTIFFs necessary for correcting the scale-projection issue in polar-sterographic products generated
+   from Sentinel-1 pairs that were created using HyP3 autoRIFT versions < 0.9.0, which was released November 2, 2022
