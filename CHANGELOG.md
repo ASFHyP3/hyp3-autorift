@@ -12,9 +12,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 * `hyp3_autorift`'s main entrypoint now accepts `++process` arguments to support multiple workflows
   * `++process hyp3_autorift` (default) will run the same autoRIFT pair processing workflow
-  * `++process s1_correction` will run a Geogrid-only workflow to create the GeoTIFFs necessary to correct a 
-    scale-projection issue in polar-sterographic products generated from Sentinel-1 pairs that were created using 
-    HyP3 autoRIFT versions < 0.9.0, which was released November 2, 2022
+  * `++process s1_correction` will run a Geogrid-only workflow to create the GeoTIFFs necessary for correcting the
+    scale-projection issue in polar-sterographic products generated from Sentinel-1 pairs that were created using HyP3
+    autoRIFT versions < 0.9.0, which was released November 2, 2022
   
 ### Changed
 * Patch [nasa-jpl/autorift#78](hyp3_autorift/vend/CHANGES-UPSTREAM-78.diff) was applied from upstream to support the
