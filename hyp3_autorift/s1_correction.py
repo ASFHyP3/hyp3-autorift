@@ -1,5 +1,7 @@
 import argparse
+import copy
 import logging
+from datetime import timedelta
 from pathlib import Path
 
 from hyp3lib.aws import upload_file_to_s3
@@ -33,8 +35,14 @@ def generate_correction_data(scene: str, buffer: int = 0, parameter_file: str = 
     isce_dem = geometry.prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
     io.format_tops_xml(scene, scene, polarization, isce_dem, orbits)
 
-    scene_meta = loadParsedata(str(scene_path), orbit_dir=orbits, aux_dir=orbits, buffer=buffer)
-    geogrid_info = runGeogrid(scene_meta, scene_meta, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+    reference_meta = loadParsedata(str(scene_path), orbit_dir=orbits, aux_dir=orbits, buffer=buffer)
+
+    secondary_meta = copy.deepcopy(reference_meta)
+    spoof_dt = timedelta(days=1)
+    secondary_meta.sensingStart += spoof_dt
+    secondary_meta.sensingStop += spoof_dt
+
+    geogrid_info = runGeogrid(reference_meta, secondary_meta, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     return geogrid_info
 
