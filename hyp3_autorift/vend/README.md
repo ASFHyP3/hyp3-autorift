@@ -64,3 +64,5 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    in [ASFHyP3/hyp3-autorift#218](https://github.com/ASFHyP3/hyp3-autorift/pull/218) to run a Geogrid-only workflow to
    create the GeoTIFFs necessary for correcting the scale-projection issue in polar-sterographic products generated
    from Sentinel-1 pairs that were created using HyP3 autoRIFT versions < 0.9.0, which was released November 2, 2022
+9. The changes listed in `CHANGES-223.diff` were applied in [ASFHyP3/hyp3-autorift#223](https://github.com/ASFHyP3/hyp3-autorift/pull/223)
+   were applied to the S1 correction workflow so that the scene's polarization was set correctly 
