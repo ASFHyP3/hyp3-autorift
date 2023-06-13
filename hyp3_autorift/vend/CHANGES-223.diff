@@ -1,7 +1,6 @@
-diff --git a/hyp3_autorift/vend/testGeogrid_ISCE.py b/hyp3_autorift/vend/testGeogrid_ISCE.py
-index a20f7a9..7e019cb 100755
---- a/hyp3_autorift/vend/testGeogrid_ISCE.py
-+++ b/hyp3_autorift/vend/testGeogrid_ISCE.py
+diff --git testGeogrid_ISCE.py testGeogrid_ISCE.py
+--- testGeogrid_ISCE.py
++++ testGeogrid_ISCE.py
 @@ -27,6 +27,8 @@
  #
  # Authors: Piyush Agram, Yang Lei
