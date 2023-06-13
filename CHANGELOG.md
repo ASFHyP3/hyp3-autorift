@@ -7,6 +7,12 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.11.1]
+
+### Fixed
+* Patch [223](hyp3_autorift/vend/CHANGES-223.diff) was applied so that the polarization is correctly selected in the
+  sentinel-1 workflow
+
 ## [0.11.0]
 
 ### Added
