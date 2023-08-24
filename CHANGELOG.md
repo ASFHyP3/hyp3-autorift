@@ -10,6 +10,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.11.1]
 
 ### Fixed
+* Patch [227](hyp3_autorift/vend/CHANGES-227.diff) was applied to align the S1 granules velocity description with the
+  optical products
+
+## [0.11.1]
+
+### Fixed
 * Patch [223](hyp3_autorift/vend/CHANGES-223.diff) was applied so that the polarization is correctly selected in the
   sentinel-1 workflow
 
