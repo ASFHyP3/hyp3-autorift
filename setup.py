@@ -41,8 +41,10 @@ setup(
         'matplotlib',
         'netCDF4',
         'numpy',
+        'pyproj',
         'requests',
         'scipy',
+        'xarray',
     ],
 
     extras_require={

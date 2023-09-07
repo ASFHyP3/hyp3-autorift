@@ -26,6 +26,7 @@ from netCDF4 import Dataset
 from osgeo import gdal
 
 from hyp3_autorift import geometry, image, io
+from hyp3_autorift.crop import crop_netcdf_product
 
 log = logging.getLogger(__name__)
 
@@ -483,6 +484,8 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     else:
         product_file = Path(netcdf_file.replace('.nc', '_IL_ASF_OD.nc'))
         shutil.move(netcdf_file, str(product_file))
+
+    crop_netcdf_product(product_file)
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']

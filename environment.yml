@@ -31,5 +31,7 @@ dependencies:
   - matplotlib-base
   - netCDF4
   - numpy<1.24 # https://github.com/isce-framework/isce2/pull/639
+  - pyproj
   - requests
   - scipy
+  - xarray
