@@ -55,6 +55,11 @@ ENCODING_TEMPLATE = {
 
 
 def crop_netcdf_product(netcdf_file: Path):
+    """
+
+    Args:
+        netcdf_file:
+    """
     with xr.open_dataset(netcdf_file) as ds:
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
         xy_ds = ds.where(ds.v.notnull(), drop=True)
@@ -112,7 +117,7 @@ def crop_netcdf_product(netcdf_file: Path):
         encoding = ENCODING_TEMPLATE.copy()
         if not netcdf_file.name.startswith('S1'):
             for radar_variable in ['M11', 'M12', 'va', 'vr']:
-                encoding.pop(radar_variable)
+                del encoding[radar_variable]
 
         for _, attributes in encoding.items():
             if attributes['_FillValue'] is not None:
