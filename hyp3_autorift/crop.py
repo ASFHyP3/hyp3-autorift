@@ -110,6 +110,10 @@ def crop_netcdf_product(netcdf_file: Path):
         two_dim_chunks_settings = (chunk_lines, dims['x'])
 
         encoding = ENCODING_TEMPLATE.copy()
+        if not netcdf_file.name.startswith('S1'):
+            for radar_variable in ['M11', 'M12', 'va', 'vr']:
+                encoding.pop(radar_variable)
+
         for _, attributes in encoding.items():
             if attributes['_FillValue'] is not None:
                 attributes['chunksizes'] = two_dim_chunks_settings
