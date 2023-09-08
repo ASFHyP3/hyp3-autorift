@@ -54,7 +54,7 @@ ENCODING_TEMPLATE = {
     }
 
 
-def crop_netcdf_product(netcdf_file: Path):
+def crop_netcdf_product(netcdf_file: Path) -> Path:
     """
 
     Args:
@@ -78,9 +78,9 @@ def crop_netcdf_product(netcdf_file: Path):
         cropped_ds = ds.where(mask, drop=True)
         cropped_ds = cropped_ds.load()
 
-        # Reset data for grid_mapping and img_pair_info data variables as ds.where() extends data of all data variables
+        # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
-        cropped_ds['grid_mapping'] = ds['grid_mapping']
+        cropped_ds['mapping'] = ds['mapping']
         cropped_ds['img_pair_info'] = ds['img_pair_info']
 
         # Compute centroid longitude/latitude
@@ -123,4 +123,7 @@ def crop_netcdf_product(netcdf_file: Path):
             if attributes['_FillValue'] is not None:
                 attributes['chunksizes'] = two_dim_chunks_settings
 
-    cropped_ds.to_netcdf(netcdf_file, engine='h5netcdf', encoding=encoding)
+        cropped_file = netcdf_file.with_stem(f'{netcdf_file.stem}_cropped')
+        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', encoding=encoding)
+
+    return cropped_file
