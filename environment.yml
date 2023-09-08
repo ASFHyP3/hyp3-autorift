@@ -23,6 +23,7 @@ dependencies:
   - wheel
   # For running
   - gdal>=3
+  - h5netcdf
   - hyp3lib=1.7.0
   - isce2=2.6.1.dev7
   - autorift=1.5.0
@@ -31,5 +32,7 @@ dependencies:
   - matplotlib-base
   - netCDF4
   - numpy<1.24 # https://github.com/isce-framework/isce2/pull/639
+  - pyproj
   - requests
   - scipy
+  - xarray
