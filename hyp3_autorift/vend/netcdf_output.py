@@ -9,6 +9,7 @@ import subprocess
 import netCDF4
 import numpy as np
 import pandas as pd
+import pyproj
 
 import hyp3_autorift
 
@@ -392,13 +393,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('references', references)
 
 
-    var = nc_outfile.createVariable('img_pair_info', 'U1', (), fill_value=None)
-    var.setncattr('standard_name', 'image_pair_information')
-    for key in IMG_INFO_DICT:
-        if key == 'autoRIFT_software_version':
-            continue
-        var.setncattr(key, IMG_INFO_DICT[key])
-
     # shift 1/2 pixel to go from UL corner (pixel-is-area) to cell-center (pixel-is-point)
     tran = [tran[0] + tran[1] / 2, tran[1], 0.0, tran[3] + tran[5] / 2, 0.0, tran[5]]
     # full dimensions
@@ -414,8 +408,26 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     x = x[x_min:x_max + 1]
     y = y[y_min:y_max + 1]
     dimidY, dimidX = (len(y), len(x))
+    center_y = (y.min() + y.max()) / 2
+    center_x = (x.min() + x.max()) / 2
 
     tran = [x[0], tran[1], 0.0, y[0], 0.0, tran[5]]
+    to_lon_lat_transformer = pyproj.Transformer.from_crs(
+        f"EPSG:{epsg}",
+        'EPSG:4326',
+        always_xy=True
+    )
+    center_lon, center_lat = to_lon_lat_transformer.transform(center_x, center_y)
+    IMG_INFO_DICT['longitude'] = round(center_lon, 2)
+    IMG_INFO_DICT['latitude'] = round(center_lat, 2)
+
+
+    var = nc_outfile.createVariable('img_pair_info', 'U1', (), fill_value=None)
+    var.setncattr('standard_name', 'image_pair_information')
+    for key in IMG_INFO_DICT:
+        if key == 'autoRIFT_software_version':
+            continue
+        var.setncattr(key, IMG_INFO_DICT[key])
 
 
     nc_outfile.createDimension('x', dimidX)
