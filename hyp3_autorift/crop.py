@@ -98,7 +98,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # Update centroid information for the granule
         center_lon_lat = to_lon_lat_transformer.transform(center_x, center_y)
 
-        cropped_ds['mapping'].attrs['latitude'] = round(center_lon_lat[1], 2)
+        cropped_ds['img_pair_info'].attrs['latitude'] = round(center_lon_lat[1], 2)
         cropped_ds['img_pair_info'].attrs['longitude'] = round(center_lon_lat[0], 2)
 
         # Update mapping.GeoTransform
