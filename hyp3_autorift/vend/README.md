@@ -66,3 +66,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
    from Sentinel-1 pairs that were created using HyP3 autoRIFT versions < 0.9.0, which was released November 2, 2022
 9. The changes listed in `CHANGES-223.diff` were applied in [ASFHyP3/hyp3-autorift#223](https://github.com/ASFHyP3/hyp3-autorift/pull/223)
    were applied to the S1 correction workflow so that the scene's polarization was set correctly 
+10. The changes listed in `CHANGES-227.diff` were applied in [ASFHyP3/hyp3-autorift#227](https://github.com/ASFHyP3/hyp3-autorift/pull/227)
+    were applied to align the S1 granules velocity description with the optical products. These changes have been
+    [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/87) and should be applied in the next 
+    `nasa-jpl/autoRIFT` release.    

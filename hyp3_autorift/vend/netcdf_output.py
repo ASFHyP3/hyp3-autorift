@@ -639,10 +639,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var = nc_outfile.createVariable('v', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'land_ice_surface_velocity')
-    if pair_type == 'radar':
-        var.setncattr('description', 'velocity magnitude from radar range and azimuth measurements')
-    else:
-        var.setncattr('description', 'velocity magnitude')
+    var.setncattr('description', 'velocity magnitude')
     var.setncattr('units', 'meter/year')
     var.setncattr('grid_mapping', mapping_var_name)
 
@@ -809,7 +806,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_shift_flag', stable_shift_applied)
         var.setncattr('stable_shift_flag_description', 'flag for applying velocity bias correction: 0 = no correction; '
                                                        '1 = correction from overlapping stable surface mask '
-                                                       '(stationary or slow-flowing surfaces with velocity < 15 meter/yearr)'
+                                                       '(stationary or slow-flowing surfaces with velocity < 15 meter/year)'
                                                        '(top priority); 2 = correction from slowest 25% of overlapping '
                                                        'velocities (second priority)')
 

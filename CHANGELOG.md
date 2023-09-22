@@ -7,6 +7,19 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.12.0]
+
+### Added
+* [`hyp3_autorift.crop`](hyp3_autorift/crop.py) provides a `crop_netcdf_product` function to crop HyP3 AutoRIFT products
+  to the extent of valid `v` data
+
+### Changed
+* HyP3 AutoRIFT products generated with the main workflow will be cropped to the extent of the valid `v` data
+
+### Fixed
+* Patch [227](hyp3_autorift/vend/CHANGES-227.diff) was applied to align the S1 granules velocity description with the
+  optical products
+
 ## [0.11.1]
 
 ### Fixed
