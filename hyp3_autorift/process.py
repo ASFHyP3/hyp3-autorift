@@ -26,7 +26,6 @@ from netCDF4 import Dataset
 from osgeo import gdal
 
 from hyp3_autorift import geometry, image, io
-from hyp3_autorift.crop import crop_netcdf_product
 
 log = logging.getLogger(__name__)
 
@@ -472,22 +471,18 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
     if netcdf_file is None:
         raise Exception('Processing failed! Output netCDF file not found')
 
-    netcdf_file = Path(netcdf_file)
-    cropped_file = crop_netcdf_product(netcdf_file)
-    netcdf_file.unlink()
-
     if naming_scheme == 'ITS_LIVE_PROD':
-        product_file = netcdf_file
+        product_file = Path(netcdf_file)
     elif naming_scheme == 'ASF':
         product_name = get_product_name(
             reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
             pixel_spacing=parameter_info['xsize'],
         )
         product_file = Path(f'{product_name}.nc')
+        shutil.move(netcdf_file, str(product_file))
     else:
-        product_file = netcdf_file.with_stem(f'{netcdf_file.stem}_IL_ASF_OD')
-
-    shutil.move(cropped_file, str(product_file))
+        product_file = Path(netcdf_file.replace('.nc', '_IL_ASF_OD.nc'))
+        shutil.move(netcdf_file, str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']

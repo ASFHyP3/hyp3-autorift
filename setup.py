@@ -37,7 +37,6 @@ setup(
         'boto3',
         'botocore',
         'gdal',
-        'h5netcdf',
         'hyp3lib==1.7.0',
         'matplotlib',
         'netCDF4',
@@ -45,7 +44,6 @@ setup(
         'pyproj',
         'requests',
         'scipy',
-        'xarray',
     ],
 
     extras_require={

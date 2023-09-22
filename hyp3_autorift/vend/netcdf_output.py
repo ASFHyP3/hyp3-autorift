@@ -9,6 +9,7 @@ import subprocess
 import netCDF4
 import numpy as np
 import pandas as pd
+import pyproj
 
 import hyp3_autorift
 
@@ -369,7 +370,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                  '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
                  '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581'
 
-    tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
+
 
     clobber = True     # overwrite existing output nc file
 
@@ -392,6 +393,35 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('references', references)
 
 
+    # shift 1/2 pixel to go from UL corner (pixel-is-area) to cell-center (pixel-is-point)
+    tran = [tran[0] + tran[1] / 2, tran[1], 0.0, tran[3] + tran[5] / 2, 0.0, tran[5]]
+    # full dimensions
+    y = np.arange(tran[3], tran[3] + tran[5] * VX.shape[0], tran[5])
+    x = np.arange(tran[0], tran[0] + tran[1] * VX.shape[1], tran[1])
+
+    # determine valid subset
+    coords = np.argwhere(~noDataMask)
+    row_min, col_min = coords.min(axis=0)
+    row_max, col_max = coords.max(axis=0)
+
+    # subset key variables
+    y = y[row_min:row_max + 1]
+    x = x[col_min:col_max + 1]
+    dimidY, dimidX = (len(y), len(x))
+    center_y = (y.min() + y.max()) / 2
+    center_x = (x.min() + x.max()) / 2
+
+    tran = [x[0], tran[1], 0.0, y[0], 0.0, tran[5]]
+    to_lon_lat_transformer = pyproj.Transformer.from_crs(
+        f"EPSG:{epsg}",
+        'EPSG:4326',
+        always_xy=True
+    )
+    center_lon, center_lat = to_lon_lat_transformer.transform(center_x, center_y)
+    IMG_INFO_DICT['longitude'] = round(center_lon, 2)
+    IMG_INFO_DICT['latitude'] = round(center_lat, 2)
+
+
     var = nc_outfile.createVariable('img_pair_info', 'U1', (), fill_value=None)
     var.setncattr('standard_name', 'image_pair_information')
     for key in IMG_INFO_DICT:
@@ -399,13 +429,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
             continue
         var.setncattr(key, IMG_INFO_DICT[key])
 
-    # set dimensions
-    dimidY, dimidX = VX.shape
-    nc_outfile.createDimension('x', dimidX)
     nc_outfile.createDimension('y', dimidY)
-
-    x = np.arange(tran[0], tran[0] + tran[1] * dimidX, tran[1])
-    y = np.arange(tran[3], tran[3] + tran[5] * dimidY, tran[5])
+    nc_outfile.createDimension('x', dimidX)
 
     chunk_lines = np.min([np.ceil(8192/dimidY)*128, dimidY])
     ChunkSize = [chunk_lines, dimidX]
@@ -546,9 +571,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('stable_count_slow', stable_count1)
 
     VX[noDataMask] = NoDataValue
-    var[:] = np.round(np.clip(VX, -32768, 32767)).astype(np.int16)
+    var[:] = np.round(np.clip(VX[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
     # var.setncattr('_FillValue', np.int16(FillValue))
-
 
     var = nc_outfile.createVariable('vy', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
@@ -632,7 +656,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('stable_count_slow', stable_count1)
 
     VY[noDataMask] = NoDataValue
-    var[:] = np.round(np.clip(VY, -32768, 32767)).astype(np.int16)
+    var[:] = np.round(np.clip(VY[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
     # var.setncattr('missing_value', np.int16(NoDataValue))
 
 
@@ -644,7 +668,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('grid_mapping', mapping_var_name)
 
     V[noDataMask] = NoDataValue
-    var[:] = np.round(np.clip(V, -32768, 32767)).astype(np.int16)
+    var[:] = np.round(np.clip(V[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
     # var.setncattr('missing_value',np.int16(NoDataValue))
 
 
@@ -662,7 +686,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     V_error = np.sqrt((vx_error * VX / V)**2 + (vy_error * VY / V)**2)
     V_error[V == 0] = v_error
     V_error[noDataMask] = NoDataValue
-    var[:] = np.round(np.clip(V_error, -32768, 32767)).astype(np.int16)
+    var[:] = np.round(np.clip(V_error[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
 #    var.setncattr('missing_value',np.int16(NoDataValue))
 
 
@@ -744,7 +768,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_count_slow', stable_count1)
 
         VR[noDataMask] = NoDataValue
-        var[:] = np.round(np.clip(VR, -32768, 32767)).astype(np.int16)
+        var[:] = np.round(np.clip(VR[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
         # var.setncattr('missing_value', np.int16(NoDataValue))
 
 
@@ -823,7 +847,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('stable_count_slow', stable_count1)
 
         VA[noDataMask] = NoDataValue
-        var[:] = np.round(np.clip(VA, -32768, 32767)).astype(np.int16)
+        var[:] = np.round(np.clip(VA[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
         # var.setncattr('missing_value', np.int16(NoDataValue))
 
         # fuse the (slope parallel & reference) flow-based range-projected result with the raw observed range/azimuth-based result
@@ -987,7 +1011,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('stable_count_slow',stable_count1_p)
         #
         # VXP[noDataMask] = NoDataValue
-        # var[:] = np.round(np.clip(VXP, -32768, 32767)).astype(np.int16)
+        # var[:] = np.round(np.clip(VXP[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
         # # var.setncattr('missing_value', np.int16(NoDataValue))
         #
         #
@@ -1067,7 +1091,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('stable_count_slow', stable_count1_p)
         #
         # VYP[noDataMask] = NoDataValue
-        # var[:] = np.round(np.clip(VYP, -32768, 32767)).astype(np.int16)
+        # var[:] = np.round(np.clip(VYP[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
         # # var.setncattr('missing_value', np.int16(NoDataValue))
         #
         #
@@ -1081,7 +1105,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # var.setncattr('grid_mapping', mapping_var_name)
         #
         # VP[noDataMask] = NoDataValue
-        # var[:] = np.round(np.clip(VP, -32768, 32767)).astype(np.int16)
+        # var[:] = np.round(np.clip(VP[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
         # # var.setncattr('missing_value',np.int16(NoDataValue))
         #
         #
@@ -1098,7 +1122,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         # VP_error = np.sqrt((vxp_error * VXP / VP)**2 + (vyp_error * VYP / VP)**2)
         # VP_error[VP==0] = vp_error
         # VP_error[noDataMask] = NoDataValue
-        # var[:] = np.round(np.clip(VP_error, -32768, 32767)).astype(np.int16)
+        # var[:] = np.round(np.clip(VP_error[row_min:row_max+1, col_min:col_max+1], -32768, 32767)).astype(np.int16)
         # # var.setncattr('missing_value', np.int16(NoDataValue))
 
 
@@ -1127,7 +1151,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
         M11[noDataMask] = NoDataValue * np.float32(1/C[0]) + np.float32(-C[1]/C[0])
         # M11[noDataMask] = NoDataValue
-        var[:] = M11
+        var[:] = M11[row_min:row_max+1, col_min:col_max+1]
         # var[:] = np.round(np.clip(M11, -32768, 32767)).astype(np.int16)
         # var[:] = np.clip(M11, -3.4028235e+38, 3.4028235e+38).astype(np.float32)
         # var.setncattr('missing_value',np.int16(NoDataValue))
@@ -1159,7 +1183,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
 
         M12[noDataMask] = NoDataValue * np.float32(1/C[0]) + np.float32(-C[1]/C[0])
         # M12[noDataMask] = NoDataValue
-        var[:] = M12
+        var[:] = M12[row_min:row_max+1, col_min:col_max+1]
         # var[:] = np.round(np.clip(M12, -32768, 32767)).astype(np.int16)
         # var[:] = np.clip(M12, -3.4028235e+38, 3.4028235e+38).astype(np.float32)
         # var.setncattr('missing_value',np.int16(NoDataValue))
@@ -1180,7 +1204,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('chip_size_coordinates', 'image projection geometry: width = x, height = y')
 
     # var[:] = np.flipud(vx_nomask).astype('float32')
-    var[:] = np.round(np.clip(CHIPSIZEX, 0, 65535)).astype('uint16')
+    var[:] = np.round(np.clip(CHIPSIZEX[row_min:row_max+1, col_min:col_max+1], 0, 65535)).astype('uint16')
     # var.setncattr('missing_value', np.uint16(0))
 
 
@@ -1199,7 +1223,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
         var.setncattr('chip_size_coordinates', 'image projection geometry: width = x, height = y')
 
     # var[:] = np.flipud(vx_nomask).astype('float32')
-    var[:] = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype('uint16')
+    var[:] = np.round(np.clip(CHIPSIZEY[row_min:row_max+1, col_min:col_max+1], 0, 65535)).astype('uint16')
     # var.setncattr('missing_value', np.uint16(0))
 
 
@@ -1212,7 +1236,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     var.setncattr('grid_mapping', mapping_var_name)
 
     # var[:] = np.flipud(vx_nomask).astype('float32')
-    var[:] = np.round(np.clip(INTERPMASK, 0, 255)).astype('uint8')
+    var[:] = np.round(np.clip(INTERPMASK[row_min:row_max+1, col_min:col_max+1], 0, 255)).astype('uint8')
     # var.setncattr('missing_value', np.uint8(0))
 
 
