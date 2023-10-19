@@ -70,3 +70,7 @@ We've replaced it  with `hyp3_autorift.io.get_topsinsar_config`.
     were applied to align the S1 granules velocity description with the optical products. These changes have been
     [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/87) and should be applied in the next 
     `nasa-jpl/autoRIFT` release.    
+11. The changes listed in `CHANGES-235.diff` were applied in [ASFHyP3/hyp3-autorift#235](https://github.com/ASFHyP3/hyp3-autorift/pull/235)
+    were applied to make it easier for users to correct for ionosphere streaks without needing to know the scale
+    factor. These changes have been [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/92) and should be
+    applied in the next `nasa-jpl/autoRIFT` release.
