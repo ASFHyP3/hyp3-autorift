@@ -10,7 +10,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.13.0]
 
 ### Changed
-* Upgraded to ASFHyP3/actions v0.7.1
+* Upgraded to ASFHyP3/actions v0.8.3
+* `hyp3-autorift` now uses a `src` layout per this [recommendation](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/).
 * `hyp3-autorift` now only uses `pyproject.toml` for package creation now that `setuptools` recommends [not using setup.py](https://setuptools.pypa.io/en/latest/userguide/quickstart.html#setuppy-discouraged).
 
 ### Fixed
