@@ -49,5 +49,5 @@ RUN wget https://github.com/nasa-jpl/autoRIFT/pull/79.diff && \
     patch -d ${PYTHON_SITE_PACKAGES}/isce/components/contrib/geo_autoRIFT/autoRIFT < 79.diff && \
     rm 79.diff
 
-ENTRYPOINT ["/hyp3-autorift/hyp3_autorift/etc/entrypoint.sh"]
+ENTRYPOINT ["/hyp3-autorift/src/hyp3_autorift/etc/entrypoint.sh"]
 CMD ["-h"]
