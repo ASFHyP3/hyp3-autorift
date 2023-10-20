@@ -63,4 +63,7 @@ Documentation = "https://hyp3-docs.asf.alaska.edu"
 include-package-data = true
 zip-safe = false
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools_scm]
