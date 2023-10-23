@@ -7,23 +7,34 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.13.0]
+
+### Changed
+* Upgraded to ASFHyP3/actions v0.8.3
+* `hyp3-autorift` now uses a `src` layout per this [recommendation](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/).
+* `hyp3-autorift` now only uses `pyproject.toml` for package creation now that `setuptools` recommends [not using setup.py](https://setuptools.pypa.io/en/latest/userguide/quickstart.html#setuppy-discouraged).
+
+### Fixed
+* Patch [235](src/hyp3_autorift/vend/CHANGES-227.diff) was applied  to make it easier for users to correct for ionosphere
+  streaks without needing to know the scale factor.
+
 ## [0.12.0]
 
 ### Added
-* [`hyp3_autorift.crop`](hyp3_autorift/crop.py) provides a `crop_netcdf_product` function to crop HyP3 AutoRIFT products
+* [`hyp3_autorift.crop`](src/hyp3_autorift/crop.py) provides a `crop_netcdf_product` function to crop HyP3 AutoRIFT products
   to the extent of valid `v` data
 
 ### Changed
 * HyP3 AutoRIFT products generated with the main workflow will be cropped to the extent of the valid `v` data
 
 ### Fixed
-* Patch [227](hyp3_autorift/vend/CHANGES-227.diff) was applied to align the S1 granules velocity description with the
+* Patch [227](src/hyp3_autorift/vend/CHANGES-227.diff) was applied to align the S1 granules velocity description with the
   optical products
 
 ## [0.11.1]
 
 ### Fixed
-* Patch [223](hyp3_autorift/vend/CHANGES-223.diff) was applied so that the polarization is correctly selected in the
+* Patch [223](src/hyp3_autorift/vend/CHANGES-223.diff) was applied so that the polarization is correctly selected in the
   sentinel-1 workflow
 
 ## [0.11.0]
@@ -36,7 +47,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     autoRIFT versions < 0.9.0, which was released November 2, 2022
   
 ### Changed
-* Patch [nasa-jpl/autorift#78](hyp3_autorift/vend/CHANGES-UPSTREAM-78.diff) was applied from upstream to support the
+* Patch [nasa-jpl/autorift#78](src/hyp3_autorift/vend/CHANGES-UPSTREAM-78.diff) was applied from upstream to support the
   Sentinel-1 correction workflow
 
 ### Removed
@@ -66,14 +77,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-* Patch [196](hyp3_autorift/vend/CHANGES-189.diff) was applied to update the `flag_meanings` netCDF attribute to be
-  inline with CF-Convention 1.8, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+* Patch [196](src/hyp3_autorift/vend/CHANGES-189.diff) was applied to update the `flag_meanings` netCDF attribute to be
+  inline with CF-Convention 1.8, as described in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 
 ## [0.10.1]
 
 ### Changed
-* Patches [189](hyp3_autorift/vend/CHANGES-189.diff),  [191](hyp3_autorift/vend/CHANGES-191.diff), and [194](hyp3_autorift/vend/CHANGES-194.diff) 
-  were applied to update some netCDF variable attributes, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+* Patches [189](src/hyp3_autorift/vend/CHANGES-189.diff),  [191](src/hyp3_autorift/vend/CHANGES-191.diff), and [194](src/hyp3_autorift/vend/CHANGES-194.diff) 
+  were applied to update some netCDF variable attributes, as described in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 
 ## [0.10.0]
 
@@ -88,8 +99,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.9.1]
 
 ### Changed
-* [A patch](hyp3_autorift/vend/CHANGES-176.diff) was applied to update some netCDF variable attributes, as described
-  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+* [A patch](src/hyp3_autorift/vend/CHANGES-176.diff) was applied to update some netCDF variable attributes, as described
+  in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 
 ## [0.9.0]
 
@@ -163,7 +174,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * Patches were applied to clean up some netCDF variable attributes, as described
-  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+  in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 
 ## [0.7.3](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.7.2...v0.7.3)
 
@@ -173,14 +184,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * In the netCDF product, the default autoRIFT parameter file URL will always be reported
   instead of reporting copies used to support custom HyP3 deployments
 * A patch was applied to fix some Sentinel-1 and Sentinel-2 product metadata, as described
-  in the [vendored software README.md](hyp3_autorift/vend/README.md)
+  in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 
 ### Fixed
 * Updated the upgrade to autoRIFT `v1.4.0` to account for the autoRIFT source repo
   having moved the `v1.4.0` tag  (between commits [`67e4996..b6700f9`](https://github.com/nasa-jpl/autoRIFT/compare/67e4996..b6700f9))
   and changed the conda-forge package accordingly (new sha256 and bumped the build number).
   * The autoRIFT workflow scripts are now based on the moved tag and any still
-    necessary fixes were applied as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+    necessary fixes were applied as described in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 * For Sentinel-2 products, file names now include the full COG Id to ensure unique
   file names are produced and to be consistent with other products.
 
@@ -193,7 +204,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * Applied a fix to the autoRIFT packaging script that updates the reference velocity
-  fields for projected velocity, as described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+  fields for projected velocity, as described in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 
 ## [0.7.0](https://github.com/ASFHyP3/hyp3-autorift/compare/v0.6.3...v0.7.0)
 
@@ -201,7 +212,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Upgraded autoRIFT to [v1.4.0](https://github.com/leiyangleon/autoRIFT/releases/tag/v1.4.0)
   and [ISCE2 v2.5.3 built with autoRIFT v1.4.0](https://anaconda.org/hyp3/isce2)
 * Applied some fixes to the autoRIFT workflow scripts as described in the
-  [vendored software README.md](hyp3_autorift/vend/README.md)
+  [vendored software README.md](src/hyp3_autorift/vend/README.md)
 * `hyp3_autorift.io.save_topsinsar_mat` has been renamed to `hyp3_autorift.io.get_topsinsar_config`
   * It no longer writes a config `.mat` file and instead returns the config dictionary
 
@@ -215,7 +226,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * Applied some minor error estimate fixes and netCDF metadata attribute updates as
-  described in the [vendored software README.md](hyp3_autorift/vend/README.md)
+  described in the [vendored software README.md](src/hyp3_autorift/vend/README.md)
 * `process.get_lc2_metadata()` now attempts to fetch STAC metadata from the
   https://landsatlook.usgs.gov/ API and falls back the STAC json in the S3 bucket
 
