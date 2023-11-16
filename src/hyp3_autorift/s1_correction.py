@@ -3,6 +3,7 @@ import copy
 import logging
 from datetime import timedelta
 from pathlib import Path
+from typing import Optional
 
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.fetch import download_file
@@ -11,11 +12,18 @@ from hyp3lib.scene import get_download_url
 
 from hyp3_autorift import geometry, io
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_s1_primary_polarization
+from hyp3_autorift.utils import get_esa_credentials
 from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
 log = logging.getLogger(__name__)
 
 
-def generate_correction_data(scene: str, buffer: int = 0, parameter_file: str = DEFAULT_PARAMETER_FILE):
+def generate_correction_data(
+    scene: str,
+    buffer: int = 0,
+    parameter_file: str = DEFAULT_PARAMETER_FILE,
+    esa_username: Optional[str] = None,
+    esa_password: Optional[str] = None,
+):
     scene_path = Path(f'{scene}.zip')
     if not scene_path.exists():
         scene_url = get_download_url(scene)
@@ -23,7 +31,12 @@ def generate_correction_data(scene: str, buffer: int = 0, parameter_file: str = 
 
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
-    state_vec, oribit_provider = downloadSentinelOrbitFile(scene, directory=str(orbits))
+
+    if (esa_username is None) or (esa_password is None):
+        esa_username, esa_password = get_esa_credentials()
+    state_vec, oribit_provider = downloadSentinelOrbitFile(
+        scene, directory=str(orbits), esa_credentials=(esa_username, esa_password)
+    )
     log.info(f'Downloaded orbit file {state_vec} from {oribit_provider}')
 
     polarization = get_s1_primary_polarization(scene)
@@ -53,6 +66,8 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
+    parser.add_argument('--esa-username', default=None, help="Username for ESA\'s Copernicus Data Space Ecosystem")
+    parser.add_argument('--esa-password', default=None, help="Password for ESA\'s Copernicus Data Space Ecosystem")
     parser.add_argument('--buffer', type=int, default=0, help='Number of pixels to buffer each edge of the input scene')
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location. '
