@@ -1,6 +1,6 @@
 import pytest
 
-from hyp3lib.utils import ESA_HOST, get_esa_credentials
+from hyp3_autorift.utils import ESA_HOST, get_esa_credentials
 
 
 def test_get_esa_credentials_env(tmp_path, monkeypatch):

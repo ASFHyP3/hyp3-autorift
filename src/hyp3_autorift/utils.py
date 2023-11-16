@@ -1,6 +1,5 @@
 import netrc
 import os
-
 from pathlib import Path
 from platform import system
 from typing import Tuple
