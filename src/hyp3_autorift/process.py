@@ -358,6 +358,7 @@ def process(
 
         if (esa_username is None) or (esa_password is None):
             esa_username, esa_password = get_esa_credentials()
+
         reference_state_vec, reference_provider = downloadSentinelOrbitFile(
             reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
         )

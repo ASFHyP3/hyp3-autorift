@@ -11,9 +11,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 * `check_esa_credentials` function to `__main__.py` to check for the existence of Dataspace credentials before processing begins.
 
-### Update
-* Updated workflows to hyp3lib v2.0.2, which uses the new Copernicus Dataspace Ecosystem API to download orbit files.
-* Calls to `downloadSentinelOrbitFile` to specify the `esa_credentials` argument.
+### Changed
+* Updated `hyp3lib` to  v2.0.2+, which uses the new Copernicus Dataspace Ecosystem API to download orbit files.
+* Calls to `downloadSentinelOrbitFile` now specify the `esa_credentials` argument.
 
 ## [0.13.0]
 

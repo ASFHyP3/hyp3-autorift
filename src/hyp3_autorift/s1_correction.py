@@ -34,6 +34,7 @@ def generate_correction_data(
 
     if (esa_username is None) or (esa_password is None):
         esa_username, esa_password = get_esa_credentials()
+
     state_vec, oribit_provider = downloadSentinelOrbitFile(
         scene, directory=str(orbits), esa_credentials=(esa_username, esa_password)
     )
