@@ -9,7 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.14.0]
 ### Added
-* `check_esa_credentials` function to `__main__.py` to check for the existence of Dataspace credentials before processing begins.
+* `utils.get_esa_credentials` to check for the existence of CDSE credentials before processing begins.
 
 ### Changed
 * Updated `hyp3lib` to  v2.0.2+, which uses the new Copernicus Data Space Ecosystem (CDSE) API to download orbit files.
