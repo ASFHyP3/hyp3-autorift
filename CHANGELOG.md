@@ -7,6 +7,14 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.14.0]
+### Added
+* `utils.get_esa_credentials` to check for the existence of CDSE credentials before processing begins.
+
+### Changed
+* Updated `hyp3lib` to  v2.0.2+, which uses the new Copernicus Data Space Ecosystem (CDSE) API to download orbit files.
+* Calls to `downloadSentinelOrbitFile` now specify the `esa_credentials` argument.
+
 ## [0.13.0]
 
 ### Changed
