@@ -27,6 +27,7 @@ from osgeo import gdal
 
 from hyp3_autorift import geometry, image, io
 from hyp3_autorift.crop import crop_netcdf_product
+from hyp3_autorift.utils import get_esa_credentials
 
 log = logging.getLogger(__name__)
 
@@ -318,8 +319,14 @@ def apply_landsat_filtering(reference_path: str, secondary_path: str) \
     return reference_path, reference_zero_path, secondary_path, secondary_zero_path
 
 
-def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAMETER_FILE,
-            naming_scheme: str = 'ITS_LIVE_OD') -> Tuple[Path, Path]:
+def process(
+    reference: str,
+    secondary: str,
+    parameter_file: str = DEFAULT_PARAMETER_FILE,
+    naming_scheme: str = 'ITS_LIVE_OD',
+    esa_username: Optional[str] = None,
+    esa_password: Optional[str] = None,
+) -> Tuple[Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
@@ -348,9 +355,17 @@ def process(reference: str, secondary: str, parameter_file: str = DEFAULT_PARAME
 
         orbits = Path('Orbits').resolve()
         orbits.mkdir(parents=True, exist_ok=True)
-        reference_state_vec, reference_provider = downloadSentinelOrbitFile(reference, directory=str(orbits))
+
+        if (esa_username is None) or (esa_password is None):
+            esa_username, esa_password = get_esa_credentials()
+
+        reference_state_vec, reference_provider = downloadSentinelOrbitFile(
+            reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
+        )
         log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(secondary, directory=str(orbits))
+        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(
+            secondary, directory=str(orbits), esa_credentials=(esa_username, esa_password)
+        )
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
         polarization = get_s1_primary_polarization(reference)
@@ -505,6 +520,8 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
+    parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
+    parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location. '
                              'Path to shapefile must be understood by GDAL')

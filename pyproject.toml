@@ -26,7 +26,6 @@ dependencies = [
     'botocore',
     'gdal',
     'h5netcdf',
-    'hyp3lib==1.7.0',
     'matplotlib',
     'netCDF4',
     'numpy',
@@ -34,6 +33,7 @@ dependencies = [
     'requests',
     'scipy',
     'xarray',
+    'hyp3lib>=2,<3',
 ]
 dynamic = ["version"]
 
