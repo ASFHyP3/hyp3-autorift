@@ -33,7 +33,7 @@ dependencies = [
     'requests',
     'scipy',
     'xarray',
-    'hyp3lib>=2,<3',
+    'hyp3lib>=3,<4',
 ]
 dynamic = ["version"]
 
