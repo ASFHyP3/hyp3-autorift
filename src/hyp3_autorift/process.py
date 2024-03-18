@@ -49,6 +49,16 @@ DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 
+PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
+    'S1': 'sentinel1',
+    'S2': 'sentinel2',
+    'L4': 'landsatOLI',
+    'L5': 'landsatOLI',
+    'L7': 'landsatOLI',
+    'L8': 'landsatOLI',
+    'L9': 'landsatOLI',
+}
+
 def get_lc2_stac_json_key(scene_name: str) -> str:
     platform = get_platform(scene_name)
     year = scene_name[17:21]
@@ -319,6 +329,42 @@ def apply_landsat_filtering(reference_path: str, secondary_path: str) \
     return reference_path, reference_zero_path, secondary_path, secondary_zero_path
 
 
+def get_lon_lat_from_ncfile(ncfile):
+    with Dataset(ncfile) as ds:
+        var = ds.variables['img_pair_info']
+        return var.latitude, var.longitude
+
+
+def point_to_prefix(dir_path: str, lat: float, lon: float) -> str:
+    """
+    Returns a string (for example, N78W124) for directory name based on
+    granule centerpoint lat,lon
+    """
+    NShemi_str = 'N' if lat >= 0.0 else 'S'
+    EWhemi_str = 'E' if lon >= 0.0 else 'W'
+
+    outlat = int(10*np.trunc(np.abs(lat/10.0)))
+    if outlat == 90: # if you are exactly at a pole, put in lat = 80 bin
+        outlat = 80
+
+    outlon = int(10*np.trunc(np.abs(lon/10.0)))
+
+    if outlon >= 180: # if you are at the dateline, back off to the 170 bin
+        outlon = 170
+
+    dirstring = os.path.join(dir_path, f'{NShemi_str}{outlat:02d}{EWhemi_str}{outlon:03d}')
+    return dirstring
+
+
+def upload_opendata(product_file: str, bucket: str, scene: str):
+    # bucket = 's3://its-live-data'
+    platform_shortname = get_platform(scene)
+    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}'
+    lat, lon = get_lon_lat_from_ncfile(product_file)
+    bucket_prefix = point_to_prefix(dir_path, lat, lon)
+    upload_file_to_s3(product_file, bucket, bucket_prefix)
+
+
 def process(
     reference: str,
     secondary: str,
@@ -520,6 +566,7 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
+    parser.add_argument('--opendata-upload', type=bool, default=Ture, help="If or not upload to its-live-data bucket")
     parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
@@ -538,6 +585,10 @@ def main():
     g1, g2 = sorted(args.granules, key=get_datetime)
 
     product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
+
+    if args.opendata_upload:
+        bucket = 'its-live-data'
+        upload_opendata(product_file, bucket, args.granules[0])
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
