@@ -59,6 +59,7 @@ PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
     'L9': 'landsatOLI',
 }
 
+
 def get_lc2_stac_json_key(scene_name: str) -> str:
     platform = get_platform(scene_name)
     year = scene_name[17:21]
@@ -344,12 +345,12 @@ def point_to_prefix(dir_path: str, lat: float, lon: float) -> str:
     EWhemi_str = 'E' if lon >= 0.0 else 'W'
 
     outlat = int(10*np.trunc(np.abs(lat/10.0)))
-    if outlat == 90: # if you are exactly at a pole, put in lat = 80 bin
+    if outlat == 90:  # if you are exactly at a pole, put in lat = 80 bin
         outlat = 80
 
     outlon = int(10*np.trunc(np.abs(lon/10.0)))
 
-    if outlon >= 180: # if you are at the dateline, back off to the 170 bin
+    if outlon >= 180:  # if you are at the dateline, back off to the 170 bin
         outlon = 170
 
     dirstring = os.path.join(dir_path, f'{NShemi_str}{outlat:02d}{EWhemi_str}{outlon:03d}')
@@ -566,7 +567,7 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--opendata-upload', type=bool, default=Ture, help="If or not upload to its-live-data bucket")
+    parser.add_argument('--opendata-upload', type=bool, default=True, help="If or not upload to its-live-data bucket")
     parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
