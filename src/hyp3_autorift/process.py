@@ -337,7 +337,7 @@ def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
         return var.latitude, var.longitude
 
 
-def point_to_prefix(platform_shortname: str, lat: float, lon: float) -> str:
+def point_to_prefix(lat: float, lon: float) -> str:
     """
     Returns a string (for example, N78W124) for directory name based on
     granule centerpoint lat,lon
@@ -363,7 +363,7 @@ def get_opendata_prefix(file: Path):
 
     platform_shortname = get_platform(scene)
     lat, lon = get_lat_lon_from_ncfile(file)
-    lat_lon_prefix_component = point_to_prefix(platform_shortname, lat, lon)
+    lat_lon_prefix_component = point_to_prefix(lat, lon)
 
     dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
     prefix = os.path.join(dir_path, lat_lon_prefix_component)

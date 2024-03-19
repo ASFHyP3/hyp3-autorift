@@ -1,5 +1,6 @@
 import io
 from datetime import datetime
+from pathlib import Path
 from re import match
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -11,7 +12,7 @@ import responses
 
 from hyp3_autorift import process
 
-
+import pdb
 def test_get_platform():
     assert process.get_platform('S1B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81') == 'S1'
     assert process.get_platform('S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2') == 'S1'
@@ -415,3 +416,23 @@ def test_apply_landsat_filtering(monkeypatch):
         process.apply_landsat_filtering('LT04', 'LE07')
     assert process.apply_landsat_filtering('LT04', 'LT05') == ('LT04', None, 'LT05', None)
     assert process.apply_landsat_filtering('LT04', 'LT04') == ('LT04', None, 'LT04', None)
+
+
+def test_point_to_prefix():
+    assert process.point_to_prefix(63.0, 128.0) == 'N60E120'
+    assert process.point_to_prefix(-63.0, 128.0) == 'S60E120'
+    assert process.point_to_prefix(63.0, -128.0) == 'N60W120'
+    assert process.point_to_prefix(-63.0, -128.0) == 'S60W120'
+    assert process.point_to_prefix(0.0, 0.0) == 'N00E000'
+
+
+def test_get_lat_lon_from_ncfile():
+    file = Path('tests/data/LT05_L1GS_219121_19841206_20200918_02_T2_X_LT05_L1GS_226120_19850124_20200918_02_T2_G0120V02_P000.nc')
+    assert process.get_lat_lon_from_ncfile(file) == (-81.49, -128.28)
+
+
+def test_get_opendata_prefix():
+    file = Path('tests/data/LT05_L1GS_219121_19841206_20200918_02_T2_X_LT05_L1GS_226120_19850124_20200918_02_T2_G0120V02_P000.nc')
+    assert process.get_opendata_prefix(file) == 'velocity_image_pair/landsatOLI/v02/S80W120'
+
+
