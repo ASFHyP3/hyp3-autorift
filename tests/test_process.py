@@ -12,7 +12,6 @@ import responses
 
 from hyp3_autorift import process
 
-import pdb
 def test_get_platform():
     assert process.get_platform('S1B_IW_GRDH_1SSH_20201203T095903_20201203T095928_024536_02EAB3_6D81') == 'S1'
     assert process.get_platform('S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2') == 'S1'
