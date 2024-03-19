@@ -22,6 +22,7 @@ from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.image import create_thumbnail
 from hyp3lib.scene import get_download_url
+from hyp3lib.util import string_is_true
 from netCDF4 import Dataset
 from osgeo import gdal
 
@@ -48,7 +49,7 @@ LANDSAT_SENSOR_MAPPING = {
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
 
-
+OPEN_DATA_BUCKET = 'its-live-data'
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
     'S1': 'sentinel1',
     'S2': 'sentinel2',
@@ -336,7 +337,7 @@ def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
         return var.latitude, var.longitude
 
 
-def point_to_prefix(dir_path: str, lat: float, lon: float) -> str:
+def point_to_prefix(platform_shortname: str, lat: float, lon: float) -> str:
     """
     Returns a string (for example, N78W124) for directory name based on
     granule centerpoint lat,lon
@@ -353,15 +354,18 @@ def point_to_prefix(dir_path: str, lat: float, lon: float) -> str:
     if outlon >= 180:  # if you are at the dateline, back off to the 170 bin
         outlon = 170
 
+    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
     dirstring = os.path.join(dir_path, f'{NShemi_str}{outlat:02d}{EWhemi_str}{outlon:03d}')
     return dirstring
 
 
-def get_opendata_prefix(file: Path, scene: str):
+def get_opendata_prefix(file: Path):
+    # filenames have form GRANULE1_X_GRANULE2
+    scene = file.name.split('_X_')[0]
+
     platform_shortname = get_platform(scene)
-    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
-    lat, lon = get_lon_lat_from_ncfile(file)
-    return point_to_prefix(dir_path, lat, lon)
+    lat, lon = get_lat_lon_from_ncfile(file)
+    return point_to_prefix(platform_shortname, lat, lon)
 
 
 def process(
@@ -565,7 +569,9 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--publish', type=string_is_true, default=False, help=f'Additionally publish the product to the ITS_LIVE AWS Open Data bucket: s3://{OPEN_DATA_BUCKET}')
+    parser.add_argument('--publish', type=string_is_true, default=False,
+                        help='Additionally publish the product to '
+                             f'the ITS_LIVE AWS Open Data bucket: s3://{OPEN_DATA_BUCKET}')
     parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
@@ -587,7 +593,7 @@ def main():
     thumbnail_file = create_thumbnail(browse_file)
 
     if args.opendata_upload:
-        prefix = get_opendata_prefix(product_file, g1)
+        prefix = get_opendata_prefix(product_file)
         upload_file_to_s3(product_file, OPEN_DATA_BUCKET, prefix)
         upload_file_to_s3(browse_file, OPEN_DATA_BUCKET, prefix)
         upload_file_to_s3(thumbnail_file, OPEN_DATA_BUCKET, prefix)
