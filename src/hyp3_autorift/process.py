@@ -354,9 +354,7 @@ def point_to_prefix(platform_shortname: str, lat: float, lon: float) -> str:
     if outlon >= 180:  # if you are at the dateline, back off to the 170 bin
         outlon = 170
 
-    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
-    dirstring = os.path.join(dir_path, f'{NShemi_str}{outlat:02d}{EWhemi_str}{outlon:03d}')
-    return dirstring
+    return f'{NShemi_str}{outlat:02d}{EWhemi_str}{outlon:03d}'
 
 
 def get_opendata_prefix(file: Path):
@@ -365,7 +363,11 @@ def get_opendata_prefix(file: Path):
 
     platform_shortname = get_platform(scene)
     lat, lon = get_lat_lon_from_ncfile(file)
-    return point_to_prefix(platform_shortname, lat, lon)
+    lat_lon_prefix_component = point_to_prefix(platform_shortname, lat, lon)
+
+    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
+    prefix = os.path.join(dir_path, lat_lon_prefix_component)
+    return prefix
 
 
 def process(
