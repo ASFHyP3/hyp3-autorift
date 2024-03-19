@@ -357,13 +357,11 @@ def point_to_prefix(dir_path: str, lat: float, lon: float) -> str:
     return dirstring
 
 
-def upload_opendata(product_file: str, bucket: str, scene: str):
-    # bucket = 's3://its-live-data'
+def get_opendata_prefix(file: Path, scene: str):
     platform_shortname = get_platform(scene)
     dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}'
-    lat, lon = get_lon_lat_from_ncfile(product_file)
-    bucket_prefix = point_to_prefix(dir_path, lat, lon)
-    upload_file_to_s3(product_file, bucket, bucket_prefix)
+    lat, lon = get_lon_lat_from_ncfile(str(file))
+    return point_to_prefix(dir_path, lat, lon)
 
 
 def process(
@@ -586,10 +584,15 @@ def main():
     g1, g2 = sorted(args.granules, key=get_datetime)
 
     product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
+    thumbnail_file = create_thumbnail(browse_file)
 
     if args.opendata_upload:
         bucket = 'its-live-data'
-        upload_opendata(product_file, bucket, args.granules[0])
+        prefix = get_opendata_prefix(product_file, args.granules[0])
+        upload_file_to_s3(product_file, bucket, prefix)
+        upload_file_to_s3(browse_file, bucket, prefix)
+        upload_file_to_s3(thumbnail_file, bucket, prefix)
+
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
