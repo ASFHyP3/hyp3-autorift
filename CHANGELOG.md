@@ -8,7 +8,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.14.2]
 ### Added
-* the option upload-opendata to upload the produdct to s3://its-live-data bucket
+* `--publish` option has been added to the HyP3 entry point to publish product to the ITS_LIVE AWS Open Data bucket, `s3://its-live-data`.
 
 ## [0.14.1]
 ### Changed
