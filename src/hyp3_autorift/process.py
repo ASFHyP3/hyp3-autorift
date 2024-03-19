@@ -594,14 +594,14 @@ def main():
     product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
     thumbnail_file = create_thumbnail(browse_file)
 
-    if args.publish:
-        prefix = get_opendata_prefix(product_file)
-        upload_file_to_s3(product_file, OPEN_DATA_BUCKET, prefix)
-        upload_file_to_s3(browse_file, OPEN_DATA_BUCKET, prefix)
-        upload_file_to_s3(thumbnail_file, OPEN_DATA_BUCKET, prefix)
-
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         thumbnail_file = create_thumbnail(browse_file)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
+
+    if args.publish:
+        prefix = get_opendata_prefix(product_file)
+        upload_file_to_s3(product_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3(browse_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3(thumbnail_file, OPEN_DATA_BUCKET, prefix)
