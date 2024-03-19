@@ -330,7 +330,7 @@ def apply_landsat_filtering(reference_path: str, secondary_path: str) \
     return reference_path, reference_zero_path, secondary_path, secondary_zero_path
 
 
-def get_lon_lat_from_ncfile(ncfile):
+def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
     with Dataset(ncfile) as ds:
         var = ds.variables['img_pair_info']
         return var.latitude, var.longitude
@@ -359,8 +359,8 @@ def point_to_prefix(dir_path: str, lat: float, lon: float) -> str:
 
 def get_opendata_prefix(file: Path, scene: str):
     platform_shortname = get_platform(scene)
-    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}'
-    lat, lon = get_lon_lat_from_ncfile(str(file))
+    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
+    lat, lon = get_lon_lat_from_ncfile(file)
     return point_to_prefix(dir_path, lat, lon)
 
 
@@ -565,7 +565,7 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--opendata-upload', type=bool, default=True, help="If or not upload to its-live-data bucket")
+    parser.add_argument('--publish', type=string_is_true, default=False, help=f'Additionally publish the product to the ITS_LIVE AWS Open Data bucket: s3://{OPEN_DATA_BUCKET}')
     parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
@@ -587,11 +587,10 @@ def main():
     thumbnail_file = create_thumbnail(browse_file)
 
     if args.opendata_upload:
-        bucket = 'its-live-data'
-        prefix = get_opendata_prefix(product_file, args.granules[0])
-        upload_file_to_s3(product_file, bucket, prefix)
-        upload_file_to_s3(browse_file, bucket, prefix)
-        upload_file_to_s3(thumbnail_file, bucket, prefix)
+        prefix = get_opendata_prefix(product_file, g1)
+        upload_file_to_s3(product_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3(browse_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3(thumbnail_file, OPEN_DATA_BUCKET, prefix)
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
