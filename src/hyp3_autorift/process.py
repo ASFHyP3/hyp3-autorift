@@ -593,7 +593,6 @@ def main():
         upload_file_to_s3(browse_file, bucket, prefix)
         upload_file_to_s3(thumbnail_file, bucket, prefix)
 
-
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
