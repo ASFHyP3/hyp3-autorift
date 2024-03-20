@@ -1,6 +1,6 @@
 import pytest
 
-from hyp3_autorift.utils import ESA_HOST, get_esa_credentials
+from hyp3_autorift.utils import ESA_HOST, get_esa_credentials, upload_file_to_s3_with_upload_access_keys
 
 
 def test_get_esa_credentials_env(tmp_path, monkeypatch):
@@ -45,3 +45,19 @@ def test_get_esa_credentials_missing(tmp_path, monkeypatch):
         msg = 'Please provide.*'
         with pytest.raises(ValueError, match=msg):
             get_esa_credentials()
+
+
+def test_upload_file_to_s3_credentials_missing(tmp_path, monkeypatch):
+    with monkeypatch.context() as m:
+        m.delenv('UPLOAD_ACCESS_KEY_ID', raising=False)
+        m.setenv('UPLOAD_ACCESS_KEY_SECRET', 'upload_access_key_secret')
+        msg = 'Please provide.*'
+        with pytest.raises(ValueError, match=msg):
+            upload_file_to_s3_with_upload_access_keys('file.zip', 'myBucket')
+
+    with monkeypatch.context() as m:
+        m.setenv('UPLOAD_ACCESS_KEY_ID', 'upload_access_key_id')
+        m.delenv('UPLOAD_ACCESS_KEY_SECRET', raising=False)
+        msg = 'Please provide.*'
+        with pytest.raises(ValueError, match=msg):
+            upload_file_to_s3_with_upload_access_keys('file.zip', 'myBucket')
