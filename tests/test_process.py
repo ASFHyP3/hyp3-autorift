@@ -436,4 +436,3 @@ def test_get_opendata_prefix():
     file = Path('tests/data/'
                 'LT05_L1GS_219121_19841206_20200918_02_T2_X_LT05_L1GS_226120_19850124_20200918_02_T2_G0120V02_P000.nc')
     assert process.get_opendata_prefix(file) == 'velocity_image_pair/landsatOLI/v02/S80W120'
-
