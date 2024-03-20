@@ -50,6 +50,7 @@ DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
 
 OPEN_DATA_BUCKET = 'its-live-data'
+OPEN_DATA_BUCKET_TEST = 'its-live-data-test'
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
     'S1': 'sentinel1',
     'S2': 'sentinel2',
@@ -571,9 +572,10 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--publish', type=string_is_true, default=False,
-                        help='Additionally publish the product to '
-                             f'the ITS_LIVE AWS Open Data bucket: s3://{OPEN_DATA_BUCKET}')
+    parser.add_argument('--publish-bucket', default='',
+                        help='Bucket to publish the product to. '
+                        f'Must be one of {OPEN_DATA_BUCKET} or {OPEN_DATA_BUCKET_TEST}')
+
     parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
@@ -599,8 +601,13 @@ def main():
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
 
-    if args.publish:
+    if args.publish_bucket:
+
+        if args.publish_bucket not in [OPEN_DATA_BUCKET, OPEN_DATA_BUCKET_TEST]:
+            raise ValueError(f'Invalid publish bucket: {args.publish}. '
+                f'Must be one of {OPEN_DATA_BUCKET} or {OPEN_DATA_BUCKET_TEST}')
+
         prefix = get_opendata_prefix(product_file)
-        upload_file_to_s3_with_upload_access_keys(product_file, OPEN_DATA_BUCKET, prefix)
-        upload_file_to_s3_with_upload_access_keys(browse_file, OPEN_DATA_BUCKET, prefix)
-        upload_file_to_s3_with_upload_access_keys(thumbnail_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3_with_upload_access_keys(product_file, args.publish_bucket, prefix)
+        upload_file_to_s3_with_upload_access_keys(browse_file, args.publish_bucket, prefix)
+        upload_file_to_s3_with_upload_access_keys(thumbnail_file, args.publish_bucket, prefix)
