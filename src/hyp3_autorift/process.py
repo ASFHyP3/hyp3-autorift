@@ -28,7 +28,7 @@ from osgeo import gdal
 
 from hyp3_autorift import geometry, image, io
 from hyp3_autorift.crop import crop_netcdf_product
-from hyp3_autorift.utils import get_esa_credentials
+from hyp3_autorift.utils import get_esa_credentials, upload_file_to_s3_with_upload_access_keys
 
 log = logging.getLogger(__name__)
 
@@ -601,6 +601,6 @@ def main():
 
     if args.publish:
         prefix = get_opendata_prefix(product_file)
-        upload_file_to_s3(product_file, OPEN_DATA_BUCKET, prefix)
-        upload_file_to_s3(browse_file, OPEN_DATA_BUCKET, prefix)
-        upload_file_to_s3(thumbnail_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3_with_upload_access_keys(product_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3_with_upload_access_keys(browse_file, OPEN_DATA_BUCKET, prefix)
+        upload_file_to_s3_with_upload_access_keys(thumbnail_file, OPEN_DATA_BUCKET, prefix)
