@@ -423,6 +423,10 @@ def test_point_to_prefix():
     assert process.point_to_prefix(-63.0, 128.0) == 'S60E120'
     assert process.point_to_prefix(63.0, -128.0) == 'N60W120'
     assert process.point_to_prefix(-63.0, -128.0) == 'S60W120'
+    assert process.point_to_prefix(0.0, 128.0) == 'N00E120'
+    assert process.point_to_prefix(0.0, -128.0) == 'N00W120'
+    assert process.point_to_prefix(63.0, 0.0) == 'N60E000'
+    assert process.point_to_prefix(-63.0, 0.0) == 'S60E000'
     assert process.point_to_prefix(0.0, 0.0) == 'N00E000'
 
 
