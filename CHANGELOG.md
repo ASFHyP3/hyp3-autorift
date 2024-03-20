@@ -9,6 +9,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.14.2]
 ### Added
 * `--publish-bucket` option has been added to the HyP3 entry point to publish product to the ITS_LIVE AWS Open Data bucket, `s3://its-live-data` or the test bucket `s3://its-live-data-test`.
+* `upload_file_to_s3_with_upload_access_keys` to perform S3 uploads with credentialed S3 clients.
+* use of `UPLOAD_ACCESS_KEY_ID` and `UPLOAD_ACCESS_KEY_SECRET` to upload products to write-protected bucket.
 
 ## [0.14.1]
 ### Changed
