@@ -27,7 +27,7 @@ from osgeo import gdal
 
 from hyp3_autorift import geometry, image, io
 from hyp3_autorift.crop import crop_netcdf_product
-from hyp3_autorift.utils import get_esa_credentials
+from hyp3_autorift.utils import get_esa_credentials, upload_file_to_s3_with_upload_access_keys
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +47,18 @@ LANDSAT_SENSOR_MAPPING = {
 
 DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
                          'autorift_parameters/v001/autorift_landice_0120m.shp'
+
+OPEN_DATA_BUCKET = 'its-live-data'
+OPEN_DATA_BUCKET_TEST = 'its-live-data-test'
+PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
+    'S1': 'sentinel1',
+    'S2': 'sentinel2',
+    'L4': 'landsatOLI',
+    'L5': 'landsatOLI',
+    'L7': 'landsatOLI',
+    'L8': 'landsatOLI',
+    'L9': 'landsatOLI',
+}
 
 
 def get_lc2_stac_json_key(scene_name: str) -> str:
@@ -319,6 +331,45 @@ def apply_landsat_filtering(reference_path: str, secondary_path: str) \
     return reference_path, reference_zero_path, secondary_path, secondary_zero_path
 
 
+def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
+    with Dataset(ncfile) as ds:
+        var = ds.variables['img_pair_info']
+        return var.latitude, var.longitude
+
+
+def point_to_prefix(lat: float, lon: float) -> str:
+    """
+    Returns a string (for example, N78W124) for directory name based on
+    granule centerpoint lat,lon
+    """
+    NShemi_str = 'N' if lat >= 0.0 else 'S'
+    EWhemi_str = 'E' if lon >= 0.0 else 'W'
+
+    outlat = int(10*np.trunc(np.abs(lat/10.0)))
+    if outlat == 90:  # if you are exactly at a pole, put in lat = 80 bin
+        outlat = 80
+
+    outlon = int(10*np.trunc(np.abs(lon/10.0)))
+
+    if outlon >= 180:  # if you are at the dateline, back off to the 170 bin
+        outlon = 170
+
+    return f'{NShemi_str}{outlat:02d}{EWhemi_str}{outlon:03d}'
+
+
+def get_opendata_prefix(file: Path):
+    # filenames have form GRANULE1_X_GRANULE2
+    scene = file.name.split('_X_')[0]
+
+    platform_shortname = get_platform(scene)
+    lat, lon = get_lat_lon_from_ncfile(file)
+    lat_lon_prefix_component = point_to_prefix(lat, lon)
+
+    dir_path = f'velocity_image_pair/{PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname]}/v02'
+    prefix = os.path.join(dir_path, lat_lon_prefix_component)
+    return prefix
+
+
 def process(
     reference: str,
     secondary: str,
@@ -520,6 +571,9 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
+    parser.add_argument('--publish-bucket', default='',
+                        help='Bucket to publish the product to. '
+                        f'Must be one of {OPEN_DATA_BUCKET} or {OPEN_DATA_BUCKET_TEST}')
     parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
@@ -538,9 +592,20 @@ def main():
     g1, g2 = sorted(args.granules, key=get_datetime)
 
     product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
+    thumbnail_file = create_thumbnail(browse_file)
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
-        thumbnail_file = create_thumbnail(browse_file)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
+
+    if args.publish_bucket:
+
+        if args.publish_bucket not in [OPEN_DATA_BUCKET, OPEN_DATA_BUCKET_TEST]:
+            raise ValueError(f'Invalid publish bucket: {args.publish}. '
+                             f'Must be one of {OPEN_DATA_BUCKET} or {OPEN_DATA_BUCKET_TEST}')
+
+        prefix = get_opendata_prefix(product_file)
+        upload_file_to_s3_with_upload_access_keys(product_file, args.publish_bucket, prefix)
+        upload_file_to_s3_with_upload_access_keys(browse_file, args.publish_bucket, prefix)
+        upload_file_to_s3_with_upload_access_keys(thumbnail_file, args.publish_bucket, prefix)
