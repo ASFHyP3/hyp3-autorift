@@ -22,7 +22,6 @@ from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.image import create_thumbnail
 from hyp3lib.scene import get_download_url
-from hyp3lib.util import string_is_true
 from netCDF4 import Dataset
 from osgeo import gdal
 
