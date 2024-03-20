@@ -8,7 +8,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.14.2]
 ### Added
-* `--publish` option has been added to the HyP3 entry point to publish product to the ITS_LIVE AWS Open Data bucket, `s3://its-live-data`.
+* `--publish-bucket` option has been added to the HyP3 entry point to publish product to the ITS_LIVE AWS Open Data bucket, `s3://its-live-data` or the test bucket `s3://its-live-data-test`.
 
 ## [0.14.1]
 ### Changed
