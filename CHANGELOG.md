@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0]
+### Added
+* `--publish-bucket` option has been added to the HyP3 entry point to additionally publish products an AWS bucket, such as the ITS_LIVE AWS Open Data bucket, `s3://its-live-data`.
+* `upload_file_to_s3_with_publish_access_keys` to perform S3 uploads using credentials from the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment vairables.
 
 ## [0.14.1]
 ### Changed

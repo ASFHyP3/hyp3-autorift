@@ -1,3 +1,0 @@
-.*gitleaks.toml$
-.*hyp3_autorift/vend/workflow/.*
-.*hyp3_autorift/vend/README.md$
