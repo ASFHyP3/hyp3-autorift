@@ -34,14 +34,14 @@ def get_esa_credentials() -> Tuple[str, str]:
     )
 
 
-def upload_file_to_s3_with_upload_access_keys(path_to_file: Path, bucket: str, prefix: str = ''):
-    if 'UPLOAD_ACCESS_KEY_ID' in os.environ and 'UPLOAD_ACCESS_KEY_SECRET' in os.environ:
-        access_key_id = os.environ['UPLOAD_ACCESS_KEY_ID']
-        access_key_secret = os.environ['UPLOAD_ACCESS_KEY_SECRET']
-    else:
+def upload_file_to_s3_with_publish_access_keys(path_to_file: Path, bucket: str, prefix: str = ''):
+    try:
+        access_key_id = os.environ['PUBLISH_ACCESS_KEY_ID']
+        access_key_secret = os.environ['PUBLISH_SECRET_ACCESS_KEY']
+    except KeyError:
         raise ValueError(
             'Please provide S3 Bucket upload access key credentials via the '
-            'UPLOAD_ACCESS_KEY_ID and UPLOAD_ACCESS_KEY_SECRET environment variables'
+            'PUBLISH_ACCESS_KEY_ID and PUBLISH_SECRET_ACCESS_KEY environment variables'
         )
 
     s3_client = boto3.client('s3', aws_access_key_id=access_key_id, aws_secret_access_key=access_key_secret)
