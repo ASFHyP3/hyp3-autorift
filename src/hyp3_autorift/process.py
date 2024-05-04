@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from secrets import token_hex
-from typing import Callable, Optional, Tuple
+from typing import Callable, Literal, Optional, Tuple
 
 import boto3
 import botocore.exceptions
@@ -370,12 +370,11 @@ def get_opendata_prefix(file: Path):
         region
     ])
 
-
 def process(
     reference: str,
     secondary: str,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-    naming_scheme: str = 'ITS_LIVE_OD',
+    naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     esa_username: Optional[str] = None,
     esa_password: Optional[str] = None,
 ) -> Tuple[Path, Path]:
@@ -540,21 +539,17 @@ def process(
         raise Exception('Processing failed! Output netCDF file not found')
 
     netcdf_file = Path(netcdf_file)
-    cropped_file = crop_netcdf_product(netcdf_file)
-    netcdf_file.unlink()
-
-    if naming_scheme == 'ITS_LIVE_PROD':
-        product_file = netcdf_file
-    elif naming_scheme == 'ASF':
-        product_name = get_product_name(
-            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
-            pixel_spacing=parameter_info['xsize'],
-        )
-        product_file = Path(f'{product_name}.nc')
-    else:
+    if naming_scheme == 'ITS_LIVE_OD':
         product_file = netcdf_file.with_stem(f'{netcdf_file.stem}_IL_ASF_OD')
+    else:
+        product_file = netcdf_file
 
-    shutil.move(cropped_file, str(product_file))
+    if not netcdf_file.name.endswith('_P000.nc'):
+        cropped_file = crop_netcdf_product(netcdf_file)
+        netcdf_file.unlink()
+        shutil.move(cropped_file, str(product_file))
+    else:
+        shutil.move(netcdf_file, str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
@@ -580,7 +575,7 @@ def main():
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location. '
                              'Path to shapefile must be understood by GDAL')
-    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD', 'ASF'],
+    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
                         help='Naming scheme to use for product files')
     parser.add_argument('granules', type=str.split, nargs='+',
                         help='Granule pair to process')
