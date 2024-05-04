@@ -24,9 +24,8 @@ from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
 
-from hyp3_autorift import geometry, image, io
+from hyp3_autorift import geometry, image, utils
 from hyp3_autorift.crop import crop_netcdf_product
-from hyp3_autorift.utils import get_esa_credentials, upload_file_to_s3_with_publish_access_keys
 
 log = logging.getLogger(__name__)
 
@@ -255,19 +254,19 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
 
 def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
-    image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+    image_array, image_transform, image_projection, image_nodata = utils.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
 
     image_new_path = create_filtered_filepath(image_path)
-    _ = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
+    _ = utils.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
                             nodata=None, dtype=gdal.GDT_Float32)
 
     zero_path = None
     if zero_mask is not None:
         zero_path = create_filtered_filepath(f'{Path(image_new_path).stem}_zeroMask{Path(image_new_path).suffix}')
-        _ = io.write_geospatial(zero_path, zero_mask, image_transform, image_projection,
+        _ = utils.write_geospatial(zero_path, zero_mask, image_transform, image_projection,
                                 nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
 
     return image_new_path, zero_path
@@ -383,7 +382,7 @@ def process(
         orbits.mkdir(parents=True, exist_ok=True)
 
         if (esa_username is None) or (esa_password is None):
-            esa_username, esa_password = get_esa_credentials()
+            esa_username, esa_password = utils.get_esa_credentials()
 
         reference_state_vec, reference_provider = downloadSentinelOrbitFile(
             reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
@@ -443,9 +442,9 @@ def process(
 
             # Reproject zero masks if necessary
             if reference_zero_path and secondary_zero_path:
-                _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
+                _, _ = utils.ensure_same_projection(reference_zero_path, secondary_zero_path)
 
-            reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
+            reference_path, secondary_path = utils.ensure_same_projection(reference_path, secondary_path)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -455,12 +454,12 @@ def process(
     log.info(f'Secondary scene path: {secondary_path}')
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = io.find_jpl_parameter_info(scene_poly, parameter_file)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
     if platform == 'S1':
         isce_dem = geometry.prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
 
-        io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
+        utils.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
         import isce  # noqa
         from topsApp import TopsInSAR
@@ -572,6 +571,6 @@ def main():
 
     if args.publish_bucket:
         prefix = get_opendata_prefix(product_file)
-        upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
-        upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
-        upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
+        utils.upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
+        utils.upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
+        utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
