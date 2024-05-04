@@ -7,12 +7,15 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.15.1]
+## [0.16.0]
 ### Fixed
 * `hyp3_autorift` will no longer attempt to crop files with no valid data
 
 ### Removed
 * The unused `ASF` naming scheme has been removed from the `hyp3_autorift` CLI and the `hyp3_autorift.process` function
+
+## Changed
+* Everything in `hyp3_autorift.io` has been moved into `hyp3_autorift.utils` to prevent shadowing the builtin `io` module
 
 ## [0.15.0]
 ### Added
