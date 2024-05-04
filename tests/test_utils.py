@@ -5,7 +5,6 @@ from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 
 
-
 def test_get_esa_credentials_env(tmp_path, monkeypatch):
     with monkeypatch.context() as m:
         m.setenv('ESA_USERNAME', 'foo')
