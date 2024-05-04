@@ -10,7 +10,6 @@ import shutil
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
-from secrets import token_hex
 from typing import Callable, Literal, Optional, Tuple
 
 import boto3
@@ -196,31 +195,6 @@ def get_datetime(scene_name):
         return datetime.strptime(scene_name[17:25], '%Y%m%d')
 
     raise ValueError(f'Unsupported scene format: {scene_name}')
-
-
-def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240):
-    mission = reference_name[0:2]
-    plat1 = reference_name.split('_')[0][-1]
-    plat2 = secondary_name.split('_')[0][-1]
-
-    ref_datetime = get_datetime(reference_name)
-    sec_datetime = get_datetime(secondary_name)
-    days = abs((ref_datetime - sec_datetime).days)
-
-    datetime1 = ref_datetime.strftime('%Y%m%dT%H%M%S')
-    datetime2 = sec_datetime.strftime('%Y%m%dT%H%M%S')
-
-    if reference_name.startswith('S1'):
-        polarization1 = reference_name[15:16]
-        polarization2 = secondary_name[15:16]
-        orbit = least_precise_orbit_of(orbit_files)
-        misc = polarization1 + polarization2 + orbit
-    else:
-        misc = 'B08'
-
-    product_id = token_hex(2).upper()
-
-    return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{misc}{days:03}_VEL{pixel_spacing}_A_{product_id}'
 
 
 def get_platform(scene: str) -> str:
