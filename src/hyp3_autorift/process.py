@@ -351,7 +351,7 @@ def process(
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     esa_username: Optional[str] = None,
     esa_password: Optional[str] = None,
-) -> Tuple[Path, Path]:
+) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
@@ -359,6 +359,9 @@ def process(
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
+
+    Returns:
+        the autoRIFT product file, browse image, and thumbnail image
     """
     orbits = None
     polarization = None
@@ -535,7 +538,9 @@ def process(
     browse_file = product_file.with_suffix('.png')
     image.make_browse(browse_file, data)
 
-    return product_file, browse_file
+    thumbnail_file = create_thumbnail(browse_file)
+
+    return product_file, browse_file, thumbnail_file
 
 
 def main():
@@ -564,8 +569,9 @@ def main():
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
-    product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
-    thumbnail_file = create_thumbnail(browse_file)
+    product_file, browse_file, thumbnail_file = process(
+        g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+    )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
