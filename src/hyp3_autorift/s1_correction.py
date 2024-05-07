@@ -10,7 +10,7 @@ from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 
-from hyp3_autorift import geometry, io
+from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_s1_primary_polarization
 from hyp3_autorift.utils import get_esa_credentials
 from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
@@ -44,10 +44,10 @@ def generate_correction_data(
     lat_limits, lon_limits = geometry.bounding_box(f'{scene}.zip', polarization=polarization, orbits=orbits)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = io.find_jpl_parameter_info(scene_poly, parameter_file)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
     isce_dem = geometry.prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
-    io.format_tops_xml(scene, scene, polarization, isce_dem, orbits)
+    utils.format_tops_xml(scene, scene, polarization, isce_dem, orbits)
 
     reference_meta = loadParsedata(str(scene_path), orbit_dir=orbits, aux_dir=orbits, buffer=buffer)
 
