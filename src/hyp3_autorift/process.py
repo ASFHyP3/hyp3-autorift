@@ -518,7 +518,10 @@ def process(
     else:
         product_file = netcdf_file
 
+    log.info(f'Successfully created autoRIFT product: {product_file}')
+
     if not netcdf_file.name.endswith('_P000.nc'):
+        log.info('Cropping product to the valid data extent')
         cropped_file = crop_netcdf_product(netcdf_file)
         netcdf_file.unlink()
         shutil.move(cropped_file, str(product_file))
