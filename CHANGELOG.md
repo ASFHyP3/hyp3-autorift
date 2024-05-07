@@ -16,6 +16,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Changed
 * Everything in `hyp3_autorift.io` has been moved into `hyp3_autorift.utils` to prevent shadowing the builtin `io` module
+* `hyp3_autorift.process.process` now returns the product file, browse image, and (new) thumbnail image
 
 ## [0.15.0]
 ### Added
