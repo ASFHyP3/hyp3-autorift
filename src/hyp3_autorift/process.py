@@ -578,6 +578,10 @@ def main():
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
 
+    # FIXME: HyP3 is passing the default value for this argument as '""' not "", so we're not getting an empty string
+    if args.publish_bucket == '""':
+        args.publish_bucket = ''
+
     if args.publish_bucket:
         prefix = get_opendata_prefix(product_file)
         utils.upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
