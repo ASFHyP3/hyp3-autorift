@@ -10,8 +10,7 @@ import shutil
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
-from secrets import token_hex
-from typing import Callable, Optional, Tuple
+from typing import Callable, Literal, Optional, Tuple
 
 import boto3
 import botocore.exceptions
@@ -25,9 +24,8 @@ from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
 
-from hyp3_autorift import geometry, image, io
+from hyp3_autorift import geometry, image, utils
 from hyp3_autorift.crop import crop_netcdf_product
-from hyp3_autorift.utils import get_esa_credentials, upload_file_to_s3_with_publish_access_keys
 
 log = logging.getLogger(__name__)
 
@@ -198,31 +196,6 @@ def get_datetime(scene_name):
     raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
-def get_product_name(reference_name, secondary_name, orbit_files=None, pixel_spacing=240):
-    mission = reference_name[0:2]
-    plat1 = reference_name.split('_')[0][-1]
-    plat2 = secondary_name.split('_')[0][-1]
-
-    ref_datetime = get_datetime(reference_name)
-    sec_datetime = get_datetime(secondary_name)
-    days = abs((ref_datetime - sec_datetime).days)
-
-    datetime1 = ref_datetime.strftime('%Y%m%dT%H%M%S')
-    datetime2 = sec_datetime.strftime('%Y%m%dT%H%M%S')
-
-    if reference_name.startswith('S1'):
-        polarization1 = reference_name[15:16]
-        polarization2 = secondary_name[15:16]
-        orbit = least_precise_orbit_of(orbit_files)
-        misc = polarization1 + polarization2 + orbit
-    else:
-        misc = 'B08'
-
-    product_id = token_hex(2).upper()
-
-    return f'{mission}{plat1}{plat2}_{datetime1}_{datetime2}_{misc}{days:03}_VEL{pixel_spacing}_A_{product_id}'
-
-
 def get_platform(scene: str) -> str:
     if scene.startswith('S1') or scene.startswith('S2'):
         return scene[0:2]
@@ -281,20 +254,20 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
 
 def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
-    image_array, image_transform, image_projection, image_nodata = io.load_geospatial(image_path)
+    image_array, image_transform, image_projection, image_nodata = utils.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
 
     image_new_path = create_filtered_filepath(image_path)
-    _ = io.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
-                            nodata=None, dtype=gdal.GDT_Float32)
+    _ = utils.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
+                               nodata=None, dtype=gdal.GDT_Float32)
 
     zero_path = None
     if zero_mask is not None:
         zero_path = create_filtered_filepath(f'{Path(image_new_path).stem}_zeroMask{Path(image_new_path).suffix}')
-        _ = io.write_geospatial(zero_path, zero_mask, image_transform, image_projection,
-                                nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
+        _ = utils.write_geospatial(zero_path, zero_mask, image_transform, image_projection,
+                                   nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
 
     return image_new_path, zero_path
 
@@ -375,10 +348,10 @@ def process(
     reference: str,
     secondary: str,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-    naming_scheme: str = 'ITS_LIVE_OD',
+    naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     esa_username: Optional[str] = None,
     esa_password: Optional[str] = None,
-) -> Tuple[Path, Path]:
+) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
@@ -386,6 +359,9 @@ def process(
         secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
+
+    Returns:
+        the autoRIFT product file, browse image, and thumbnail image
     """
     orbits = None
     polarization = None
@@ -409,7 +385,7 @@ def process(
         orbits.mkdir(parents=True, exist_ok=True)
 
         if (esa_username is None) or (esa_password is None):
-            esa_username, esa_password = get_esa_credentials()
+            esa_username, esa_password = utils.get_esa_credentials()
 
         reference_state_vec, reference_provider = downloadSentinelOrbitFile(
             reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
@@ -469,9 +445,9 @@ def process(
 
             # Reproject zero masks if necessary
             if reference_zero_path and secondary_zero_path:
-                _, _ = io.ensure_same_projection(reference_zero_path, secondary_zero_path)
+                _, _ = utils.ensure_same_projection(reference_zero_path, secondary_zero_path)
 
-            reference_path, secondary_path = io.ensure_same_projection(reference_path, secondary_path)
+            reference_path, secondary_path = utils.ensure_same_projection(reference_path, secondary_path)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
@@ -481,12 +457,12 @@ def process(
     log.info(f'Secondary scene path: {secondary_path}')
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = io.find_jpl_parameter_info(scene_poly, parameter_file)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
     if platform == 'S1':
         isce_dem = geometry.prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
 
-        io.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
+        utils.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
         import isce  # noqa
         from topsApp import TopsInSAR
@@ -540,21 +516,20 @@ def process(
         raise Exception('Processing failed! Output netCDF file not found')
 
     netcdf_file = Path(netcdf_file)
-    cropped_file = crop_netcdf_product(netcdf_file)
-    netcdf_file.unlink()
-
-    if naming_scheme == 'ITS_LIVE_PROD':
-        product_file = netcdf_file
-    elif naming_scheme == 'ASF':
-        product_name = get_product_name(
-            reference, secondary, orbit_files=(reference_state_vec, secondary_state_vec),
-            pixel_spacing=parameter_info['xsize'],
-        )
-        product_file = Path(f'{product_name}.nc')
-    else:
+    if naming_scheme == 'ITS_LIVE_OD':
         product_file = netcdf_file.with_stem(f'{netcdf_file.stem}_IL_ASF_OD')
+    else:
+        product_file = netcdf_file
 
-    shutil.move(cropped_file, str(product_file))
+    log.info(f'Successfully created autoRIFT product: {product_file}')
+
+    if not netcdf_file.name.endswith('_P000.nc'):
+        log.info('Cropping product to the valid data extent')
+        cropped_file = crop_netcdf_product(netcdf_file)
+        netcdf_file.unlink()
+        shutil.move(cropped_file, str(product_file))
+    else:
+        shutil.move(netcdf_file, str(product_file))
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
@@ -563,7 +538,9 @@ def process(
     browse_file = product_file.with_suffix('.png')
     image.make_browse(browse_file, data)
 
-    return product_file, browse_file
+    thumbnail_file = create_thumbnail(browse_file)
+
+    return product_file, browse_file, thumbnail_file
 
 
 def main():
@@ -580,7 +557,7 @@ def main():
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location. '
                              'Path to shapefile must be understood by GDAL')
-    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD', 'ASF'],
+    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
                         help='Naming scheme to use for product files')
     parser.add_argument('granules', type=str.split, nargs='+',
                         help='Granule pair to process')
@@ -592,16 +569,21 @@ def main():
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
-    product_file, browse_file = process(g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme)
-    thumbnail_file = create_thumbnail(browse_file)
+    product_file, browse_file, thumbnail_file = process(
+        g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+    )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
 
+    # FIXME: HyP3 is passing the default value for this argument as '""' not "", so we're not getting an empty string
+    if args.publish_bucket == '""':
+        args.publish_bucket = ''
+
     if args.publish_bucket:
         prefix = get_opendata_prefix(product_file)
-        upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
-        upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
-        upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
+        utils.upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
+        utils.upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
+        utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
