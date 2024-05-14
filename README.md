@@ -1,77 +1,29 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8007397.svg)](https://doi.org/10.5281/zenodo.8007397) ![Coverage](images/coverage.svg)
 
-# HyP3 ISCE2 Plugin
+# HyP3 autoRIFT Plugin
 
-The HyP3-ISCE2 plugin provides a set of workflows to process SAR satellite data using the [InSAR Scientific Computing Environment 2](https://github.com/isce-framework/isce2) (ISCE2) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of SAR data.
+The HyP3-autoRIFT plugin provides a set of workflows to get dense feature tracking between two images with the [autonomous Repeat Image Feature Tracking](https://github.com/nasa-jpl/autoRIFT) (autoRIFT) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of optical and SAR data.
 
 ## Usage
-The HyP3-ISCE2 plugin provides a set of workflows (accessible directly in Python or via a CLI) that can be used to process SAR data using ISCE2. The workflows currently included in this plugin are:
+The HyP3-autoRIFT plugin provides a set of workflows (accessible directly in Python or via a CLI) that can be used to process SAR or optical data using autoRIFT. The workflows currently included in this plugin are:
 
-- `insar_tops`: A workflow for creating full-SLC Sentinel-1 geocoded unwrapped interferogram using ISCE2's TOPS processing workflow 
-- `insar_tops_burst`: A workflow for creating single-burst Sentinel-1 geocoded unwrapped interferogram using ISCE2's TOPS processing workflow 
+- `hyp3_autorift`: A workflow to get dense feature tracking between two images using autoRIFT
+- `s1_correction`: A workflow for geogriding Sentinel-1 images using ISCE2's processing workflow 
 ---
 
-To run a workflow, simply run `python -m hyp3_isce2 ++process [WORKFLOW_NAME] [WORKFLOW_ARGS]`. For example, to run the `insar_tops_burst` workflow:
+To run a workflow, simply run `python -m hyp3_autorift ++process [WORKFLOW_NAME] [WORKFLOW_ARGS]`. For example, to run the `s1_correction` workflow:
 
 ```
-python -m hyp3_isce2 ++process insar_tops_burst \
-  S1_136231_IW2_20200604T022312_VV_7C85-BURST \
-  S1_136231_IW2_20200616T022313_VV_5D11-BURST \
-  --looks 20x4 \
-  --apply-water-mask True
+python -m hyp3_autorift ++process s1_correction \
+  "S1A_IW_SLC__1SSH_20170221T204710_20170221T204737_015387_0193F6_AB07" \
 ```
 
-This command will create a Sentinel-1 interferogram that contains a deformation signal related to a 
-2020 Iranian earthquake. 
-
-### Product Merging Utility Usage
-**This feature is under active development and is subject to change!**
-
-Burst InSAR products created using the `insar_tops_burst` workflow can be merged together using the `merge_tops_burst` workflow. This can be useful when the deformation signal you'd like to observe spans multiple bursts. It can be called using the following syntax:
-```
-python -m hyp3_isce2 ++process merge_tops_bursts \
-  PATH_TO_UNZIPPED_PRODUCTS \
-  --apply-water-mask True
-```
-Where `PATH_TO_UNZIPPED_PRODUCTS` is the path to a directory containing unzipped burst InSAR products. For example:
-```bash
-PATH_TO_UNZIPPED_PRODUCTS/
-├─ S1_136232_IW2_20200604_20200616_VV_INT80_663F/
-├─ S1_136231_IW2_20200604_20200616_VV_INT80_529D/
-```
-In order to be merging eligible, all burst products must:
-1. Have the same reference and secondary dates
-1. Have the same polarization
-1. Have the same multilooking
-1. Be from the same relative orbit
-1. Be contiguous
-
-The workflow should through an error if any of these conditions are not met.
-
-**Merging burst InSAR products requires extra data that is not contained in the production HyP3 Burst InSAR products. For the time being, to be merging eligible burst products must be created locally using your own installation of `hyp3-isce2` from the `merge_bursts` branch of this repository!**
-
-As mentioned above this feature is under active development, so we welcome any feedback you have!
+This command will geogriding a Sentinel-1 image in Greenland. 
 
 ### Options
 To learn about the arguments for each workflow, look at the help documentation 
-(`python -m hyp3_isce2 ++process [WORKFLOW_NAME] --help`).
-
-#### Looks Option
-When ordering Sentinel-1 Burst InSAR On Demand products, users can choose the number of **looks** (`--looks`) to use 
-in processing, which drives the resolution and pixel spacing of the output products. The available options are 
-20x4, 10x2, or 5x1. The first number indicates the number of looks in range, the second is the number of looks 
-in azimuth.
-
-The output product pixel spacing depends on the number of looks in azimuth:
-pixel spacing = 20 * azimuth looks
-
-Products with 20x4 looks have a pixel spacing of 80 m, those with 10x2 looks have a pixel spacing of 40 m, and
-those with 5x1 looks have a pixel spacing of 20 m.
-
-#### Water Mask Option
-There is always a water mask geotiff file included in the product package, but setting the **apply-water-mask** 
-(`--apply-water-mask`) option to True will apply the mask to the wrapped interferogram prior to phase unwrapping.
+(`python -m hyp3_autorift ++process [WORKFLOW_NAME] --help`).
 
 ### Earthdata Login and ESA Credentials
 
@@ -83,7 +35,7 @@ Your credentials can be passed to the workflows via command-line options (`--esa
 before, check out this [guide](https://harmony.earthdata.nasa.gov/docs#getting-started) to get started.
 
 ### Docker Container
-The ultimate goal of this project is to create a docker container that can run ISCE2 workflows within a HyP3 
+The ultimate goal of this project is to create a docker container that can run autoRIFT workflows within a HyP3 
 deployment. To run the current version of the project's container, use this command:
 ```
 docker run -it --rm \
@@ -91,7 +43,7 @@ docker run -it --rm \
     -e EARTHDATA_PASSWORD=[YOUR_PASSWORD_HERE] \
     -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
     -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
-    ghcr.io/asfhyp3/hyp3-isce2:latest \
+    ghcr.io/asfhyp3/hyp3-autorift:latest \
     ++process [WORKFLOW_NAME] \
     [WORKFLOW_ARGS]
 ```
@@ -100,11 +52,11 @@ docker run -it --rm \
 
 #### Docker Outputs
 
-To retain hyp3_isce2 output files running via Docker there are two recommended approaches:
+To retain hyp3_autorift output files running via Docker there are two recommended approaches:
 
 1. Use a volume mount
 
-Add the `-w /tmp -v [localdir]:/tmp` flags after docker run. `-w` changes the working directory of the container to `/tmp` and `-v` will mount whichever local directory you choose so that such that hyp3_isce3 outputs are preserved locally.
+Add the `-w /tmp -v [localdir]:/tmp` flags after docker run. `-w` changes the working directory of the container to `/tmp` and `-v` will mount whichever local directory you choose so that such that hyp3_autorift outputs are preserved locally.
 
 1. Copy outputs to remote object storage
 
@@ -131,16 +83,16 @@ Tip: you can use [`docker run --env-file`](https://docs.docker.com/reference/cli
 
 ## Developer Setup
 1. Ensure that conda is installed on your system (we recommend using [mambaforge](https://github.com/conda-forge/miniforge#mambaforge) to reduce setup times).
-2. Download a local version of the `hyp3-isce2` repository (`git clone https://github.com/ASFHyP3/hyp3-isce2.git`)
-3. In the base directory for this project call `mamba env create -f environment.yml` to create your Python environment, then activate it (`mamba activate hyp3-isce2`)
+2. Download a local version of the `hyp3-autorift` repository (`git clone https://github.com/ASFHyP3/hyp3-autorift.git`)
+3. In the base directory for this project call `mamba env create -f environment.yml` to create your Python environment, then activate it (`mamba activate hyp3-autorift`)
 4. Finally, install a development version of the package (`python -m pip install -e .`)
 
 To run all commands in sequence use:
 ```bash
-git clone https://github.com/ASFHyP3/hyp3-isce2.git
-cd hyp3-isce2
+git clone https://github.com/ASFHyP3/hyp3-autorift.git
+cd hyp3-autorift
 mamba env create -f environment.yml
-mamba activate hyp3-isce2
+mamba activate hyp3-autorift
 python -m pip install -e .
 ```
 
@@ -154,7 +106,7 @@ The cloud infratstructure-as-code for HyP3 can be found in the main [HyP3 reposi
 This project was heavily influenced by the [DockerizedTopsApp](https://github.com/ACCESS-Cloud-Based-InSAR/DockerizedTopsApp) project, which contains a similar workflow that is designed to produce ARIA Sentinel-1 Geocoded Unwrapped Interferogram standard products via HyP3.
 
 ## License
-The HyP3-ISCE2 plugin is licensed under the Apache License, Version 2 license. See the LICENSE file for more details.
+The HyP3-autoRIFT plugin is licensed under the Apache License, Version 2 license. See the LICENSE file for more details.
 
 ## Code of conduct
 We strive to create a welcoming and inclusive community for all contributors to HyP3-ISCE2. As such, all contributors to this project are expected to adhere to our code of conduct.
@@ -162,10 +114,10 @@ We strive to create a welcoming and inclusive community for all contributors to 
 Please see `CODE_OF_CONDUCT.md` for the full code of conduct text.
 
 ## Contributing
-Contributions to the HyP3-ISCE2 plugin are welcome! If you would like to contribute, please submit a pull request on the GitHub repository.
+Contributions to the HyP3-autoRIFT plugin are welcome! If you would like to contribute, please submit a pull request on the GitHub repository.
 
 ## Contact Us
-Want to talk about HyP3-ISCE2? We would love to hear from you!
+Want to talk about HyP3-autoRIFT? We would love to hear from you!
 
 Found a bug? Want to request a feature?
 [open an issue](https://github.com/ASFHyP3/asf_tools/issues/new)
