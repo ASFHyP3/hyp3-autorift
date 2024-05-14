@@ -19,7 +19,7 @@ python -m hyp3_autorift ++process s1_correction \
   "S1A_IW_SLC__1SSH_20170221T204710_20170221T204737_015387_0193F6_AB07" \
 ```
 
-This command will geogriding a Sentinel-1 image in Greenland. 
+This command will geogrid a Sentinel-1 image in Greenland. 
 
 ### Options
 To learn about the arguments for each workflow, look at the help documentation 
