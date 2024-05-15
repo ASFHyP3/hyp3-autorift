@@ -1,54 +1,56 @@
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10871107.svg)](https://doi.org/10.5281/zenodo.10871107) ![Coverage](images/coverage.svg)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4037015.svg)](https://doi.org/10.5281/zenodo.4037015) ![Coverage](images/coverage.svg)
 
 # HyP3 autoRIFT Plugin
 
-The HyP3-autoRIFT plugin provides a set of workflows to get dense feature tracking between two images with the [autonomous Repeat Image Feature Tracking](https://github.com/nasa-jpl/autoRIFT) (autoRIFT) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of optical and SAR data.
+HyP3-autoRIFT for feature tracking processing with AutoRIFT-ISCE [autonomous Repeat Image Feature Tracking](https://github.com/nasa-jpl/autoRIFT) (autoRIFT) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of optical (Landsat and Sentinel-2) and SAR data (Sentinel-1).
 
 ## Usage
-The HyP3-autoRIFT plugin provides a set of workflows (accessible directly in Python or via a CLI) that can be used to process SAR or optical data using autoRIFT. The workflows currently included in this plugin are:
+The HyP3-autoRIFT plugin provides a workflow (accessible directly in Python or via a CLI) that can be used to process SAR or optical data using autoRIFT:
 
 - `hyp3_autorift`: A workflow to get dense feature tracking between two images using autoRIFT
-- `s1_correction`: A workflow for geogriding Sentinel-1 images using ISCE2's processing workflow 
 ---
 
-To run a workflow, simply run `python -m hyp3_autorift ++process [WORKFLOW_NAME] [WORKFLOW_ARGS]`. For example, to run the `s1_correction` workflow:
+To run the workflow, simply run `python -m hyp3_autorift ++process hyp3_autorift [WORKFLOW_ARGS]`. For example:
 
 ```
-python -m hyp3_autorift ++process s1_correction \
-  "S1A_IW_SLC__1SSH_20170221T204710_20170221T204737_015387_0193F6_AB07" \
+python -m hyp3_autorift ++process hyp3_autorift \
+  "LC08_L1TP_009011_20200703_20200913_02_T1" \
+  "LC08_L1TP_009011_20200820_20200905_02_T1"
 ```
 
-This command will geogrid a Sentinel-1 image in Greenland. 
+This command will run autorift for a pair of Landsar images. 
 
 ### Options
 To learn about the arguments for each workflow, look at the help documentation 
-(`python -m hyp3_autorift ++process [WORKFLOW_NAME] --help`).
+(`python -m hyp3_autorift ++process hyp3_autorift --help`).
 
 ### Earthdata Login and ESA Credentials
 
-For all workflows, the user must provide their Earthdata Login credentials and ESA Copernicus Data Space Ecosystem (CDSE) credentials in order to download input data.
+For the workflow, the user must provide their Earthdata Login credentials and ESA Copernicus Data Space Ecosystem (CDSE) credentials in order to download input data.
 If you do not already have an Earthdata account, you can sign up [here](https://urs.earthdata.nasa.gov/home). 
 If you do not already have a CDSE account, you can sign up [here](https://dataspace.copernicus.eu). 
 Your credentials can be passed to the workflows via command-line options (`--esa-username` and  `--esa-password`), environment variables 
-(`EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`, `ESA_USERNAME`, and `ESA_PASSWORD`), or via your `.netrc` file. If you haven't set up a `.netrc` file 
+(`AWS_ACCESS_KEY_ID`,`AWS_SECRET_ACCESS_KEY`,`EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`, `ESA_USERNAME`, and `ESA_PASSWORD`), or via your `.netrc` file. If you haven't set up a `.netrc` file 
 before, check out this [guide](https://harmony.earthdata.nasa.gov/docs#getting-started) to get started.
+
+**NOTE** AWS credentials are necessary to access Landsat data.
 
 ### Docker Container
 The ultimate goal of this project is to create a docker container that can run autoRIFT workflows within a HyP3 
 deployment. To run the current version of the project's container, use this command:
 ```
 docker run -it --rm \
+    -e AWS_ACCESS_KEY_ID=[YOUR_KEY] \
+    -e AWS_SECRET_ACCESS_KEY=[YOUR_SECRET] \
     -e EARTHDATA_USERNAME=[YOUR_USERNAME_HERE] \
     -e EARTHDATA_PASSWORD=[YOUR_PASSWORD_HERE] \
     -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
     -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
     ghcr.io/asfhyp3/hyp3-autorift:latest \
-    ++process [WORKFLOW_NAME] \
+    ++process hyp3_autorift \
     [WORKFLOW_ARGS]
 ```
-
-**NOTE** Each workflow can also be accessed via an alternative CLI with the format (`[WORKFLOW_NAME] [WORKFLOW_ARGS]`)
 
 #### Docker Outputs
 
@@ -60,7 +62,7 @@ Add the `-w /tmp -v [localdir]:/tmp` flags after docker run. `-w` changes the wo
 
 1. Copy outputs to remote object storage
 
-Append the `--bucket` and `--bucket-prefix` to [WORKFLOW_ARGS]. *Only the final output files and zipped archive of those files is uploaded.* This also requires that AWS credentials to write to the bucket are available to the running container. For example, to write outputs to a hypothetical bucket `s3://hypothetical-bucket/test-run/`:
+Append the `--bucket` and `--bucket-prefix` to [WORKFLOW_ARGS]. *Only the final output files are uploaded.* This also requires that AWS credentials to write to the bucket are available to the running container. For example, to write outputs to a hypothetical bucket `s3://hypothetical-bucket/test-run/`:
 
 ```
 docker run -it --rm \
@@ -72,7 +74,7 @@ docker run -it --rm \
     -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
     -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
     ghcr.io/asfhyp3/hyp3-isce2:latest \
-      ++process [WORKFLOW_NAME] \
+      ++process hyp3_autorift \
       [WORKFLOW_ARGS] \
       --bucket "hypothetical-bucket" \
       --bucket-prefix "test-run"
@@ -101,15 +103,13 @@ HyP3 is broken into two components: the cloud architecture/API that manage proce
 
 ![Cloud Architecture](images/arch_here.jpg)
 
-The cloud infratstructure-as-code for HyP3 can be found in the main [HyP3 repository](https://github.com/asfhyp3/hyp3). This repository contains a plugin that can be used to process ISCE2-based processing of SAR data.
-
-This project was heavily influenced by the [DockerizedTopsApp](https://github.com/ACCESS-Cloud-Based-InSAR/DockerizedTopsApp) project, which contains a similar workflow that is designed to produce ARIA Sentinel-1 Geocoded Unwrapped Interferogram standard products via HyP3.
+The cloud infrastructure-as-code for HyP3 can be found in the main [HyP3 repository](https://github.com/asfhyp3/hyp3). This repository contains a plugin that can be used for feature tracking processing with AutoRIFT-ISCE.
 
 ## License
 The HyP3-autoRIFT plugin is licensed under the Apache License, Version 2 license. See the LICENSE file for more details.
 
 ## Code of conduct
-We strive to create a welcoming and inclusive community for all contributors to HyP3-ISCE2. As such, all contributors to this project are expected to adhere to our code of conduct.
+We strive to create a welcoming and inclusive community for all contributors to HyP3-autoRIFT. As such, all contributors to this project are expected to adhere to our code of conduct.
 
 Please see `CODE_OF_CONDUCT.md` for the full code of conduct text.
 
