@@ -15,11 +15,11 @@ To run the workflow, simply run `python -m hyp3_autorift ++process hyp3_autorift
 
 ```
 python -m hyp3_autorift ++process hyp3_autorift \
-  "LC08_L1TP_009011_20200703_20200913_02_T1" \
-  "LC08_L1TP_009011_20200820_20200905_02_T1"
+  "S2B_MSIL1C_20200612T150759_N0209_R025_T22WEB_20200612T184700" \
+  "S2A_MSIL1C_20200627T150921_N0209_R025_T22WEB_20200627T170912"
 ```
 
-This command will run autorift for a pair of Landsar images. 
+This command will run autorift for a pair of Sentinel-2 images. 
 
 ### Options
 To learn about the arguments for each workflow, look at the help documentation 
