@@ -54,7 +54,8 @@ Your credentials can be passed to the workflows via command-line options (`--esa
 (`AWS_ACCESS_KEY_ID`,`AWS_SECRET_ACCESS_KEY`,`EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`, `ESA_USERNAME`, and `ESA_PASSWORD`), or via your `.netrc` file. If you haven't set up a `.netrc` file 
 before, check out this [guide](https://harmony.earthdata.nasa.gov/docs#getting-started) to get started.
 
-**NOTE** AWS credentials are necessary to access Landsat data.
+> [!IMPORTANT]
+> AWS credentials are necessary to access Landsat data.
 
 ### Docker Container
 The ultimate goal of this project is to create a docker container that can run autoRIFT workflows within a HyP3 
