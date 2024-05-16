@@ -21,7 +21,15 @@ python -m hyp3_autorift ++help
 - `hyp3_autorift`: A workflow to get dense feature tracking between two images using autoRIFT
 ---
 
-To run the workflow, simply run `python -m hyp3_autorift ++process hyp3_autorift [WORKFLOW_ARGS]`. For example:
+You can run this workflow by selecting the `hyp3_autorift` process: 
+```
+python -m hyp3_autorift ++process hyp3_autorift [WORKFLOW_ARGS]
+```
+or by using the `hyp3_autorift` console script:
+```
+hyp3_autorift [WORKFLOW_ARGS]
+```
+For example:
 
 ```
 python -m hyp3_autorift ++process hyp3_autorift \
