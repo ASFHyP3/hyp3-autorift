@@ -83,25 +83,25 @@ To retain hyp3_autorift output files running via Docker there are two recommende
 
 1. Copy outputs to remote object storage
 
-Append the `--bucket` and `--bucket-prefix` to [WORKFLOW_ARGS]. *Only the final output files are uploaded.* This also requires that AWS credentials to write to the bucket are available to the running container. For example, to write outputs to a hypothetical bucket `s3://hypothetical-bucket/test-run/`:
+   Append the `--bucket` and `--bucket-prefix` to [WORKFLOW_ARGS]. *Only the final output files are uploaded.* This also requires that AWS credentials to write to the bucket are available to the running container. For example, to write outputs to a hypothetical bucket `s3://hypothetical-bucket/test-run/`:
 
-```
-docker run -it --rm \
-    -e AWS_ACCESS_KEY_ID=[YOUR_KEY] \
-    -e AWS_SECRET_ACCESS_KEY=[YOUR_SECRET] \ 
-    -e AWS_SESSION_TOKEN=[YOUR_TOKEN] \ 
-    -e EARTHDATA_USERNAME=[YOUR_USERNAME_HERE] \
-    -e EARTHDATA_PASSWORD=[YOUR_PASSWORD_HERE] \
-    -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
-    -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
-    ghcr.io/asfhyp3/hyp3-isce2:latest \
-      ++process hyp3_autorift \
-      [WORKFLOW_ARGS] \
-      --bucket "hypothetical-bucket" \
-      --bucket-prefix "test-run"
-```
+   ```
+   docker run -it --rm \
+       -e AWS_ACCESS_KEY_ID=[YOUR_KEY] \
+       -e AWS_SECRET_ACCESS_KEY=[YOUR_SECRET] \ 
+       -e AWS_SESSION_TOKEN=[YOUR_TOKEN] \  # Optional
+       -e EARTHDATA_USERNAME=[YOUR_USERNAME_HERE] \
+       -e EARTHDATA_PASSWORD=[YOUR_PASSWORD_HERE] \
+       -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
+       -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
+       ghcr.io/asfhyp3/hyp3-autorift:latest \
+         ++process hyp3_autorift \
+         [WORKFLOW_ARGS] \
+         --bucket "hypothetical-bucket" \
+         --bucket-prefix "test-run"
+   ```
 
-Tip: you can use [`docker run --env-file`](https://docs.docker.com/reference/cli/docker/container/run/#env) to capture all the necessary environment variables in a single file.
+   Tip: you can use [`docker run --env-file`](https://docs.docker.com/reference/cli/docker/container/run/#env) to capture all the necessary environment variables in a single file.
 
 
 ## Developer Setup
