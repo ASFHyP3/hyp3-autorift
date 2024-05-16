@@ -45,7 +45,7 @@ To learn about the arguments for each workflow, look at the help documentation
 hyp3_autorift --help
 ```
 
-### Earthdata Login and ESA Credentials
+#### Earthdata Login and ESA Credentials
 
 For the workflow, the user must provide their Earthdata Login credentials and ESA Copernicus Data Space Ecosystem (CDSE) credentials in order to download input data.
 If you do not already have an Earthdata account, you can sign up [here](https://urs.earthdata.nasa.gov/home). 
