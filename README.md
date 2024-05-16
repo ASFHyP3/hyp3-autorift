@@ -6,7 +6,17 @@
 They HyP3-autoRIFT plugin provides a set of workflows for feature tracking processing with the AutoRIFT [autonomous Repeat Image Feature Tracking](https://github.com/nasa-jpl/autoRIFT) (autoRIFT) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of remote sensing data.
 
 ## Usage
-The HyP3-autoRIFT plugin provides a workflow (accessible directly in Python or via a CLI) that can be used to process SAR or optical data using autoRIFT:
+The HyP3-autoRIFT plugin provides workflows (accessible directly in Python or via a CLI) that can be used to process SAR  data or optical data using autoRIFT. HyP3-autoRIFT can process these satellite missions:
+* SAR:
+  * Sentinel-1
+* Optical:
+  * Sentinel-2
+  * Landsat 4,5,7,8,9 
+  
+To see all available workflows, run:
+```
+python -m hyp3_autorift ++help
+```
 
 - `hyp3_autorift`: A workflow to get dense feature tracking between two images using autoRIFT
 ---
