@@ -79,7 +79,7 @@ To retain hyp3_autorift output files running via Docker there are two recommende
 
 1. Use a volume mount
 
-Add the `-w /tmp -v [localdir]:/tmp` flags after docker run. `-w` changes the working directory of the container to `/tmp` and `-v` will mount whichever local directory you choose so that such that hyp3_autorift outputs are preserved locally.
+   Add the `-w /tmp -v [localdir]:/tmp` flags after docker run. `-w` changes the working directory of the container to `/tmp` and `-v` will mount whichever local directory you choose so that such that hyp3_autorift outputs are preserved locally.
 
 1. Copy outputs to remote object storage
 
