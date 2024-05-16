@@ -127,7 +127,7 @@ HyP3 is broken into two components: the cloud architecture/API that manage proce
 The cloud infrastructure-as-code for HyP3 can be found in the main [HyP3 repository](https://github.com/asfhyp3/hyp3)., while this repository contains a plugin that can be used for feature tracking processing with AutoRIFT.
 
 ## License
-The HyP3-autoRIFT plugin is licensed under the Apache License, Version 2 license. See the LICENSE file for more details.
+The HyP3-autoRIFT plugin is licensed under the BSD 3-Clause license. See the LICENSE file for more details.
 
 ## Code of conduct
 We strive to create a welcoming and inclusive community for all contributors to HyP3-autoRIFT. As such, all contributors to this project are expected to adhere to our code of conduct.
