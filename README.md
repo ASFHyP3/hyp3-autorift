@@ -41,7 +41,9 @@ This command will run autorift for a pair of Sentinel-2 images.
 
 ### Options
 To learn about the arguments for each workflow, look at the help documentation 
-(`python -m hyp3_autorift ++process hyp3_autorift --help`).
+```
+hyp3_autorift --help
+```
 
 ### Earthdata Login and ESA Credentials
 
