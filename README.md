@@ -32,7 +32,7 @@ hyp3_autorift [WORKFLOW_ARGS]
 For example:
 
 ```
-python -m hyp3_autorift ++process hyp3_autorift \
+hyp3_autorift \
   "S2B_MSIL1C_20200612T150759_N0209_R025_T22WEB_20200612T184700" \
   "S2A_MSIL1C_20200627T150921_N0209_R025_T22WEB_20200627T170912"
 ```
