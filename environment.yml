@@ -1,4 +1,4 @@
-name: hyp3-autorift
+name: hyp3-autorift-fork
 channels:
   - hyp3
   - conda-forge

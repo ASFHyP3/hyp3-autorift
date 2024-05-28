@@ -374,13 +374,14 @@ def process(
     reference_state_vec = None
     secondary_state_vec = None
     lat_limits, lon_limits = None, None
-
+    
     platform = get_platform(reference)
     if platform == 'S1':
+        from hyp3_autorift.sentinel1_isce2 import bounding_box, process_sentinel1_with_isce2
+        
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)
             download_file(scene_url, chunk_size=5242880)
-
         orbits = Path('Orbits').resolve()
         orbits.mkdir(parents=True, exist_ok=True)
 
@@ -397,7 +398,12 @@ def process(
         log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
 
         polarization = get_s1_primary_polarization(reference)
-        lat_limits, lon_limits = geometry.bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
+        lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
+        
+        scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
+        parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
+        
+        netcdf_file = process_sentinel1_with_isce2(parameter_info,reference,secondary,polarization,orbits)
 
     elif platform == 'S2':
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -452,49 +458,14 @@ def process(
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
-
+        
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
-
-    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
-
-    if platform == 'S1':
-        isce_dem = geometry.prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
-
-        utils.format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
-
-        import isce  # noqa
-        from topsApp import TopsInSAR
-        insar = TopsInSAR(name='topsApp', cmdline=['topsApp.xml', '--end=mergebursts'])
-        insar.configure()
-        insar.run()
-
-        reference_path = os.path.join(os.getcwd(), 'merged', 'reference.slc.full')
-        secondary_path = os.path.join(os.getcwd(), 'merged', 'secondary.slc.full')
-
-        for slc in [reference_path, secondary_path]:
-            gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
-
-        from hyp3_autorift.vend.testGeogrid_ISCE import (loadMetadata,
-                                                         runGeogrid)
-        meta_r = loadMetadata('fine_coreg')
-        meta_s = loadMetadata('secondary')
-        geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
-
-        # NOTE: After Geogrid is run, all drivers are no longer registered.
-        #       I've got no idea why, or if there are other affects...
-        gdal.AllRegister()
-
-        from hyp3_autorift.vend.testautoRIFT_ISCE import \
-            generateAutoriftProduct
-        netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform, optical_flag=False, ncname=None,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
-        )
-
-    else:
+        
+    if 'L' in platform or platform=='S2':
+        scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
+        parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
+        
         from hyp3_autorift.vend.testGeogridOptical import (
             coregisterLoadMetadata, runGeogrid)
         meta_r, meta_s = coregisterLoadMetadata(
@@ -503,7 +474,7 @@ def process(
             secondary_metadata=secondary_metadata,
         )
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
-
+        
         from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
         netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
@@ -511,6 +482,8 @@ def process(
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
             parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
+    
+    
 
     if netcdf_file is None:
         raise Exception('Processing failed! Output netCDF file not found')
