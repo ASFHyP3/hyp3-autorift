@@ -462,7 +462,7 @@ def process(
     log.info(f'Reference scene path: {reference_path}')
     log.info(f'Secondary scene path: {secondary_path}')
         
-    if 'L' in platform or platform=='S2':
+    if 'L' in platform or platform == 'S2':
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
         
