@@ -403,7 +403,7 @@ def process(
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
-        netcdf_file = process_sentinel1_with_isce2(parameter_info, reference,secondary, polarization, orbits)
+        netcdf_file = process_sentinel1_with_isce2(parameter_info, reference, secondary, polarization, orbits)
 
     elif platform == 'S2':
         # Set config and env for new CXX threads in Geogrid/autoRIFT
