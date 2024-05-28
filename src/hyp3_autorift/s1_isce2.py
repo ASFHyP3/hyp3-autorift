@@ -1,24 +1,24 @@
+import copy
 import logging
+import os
 import sys
 import textwrap
-import copy
-import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 from typing import Optional
 
-import numpy as np
+from hyp3lib.fetch import download_file
+from hyp3lib.get_orb import downloadSentinelOrbitFile
+from hyp3lib.scene import get_download_url
+
 import isce  # noqa: F401
 import isceobj
+import numpy as np
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
-
-from hyp3lib.fetch import download_file
-from hyp3lib.get_orb import downloadSentinelOrbitFile
-from hyp3lib.scene import get_download_url
 
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_s1_primary_polarization
