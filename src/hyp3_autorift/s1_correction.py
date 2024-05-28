@@ -12,7 +12,7 @@ from hyp3lib.scene import get_download_url
 
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.utils import get_esa_credentials
-from sentinel1_isce2 import generate_correction_data
+from s1_isce2 import generate_correction_data
 log = logging.getLogger(__name__)
 
 def main():

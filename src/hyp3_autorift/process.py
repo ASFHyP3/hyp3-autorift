@@ -377,7 +377,7 @@ def process(
     
     platform = get_platform(reference)
     if platform == 'S1':
-        from hyp3_autorift.sentinel1_isce2 import bounding_box, process_sentinel1_with_isce2
+        from hyp3_autorift.s1_isce2 import bounding_box, process_sentinel1_with_isce2
         
         for scene in [reference, secondary]:
             scene_url = get_download_url(scene)

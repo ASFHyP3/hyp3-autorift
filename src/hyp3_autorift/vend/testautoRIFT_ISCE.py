@@ -864,7 +864,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         dt = geogrid_run_info['dt']
                         epsg = geogrid_run_info['epsg']
 
-                    from hyp3_autorift.sentinel1_isce2 import get_topsinsar_config
+                    from hyp3_autorift.s1_isce2 import get_topsinsar_config
                     conts = get_topsinsar_config()
                     master_filename = conts['reference_filename']
                     slave_filename = conts['secondary_filename']
