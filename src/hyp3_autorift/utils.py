@@ -3,8 +3,6 @@
 import logging
 import netrc
 import os
-import sys
-import textwrap
 from pathlib import Path
 from platform import system
 from typing import Tuple, Union
