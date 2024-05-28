@@ -1,34 +1,42 @@
-import isce  # noqa: F401
-import isceobj
 import logging
 import sys
+import textwrap
+from pathlib import Path
+import os
+import copy
+from datetime import timedelta
+from typing import Optional
 
+import numpy as np
+from osgeo import gdal
+import isce  # noqa: F401
+import isceobj
 from contrib.demUtils import createDemStitcher
 from contrib.geo_autoRIFT.geogrid import Geogrid
 from isceobj.Orbit.Orbit import Orbit
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
+
+from hyp3lib.aws import upload_file_to_s3
+from hyp3lib.fetch import download_file
+from hyp3lib.get_orb import downloadSentinelOrbitFile
+from hyp3lib.image import create_thumbnail
+from hyp3lib.scene import get_download_url
+
+from hyp3_autorift import geometry, utils
+from hyp3_autorift.utils import get_esa_credentials
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_s1_primary_polarization
-
-import textwrap
-from pathlib import Path
-from osgeo import gdal
-import os
-from typing import Optional
-
-import numpy as np
-
 from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
-
 log = logging.getLogger(__name__)
 
-def process_sentinel1_with_isce2(parameter_info,reference,secondary,polarization,orbits):
+
+def process_sentinel1_with_isce2(parameter_info, reference,secondary, polarization, orbits):
 
     import isce  # noqa
     from topsApp import TopsInSAR
     from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
     from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
 
-    lat_limits,lon_limits=bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
+    lat_limits,lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
     isce_dem = prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
 
     format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
@@ -102,7 +110,7 @@ def generate_correction_data(
 
     return geogrid_info
 
-####### this was in utils############################
+
 class SysArgvManager:
     """Context manager to clear and reset sys.argv
 
@@ -148,6 +156,7 @@ def get_topsinsar_config():
 
     return config_data
 
+
 def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):
     xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>
     <topsApp>
@@ -185,7 +194,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
     with open(xml_file, 'w') as f:
         f.write(textwrap.dedent(xml_template))
 
-####### this was in geometry############################
+
 def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
@@ -254,6 +263,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     log.info(f'Longitude limits [min, max]: {lon_limits}')
 
     return lat_limits, lon_limits
+
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
     if isce_dem is None:

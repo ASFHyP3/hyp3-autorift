@@ -1,11 +1,8 @@
 """Geometry routines for working Geogrid"""
 
 import logging
-import os
 from typing import Tuple
-import numpy as np
 
-from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
@@ -67,6 +64,3 @@ def fix_point_for_antimeridian(point: ogr.Geometry):
     fixed = ogr.Geometry(ogr.wkbPoint)
     fixed.AddPoint_2D(fix(point.GetX()), fix(point.GetY()))
     return fixed
-
-
-

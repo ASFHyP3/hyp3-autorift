@@ -1,19 +1,12 @@
 import argparse
-import copy
 import logging
-from datetime import timedelta
 from pathlib import Path
-from typing import Optional
 
 from hyp3lib.aws import upload_file_to_s3
-from hyp3lib.fetch import download_file
-from hyp3lib.get_orb import downloadSentinelOrbitFile
-from hyp3lib.scene import get_download_url
-
-from hyp3_autorift import geometry, utils
-from hyp3_autorift.utils import get_esa_credentials
-from s1_isce2 import generate_correction_data
+from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
+from hyp3_autorift.s1_isce2 import generate_correction_data
 log = logging.getLogger(__name__)
+
 
 def main():
     parser = argparse.ArgumentParser(
