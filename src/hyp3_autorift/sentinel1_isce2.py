@@ -22,12 +22,17 @@ from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
 log = logging.getLogger(__name__)
 
 def process_sentinel1_with_isce2(parameter_info,reference,secondary,polarization,orbits):
+
+    import isce  # noqa
+    from topsApp import TopsInSAR
+    from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
+    from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
+
     lat_limits,lon_limits=bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
     isce_dem = prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
 
     format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
-    import isce  # noqa
-    from topsApp import TopsInSAR
+
     insar = TopsInSAR(name='topsApp', cmdline=['topsApp.xml', '--end=mergebursts'])
     insar.configure()
     insar.run()
@@ -38,8 +43,6 @@ def process_sentinel1_with_isce2(parameter_info,reference,secondary,polarization
     for slc in [reference_path, secondary_path]:
         gdal.Translate(slc, f'{slc}.vrt', format='ENVI')
 
-    from hyp3_autorift.vend.testGeogrid_ISCE import (loadMetadata,
-                                                         runGeogrid)
     meta_r = loadMetadata('fine_coreg')
     meta_s = loadMetadata('secondary')
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
@@ -48,8 +51,6 @@ def process_sentinel1_with_isce2(parameter_info,reference,secondary,polarization
     #       I've got no idea why, or if there are other affects...
     gdal.AllRegister()
 
-    from hyp3_autorift.vend.testautoRIFT_ISCE import \
-            generateAutoriftProduct
     netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor='S1', optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
