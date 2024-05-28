@@ -7,11 +7,12 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
+import isce  # noqa: F401
+
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 
-import isce  # noqa: F401
 import isceobj
 import numpy as np
 from contrib.demUtils import createDemStitcher
