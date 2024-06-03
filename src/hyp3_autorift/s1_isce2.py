@@ -7,35 +7,60 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
-import isce  # noqa: F401
-import isceobj
 import numpy as np
-from contrib.demUtils import createDemStitcher
-from contrib.geo_autoRIFT.geogrid import Geogrid
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
-from isceobj.Orbit.Orbit import Orbit
-from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
 from osgeo import gdal
 
 from hyp3_autorift import geometry, utils
-from hyp3_autorift.process import DEFAULT_PARAMETER_FILE, get_s1_primary_polarization
+from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.utils import get_esa_credentials
-from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
+
 log = logging.getLogger(__name__)
 
 
-def process_sentinel1_with_isce2(parameter_info, reference, secondary, polarization, orbits):
+def get_s1_primary_polarization(granule_name):
+    polarization = granule_name[14:16]
+    if polarization in ['SV', 'DV']:
+        return 'vv'
+    if polarization in ['SH', 'DH']:
+        return 'hh'
+    raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
 
+
+def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     import isce  # noqa
     from topsApp import TopsInSAR
     from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
     from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
 
-    lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
-    isce_dem = prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
+    for scene in [reference, secondary]:
+        scene_url = get_download_url(scene)
+        download_file(scene_url, chunk_size=5242880)
 
+    orbits = Path('Orbits').resolve()
+    orbits.mkdir(parents=True, exist_ok=True)
+
+    esa_username, esa_password = utils.get_esa_credentials()
+
+    reference_state_vec, reference_provider = downloadSentinelOrbitFile(
+        reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
+    )
+    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
+
+    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(
+        secondary, directory=str(orbits), esa_credentials=(esa_username, esa_password)
+    )
+    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
+
+    polarization = get_s1_primary_polarization(reference)
+    lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=str(orbits))
+
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
+
+    isce_dem = prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
     format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
 
     insar = TopsInSAR(name='topsApp', cmdline=['topsApp.xml', '--end=mergebursts'])
@@ -59,7 +84,7 @@ def process_sentinel1_with_isce2(parameter_info, reference, secondary, polarizat
     netcdf_file = generateAutoriftProduct(
             reference_path, secondary_path, nc_sensor='S1', optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+            parameter_file=parameter_file.replace('/vsicurl/', ''),
         )
     return netcdf_file
 
@@ -71,6 +96,7 @@ def generate_correction_data(
     esa_username: Optional[str] = None,
     esa_password: Optional[str] = None,
 ):
+    from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
     scene_path = Path(f'{scene}.zip')
     if not scene_path.exists():
         scene_url = get_download_url(scene)
@@ -88,7 +114,7 @@ def generate_correction_data(
     log.info(f'Downloaded orbit file {state_vec} from {oribit_provider}')
 
     polarization = get_s1_primary_polarization(scene)
-    lat_limits, lon_limits = bounding_box(f'{scene}.zip', polarization=polarization, orbits=orbits)
+    lat_limits, lon_limits = bounding_box(f'{scene}.zip', polarization=polarization, orbits=str(orbits))
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
@@ -205,6 +231,10 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         lat_limits: list containing the [minimum, maximum] latitudes
         lat_limits: list containing the [minimum, maximum] longitudes
     """
+    import isce  # noqa: F401
+    from contrib.geo_autoRIFT.geogrid import Geogrid
+    from isceobj.Orbit.Orbit import Orbit
+    from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
     frames = []
     for swath in range(1, 4):
         rdr = Sentinel1()
@@ -263,6 +293,10 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
 
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
+    import isce  # noqa: F401
+    import isceobj
+    from contrib.demUtils import createDemStitcher
+
     if isce_dem is None:
         seamstress = createDemStitcher()
         isce_dem = seamstress.defaultName([*lat_limits, *lon_limits])

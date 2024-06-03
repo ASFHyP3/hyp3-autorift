@@ -17,10 +17,7 @@ import botocore.exceptions
 import numpy as np
 import requests
 from hyp3lib.aws import upload_file_to_s3
-from hyp3lib.fetch import download_file
-from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.image import create_thumbnail
-from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal
 
@@ -205,15 +202,6 @@ def get_platform(scene: str) -> str:
         raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
-def get_s1_primary_polarization(granule_name):
-    polarization = granule_name[14:16]
-    if polarization in ['SV', 'DV']:
-        return 'vv'
-    if polarization in ['SH', 'DH']:
-        return 'hh'
-    raise ValueError(f'Cannot determine co-polarization of granule {granule_name}')
-
-
 def create_filtered_filepath(path: str) -> str:
     parent = (Path.cwd() / 'filtered').resolve()
     parent.mkdir(exist_ok=True)
@@ -349,8 +337,6 @@ def process(
     secondary: str,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
-    esa_username: Optional[str] = None,
-    esa_password: Optional[str] = None,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
@@ -363,49 +349,20 @@ def process(
     Returns:
         the autoRIFT product file, browse image, and thumbnail image
     """
-    orbits = None
-    polarization = None
     reference_path = None
     secondary_path = None
     reference_metadata = None
     secondary_metadata = None
     reference_zero_path = None
     secondary_zero_path = None
-    reference_state_vec = None
-    secondary_state_vec = None
-    lat_limits, lon_limits = None, None
 
     platform = get_platform(reference)
+
     if platform == 'S1':
-        from hyp3_autorift.s1_isce2 import bounding_box, process_sentinel1_with_isce2
+        from hyp3_autorift.s1_isce2 import process_sentinel1_with_isce2
+        netcdf_file = process_sentinel1_with_isce2(reference, secondary, parameter_file)
 
-        for scene in [reference, secondary]:
-            scene_url = get_download_url(scene)
-            download_file(scene_url, chunk_size=5242880)
-        orbits = Path('Orbits').resolve()
-        orbits.mkdir(parents=True, exist_ok=True)
-
-        if (esa_username is None) or (esa_password is None):
-            esa_username, esa_password = utils.get_esa_credentials()
-
-        reference_state_vec, reference_provider = downloadSentinelOrbitFile(
-            reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-        )
-        log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-        secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(
-            secondary, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-        )
-        log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
-
-        polarization = get_s1_primary_polarization(reference)
-        lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=orbits)
-
-        scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-        parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
-
-        netcdf_file = process_sentinel1_with_isce2(parameter_info, reference, secondary, polarization, orbits)
-
-    elif platform == 'S2':
+    else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
@@ -413,56 +370,48 @@ def process(
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
         os.environ['AWS_REGION'] = 'us-west-2'
 
-        reference_metadata = get_s2_metadata(reference)
-        secondary_metadata = get_s2_metadata(secondary)
-        reference_path = reference_metadata['path']
-        secondary_path = secondary_metadata['path']
-        bbox = reference_metadata['bbox']
-        lat_limits = (bbox[1], bbox[3])
-        lon_limits = (bbox[0], bbox[2])
+        if platform == 'S2':
+            reference_metadata = get_s2_metadata(reference)
+            reference_path = reference_metadata['path']
 
-    elif 'L' in platform:
-        # Set config and env for new CXX threads in Geogrid/autoRIFT
-        gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
-        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+            secondary_metadata = get_s2_metadata(secondary)
+            secondary_path = secondary_metadata['path']
 
-        gdal.SetConfigOption('AWS_REGION', 'us-west-2')
-        os.environ['AWS_REGION'] = 'us-west-2'
+        elif 'L' in platform:
+            # Set config and env for new CXX threads in Geogrid/autoRIFT
+            gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
+            os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-        gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
-        os.environ['AWS_REQUEST_PAYER'] = 'requester'
+            reference_metadata = get_lc2_metadata(reference)
+            reference_path = get_lc2_path(reference_metadata)
 
-        reference_metadata = get_lc2_metadata(reference)
-        reference_path = get_lc2_path(reference_metadata)
+            secondary_metadata = get_lc2_metadata(secondary)
+            secondary_path = get_lc2_path(secondary_metadata)
 
-        secondary_metadata = get_lc2_metadata(secondary)
-        secondary_path = get_lc2_path(secondary_metadata)
+            filter_platform = min([platform, get_platform(secondary)])
+            if filter_platform in ('L4', 'L5', 'L7'):
+                # Log path here before we transform it
+                log.info(f'Reference scene path: {reference_path}')
+                log.info(f'Secondary scene path: {secondary_path}')
+                reference_path, reference_zero_path, secondary_path, secondary_zero_path = \
+                    apply_landsat_filtering(reference_path, secondary_path)
 
-        filter_platform = min([platform, get_platform(secondary)])
-        if filter_platform in ('L4', 'L5', 'L7'):
-            # Log path here before we transform it
-            log.info(f'Reference scene path: {reference_path}')
-            log.info(f'Secondary scene path: {secondary_path}')
-            reference_path, reference_zero_path, secondary_path, secondary_zero_path = \
-                apply_landsat_filtering(reference_path, secondary_path)
+            if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
+                log.info('Reference and secondary projections are different! Reprojecting.')
 
-        if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
-            log.info('Reference and secondary projections are different! Reprojecting.')
+                # Reproject zero masks if necessary
+                if reference_zero_path and secondary_zero_path:
+                    _, _ = utils.ensure_same_projection(reference_zero_path, secondary_zero_path)
 
-            # Reproject zero masks if necessary
-            if reference_zero_path and secondary_zero_path:
-                _, _ = utils.ensure_same_projection(reference_zero_path, secondary_zero_path)
-
-            reference_path, secondary_path = utils.ensure_same_projection(reference_path, secondary_path)
+                reference_path, secondary_path = utils.ensure_same_projection(reference_path, secondary_path)
 
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
 
-    log.info(f'Reference scene path: {reference_path}')
-    log.info(f'Secondary scene path: {secondary_path}')
+        log.info(f'Reference scene path: {reference_path}')
+        log.info(f'Secondary scene path: {secondary_path}')
 
-    if 'L' in platform or platform == 'S2':
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
@@ -523,8 +472,6 @@ def main():
     parser.add_argument('--publish-bucket', default='',
                         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
                              'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.')
-    parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
-    parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location. '
                              'Path to shapefile must be understood by GDAL')

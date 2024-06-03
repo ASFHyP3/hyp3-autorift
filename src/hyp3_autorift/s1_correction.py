@@ -6,6 +6,7 @@ from hyp3lib.aws import upload_file_to_s3
 
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.s1_isce2 import generate_correction_data
+
 log = logging.getLogger(__name__)
 
 
