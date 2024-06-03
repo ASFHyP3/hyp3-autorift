@@ -24,7 +24,7 @@ Changes, as listed in `CHANGES.diff`, were done to:
   * use the full Sentinel-2 COG id in the output netCDF product filename to ensure unique names
 
 **Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
-We've replaced it  with `hyp3_autorift.utils.get_topsinsar_config`. 
+We've replaced it  with `hyp3_autorift.s1_isce2.get_topsinsar_config`. 
 
 ## Additional Patches
 
