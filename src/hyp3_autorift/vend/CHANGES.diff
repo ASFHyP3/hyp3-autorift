@@ -134,7 +134,7 @@
 -                    slave_filename = conts['slave_filename'][0]
 -                    master_dt = conts['master_dt'][0]
 -                    slave_dt = conts['slave_dt'][0]
-+                    from hyp3_autorift.utils import get_topsinsar_config
++                    from hyp3_autorift.s1_isce2 import get_topsinsar_config
 +                    conts = get_topsinsar_config()
 +                    master_filename = conts['reference_filename']
 +                    slave_filename = conts['secondary_filename']
