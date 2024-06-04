@@ -7,6 +7,10 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.17.0]
+## Changed
+* In preparation for a major update, the Sentinel-1 processing workflow has been isolated to a new `hyp3_autorift.s1_isce2` module. 
+
 ## [0.16.0]
 ### Fixed
 * `hyp3_autorift` will no longer attempt to crop files with no valid data
