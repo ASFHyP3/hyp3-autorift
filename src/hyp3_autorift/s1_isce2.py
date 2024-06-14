@@ -5,7 +5,6 @@ import sys
 import textwrap
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from hyp3lib.fetch import download_file
@@ -93,8 +92,6 @@ def generate_correction_data(
     scene: str,
     buffer: int = 0,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-    esa_username: Optional[str] = None,
-    esa_password: Optional[str] = None,
 ):
     from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
     scene_path = Path(f'{scene}.zip')
@@ -105,8 +102,7 @@ def generate_correction_data(
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
 
-    if (esa_username is None) or (esa_password is None):
-        esa_username, esa_password = get_esa_credentials()
+    esa_username, esa_password = get_esa_credentials()
 
     state_vec, oribit_provider = downloadSentinelOrbitFile(
         scene, directory=str(orbits), esa_credentials=(esa_username, esa_password)
