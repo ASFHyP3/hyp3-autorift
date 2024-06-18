@@ -1,15 +1,17 @@
 import copy
+import json
 import logging
 import os
 import sys
 import textwrap
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
+from netCDF4 import Dataset
 from osgeo import gdal
 
 from hyp3_autorift import geometry, utils
@@ -88,6 +90,164 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     return netcdf_file
 
 
+def write_conversion_file(*, file_name, srs, epsg, tran, x, y, M11, M12, dr_2_vr_factor, ChunkSize,
+                          NoDataValue=-32767) -> Path:
+
+    # FIXME: what else needs to be added to the nextCDF file
+    nc_outfile = Dataset(file_name, 'w', clobber=True, format='NETCDF4')
+
+    nc_outfile.setncattr('GDAL_AREA_OR_POINT', 'Area')
+    nc_outfile.setncattr('Conventions', 'CF-1.8')
+    nc_outfile.setncattr('date_created', datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+    nc_outfile.setncattr('title', 'autoRIFT S1 Corrections')
+    # nc_outfile.setncattr('autoRIFT_software_version', 'FIXME')
+    # nc_outfile.setncattr('autoRIFT_parameter_file', 'FIXME')
+
+    nc_outfile.createDimension('x', len(x))
+    nc_outfile.createDimension('y', len(y))
+
+    var = nc_outfile.createVariable('x', np.dtype('float64'), 'x', fill_value=None)
+    var.setncattr('standard_name', 'projection_x_coordinate')
+    var.setncattr('description', 'x coordinate of projection')
+    var.setncattr('units', 'm')
+    var[:] = x
+
+    var = nc_outfile.createVariable('y', np.dtype('float64'), 'y', fill_value=None)
+    var.setncattr('standard_name', 'projection_y_coordinate')
+    var.setncattr('description', 'y coordinate of projection')
+    var.setncattr('units', 'm')
+    var[:] = y
+
+    mapping_var_name = 'mapping'
+    var = nc_outfile.createVariable(mapping_var_name, 'U1', (), fill_value=None)
+    if srs.GetAttrValue('PROJECTION') == 'Polar_Stereographic':
+        var.setncattr('grid_mapping_name', 'polar_stereographic')
+        var.setncattr('straight_vertical_longitude_from_pole', srs.GetProjParm('central_meridian'))
+        var.setncattr('false_easting', srs.GetProjParm('false_easting'))
+        var.setncattr('false_northing', srs.GetProjParm('false_northing'))
+        var.setncattr('latitude_of_projection_origin', np.sign(srs.GetProjParm('latitude_of_origin')) * 90.0)
+        var.setncattr('latitude_of_origin', srs.GetProjParm('latitude_of_origin'))
+        var.setncattr('semi_major_axis', float(srs.GetAttrValue('GEOGCS|SPHEROID', 1)))
+        var.setncattr('scale_factor_at_projection_origin', 1)
+        var.setncattr('inverse_flattening', float(srs.GetAttrValue('GEOGCS|SPHEROID', 2)))
+        var.setncattr('spatial_ref', srs.ExportToWkt())
+        var.setncattr('crs_wkt', srs.ExportToWkt())
+        var.setncattr('proj4text', srs.ExportToProj4())
+        var.setncattr('spatial_epsg', epsg)
+        var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))
+
+    elif srs.GetAttrValue('PROJECTION') == 'Transverse_Mercator':
+        var.setncattr('grid_mapping_name', 'universal_transverse_mercator')
+        zone = epsg - np.floor(epsg / 100) * 100
+        var.setncattr('utm_zone_number', zone)
+        var.setncattr('longitude_of_central_meridian', srs.GetProjParm('central_meridian'))
+        var.setncattr('false_easting', srs.GetProjParm('false_easting'))
+        var.setncattr('false_northing', srs.GetProjParm('false_northing'))
+        var.setncattr('latitude_of_projection_origin', srs.GetProjParm('latitude_of_origin'))
+        var.setncattr('semi_major_axis', float(srs.GetAttrValue('GEOGCS|SPHEROID', 1)))
+        var.setncattr('scale_factor_at_central_meridian', srs.GetProjParm('scale_factor'))
+        var.setncattr('inverse_flattening', float(srs.GetAttrValue('GEOGCS|SPHEROID', 2)))
+        var.setncattr('spatial_ref', srs.ExportToWkt())
+        var.setncattr('crs_wkt', srs.ExportToWkt())
+        var.setncattr('proj4text', srs.ExportToProj4())
+        var.setncattr('spatial_epsg', epsg)
+        var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))
+    else:
+        raise Exception('Projection {0} not recognized for this program'.format(srs.GetAttrValue('PROJECTION')))
+
+    var = nc_outfile.createVariable('M11', np.dtype('float32'), ('y', 'x'), fill_value=NoDataValue,
+                                    zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name', 'conversion_matrix_element_11')
+    var.setncattr(
+        'description',
+        'conversion matrix element (1st row, 1st column) that can be multiplied with vx to give range pixel '
+        'displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)'
+    )
+    var.setncattr('units', 'pixel/(meter/year)')
+    var.setncattr('grid_mapping', mapping_var_name)
+    var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
+    var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
+                                                 'pixel displacement dr to slant range velocity vr')
+    var[:] = M11
+
+    var = nc_outfile.createVariable('M12', np.dtype('float32'), ('y', 'x'), fill_value=NoDataValue,
+                                    zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var.setncattr('standard_name', 'conversion_matrix_element_12')
+    var.setncattr(
+        'description',
+        'conversion matrix element (1st row, 2nd column) that can be multiplied with vy to give range pixel '
+        'displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)'
+    )
+    var.setncattr('units', 'pixel/(meter/year)')
+    var.setncattr('grid_mapping', mapping_var_name)
+    var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
+    var.setncattr('dr_to_vr_factor_description',
+                  'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
+    var[:] = M12
+
+    return Path(nc_outfile.filepath())
+
+
+def create_conversion_matrices(
+        *,
+        scene: str,
+        grid_location: str = 'window_location.tif',
+        search_range: str = 'window_search_range.tif',
+        offset2vx: str = 'window_rdr_off2vel_x_vec.tif',
+        offset2vy: str = 'window_rdr_off2vel_y_vec.tif',
+        scale_factor: str = 'window_scale_factor.tif',
+        epsg: int = 4326,
+        **kwargs,  # noqa: consume kwargs we don't care about for convenience
+) -> Path:
+    xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
+    yGrid, _, _, _, _ = utils.load_geospatial(grid_location, band=2)
+
+    offset2vy_1, _, _, _, _ = utils.load_geospatial(offset2vy, band=1)
+    offset2vy_1[offset2vy_1 == nodata] = np.nan
+
+    offset2vy_2, _, _, _, _ = utils.load_geospatial(offset2vy, band=2)
+    offset2vy_2[offset2vy_2 == nodata] = np.nan
+
+    offset2vx_1, _, _, _, _ = utils.load_geospatial(offset2vx, band=1)
+    offset2vx_1[offset2vx_1 == nodata] = np.nan
+
+    offset2vx_2, _, _, _, _ = utils.load_geospatial(offset2vx, band=2)
+    offset2vx_2[offset2vx_2 == nodata] = np.nan
+
+    offset2vr, _, _, _, _ = utils.load_geospatial(offset2vx, band=3)
+    offset2vr[offset2vr == nodata] = np.nan
+
+    scale_factor_1, _, _, _, _ = utils.load_geospatial(scale_factor, band=1)
+    scale_factor_1[scale_factor_1 == nodata] = np.nan
+
+    scale_factor_2, _, _, _, _ = utils.load_geospatial(scale_factor, band=2)
+    scale_factor_2[scale_factor_2 == nodata] = np.nan
+
+    SRx0, _, _, _, _ = utils.load_geospatial(search_range, band=1)
+    SRx0 = SRx0.astype('float32')
+    SRx0[SRx0 == nodata] = np.nan
+
+    dimidY, dimidX = xGrid.shape
+
+    y = np.arange(tran[3], tran[3] + tran[5] * dimidY, tran[5])
+    x = np.arange(tran[0], tran[0] + tran[1] * dimidX, tran[1])
+
+    M11 = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) / scale_factor_1
+    M12 = -offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) / scale_factor_1
+
+    dr_2_vr_factor = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))])
+
+    chunk_lines = np.min([np.ceil(8192 / dimidY) * 128, dimidY])
+    ChunkSize = [chunk_lines, dimidX]
+
+    conversion_nc = write_conversion_file(
+        file_name=f'{scene}_conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
+        dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize
+    )
+
+    return conversion_nc
+
+
 def generate_correction_data(
     scene: str,
     buffer: int = 0,
@@ -127,7 +287,9 @@ def generate_correction_data(
 
     geogrid_info = runGeogrid(reference_meta, secondary_meta, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-    return geogrid_info
+    conversion_nc = create_conversion_matrices(scene=scene, epsg=parameter_info['epsg'], **parameter_info['autorift'])
+
+    return geogrid_info, conversion_nc
 
 
 class SysArgvManager:

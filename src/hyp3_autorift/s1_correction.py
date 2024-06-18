@@ -23,8 +23,9 @@ def main():
     parser.add_argument('granule', help='Reference granule to process')
     args = parser.parse_args()
 
-    _ = generate_correction_data(args.granule, buffer=args.buffer)
+    _, conversion_nc = generate_correction_data(args.granule, buffer=args.buffer)
 
     if args.bucket:
+        upload_file_to_s3(conversion_nc, args.bucket, args.bucket_prefix)
         for geotiff in Path.cwd().glob('*.tif'):
             upload_file_to_s3(geotiff, args.bucket, args.bucket_prefix)
