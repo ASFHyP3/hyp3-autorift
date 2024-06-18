@@ -1,5 +1,4 @@
 import copy
-import json
 import logging
 import os
 import sys
@@ -90,8 +89,8 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     return netcdf_file
 
 
-def write_conversion_file(*, file_name, srs, epsg, tran, x, y, M11, M12, dr_2_vr_factor, ChunkSize,
-                          NoDataValue=-32767) -> Path:
+def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr_2_vr_factor, ChunkSize,
+                          NoDataValue=-32767) -> str:
 
     # FIXME: what else needs to be added to the nextCDF file
     nc_outfile = Dataset(file_name, 'w', clobber=True, format='NETCDF4')
@@ -185,7 +184,7 @@ def write_conversion_file(*, file_name, srs, epsg, tran, x, y, M11, M12, dr_2_vr
                   'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
     var[:] = M12
 
-    return Path(nc_outfile.filepath())
+    return file_name
 
 
 def create_conversion_matrices(
@@ -198,7 +197,7 @@ def create_conversion_matrices(
         scale_factor: str = 'window_scale_factor.tif',
         epsg: int = 4326,
         **kwargs,  # noqa: consume kwargs we don't care about for convenience
-) -> Path:
+) -> str:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
     yGrid, _, _, _, _ = utils.load_geospatial(grid_location, band=2)
 
@@ -252,7 +251,7 @@ def generate_correction_data(
     scene: str,
     buffer: int = 0,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-):
+) -> (dict, str):
     from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
     scene_path = Path(f'{scene}.zip')
     if not scene_path.exists():
