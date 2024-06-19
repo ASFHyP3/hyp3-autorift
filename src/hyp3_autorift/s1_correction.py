@@ -16,8 +16,6 @@ def main():
     )
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--esa-username', default=None, help="Username for ESA's Copernicus Data Space Ecosystem")
-    parser.add_argument('--esa-password', default=None, help="Password for ESA's Copernicus Data Space Ecosystem")
     parser.add_argument('--buffer', type=int, default=0, help='Number of pixels to buffer each edge of the input scene')
     parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
                         help='Shapefile for determining the correct search parameters by geographic location. '
@@ -25,8 +23,9 @@ def main():
     parser.add_argument('granule', help='Reference granule to process')
     args = parser.parse_args()
 
-    _ = generate_correction_data(args.granule, buffer=args.buffer)
+    _, conversion_nc = generate_correction_data(args.granule, buffer=args.buffer)
 
     if args.bucket:
+        upload_file_to_s3(conversion_nc, args.bucket, args.bucket_prefix)
         for geotiff in Path.cwd().glob('*.tif'):
             upload_file_to_s3(geotiff, args.bucket, args.bucket_prefix)

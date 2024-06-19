@@ -125,10 +125,13 @@ def load_geospatial(infile: str, band: int = 1):
 
     data = ds.GetRasterBand(band).ReadAsArray()
     nodata = ds.GetRasterBand(band).GetNoDataValue()
-    projection = ds.GetProjection()
+
     transform = ds.GetGeoTransform()
+    projection = ds.GetProjection()
+    srs = ds.GetSpatialRef()
+
     del ds
-    return data, transform, projection, nodata
+    return data, transform, projection, srs, nodata
 
 
 def write_geospatial(outfile: str, data, transform, projection, nodata,
