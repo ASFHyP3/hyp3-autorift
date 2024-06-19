@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import textwrap
+from typing import List
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
-from osgeo import gdal
+from osgeo import gdal, osr
 
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
@@ -90,8 +91,21 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     return netcdf_file
 
 
-def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr_2_vr_factor, ChunkSize,
-                          NoDataValue=np.nan, parameter_file: str) -> str:
+def write_conversion_file(
+        *,
+        file_name: str,
+        srs: osr.SpatialReference,
+        epsg: int,
+        tran: List[float],
+        x: np.ndarray,
+        y: np.ndarray,
+        M11: np.ndarray,
+        M12: np.ndarray,
+        dr_2_vr_factor: float,
+        ChunkSize: List[int],
+        NoDataValue=np.nan,
+        parameter_file: str
+) -> str:
 
     nc_outfile = Dataset(file_name, 'w', clobber=True, format='NETCDF4')
 
@@ -154,7 +168,7 @@ def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr
     else:
         raise Exception('Projection {0} not recognized for this program'.format(srs.GetAttrValue('PROJECTION')))
 
-    var = nc_outfile.createVariable('M11', np.dtype('float32'), ('y', 'x'), fill_value=NoDataValue,
+    var = nc_outfile.createVariable('M11', np.dtype('float64'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'conversion_matrix_element_11')
     var.setncattr(
@@ -169,7 +183,7 @@ def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr
                                                  'pixel displacement dr to slant range velocity vr')
     var[:] = M11
 
-    var = nc_outfile.createVariable('M12', np.dtype('float32'), ('y', 'x'), fill_value=NoDataValue,
+    var = nc_outfile.createVariable('M12', np.dtype('float64'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'conversion_matrix_element_12')
     var.setncattr(
@@ -224,7 +238,7 @@ def create_conversion_matrices(
     scale_factor_2[scale_factor_2 == nodata] = np.nan
 
     SRx0, _, _, _, _ = utils.load_geospatial(search_range, band=1)
-    SRx0 = SRx0.astype('float32')
+    SRx0 = SRx0.astype('float64')
     SRx0[SRx0 == nodata] = np.nan
 
     dimidY, dimidX = xGrid.shape
