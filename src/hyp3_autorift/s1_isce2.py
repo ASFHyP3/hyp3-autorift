@@ -286,6 +286,10 @@ def generate_correction_data(
 
     geogrid_info = runGeogrid(reference_meta, secondary_meta, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
+    # NOTE: After Geogrid is run, all drivers are no longer registered.
+    #       I've got no idea why, or if there are other affects...
+    gdal.AllRegister()
+
     conversion_nc = create_conversion_matrices(scene=scene, epsg=parameter_info['epsg'], **parameter_info['autorift'])
 
     return geogrid_info, conversion_nc
