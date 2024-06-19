@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
+from autoRIFT import __version__ as version
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
@@ -90,7 +91,7 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
 
 
 def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr_2_vr_factor, ChunkSize,
-                          NoDataValue=-32767) -> str:
+                          NoDataValue=np.nan, parameter_file: str) -> str:
 
     # FIXME: what else needs to be added to the netCDF file
     nc_outfile = Dataset(file_name, 'w', clobber=True, format='NETCDF4')
@@ -99,8 +100,8 @@ def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr
     nc_outfile.setncattr('Conventions', 'CF-1.8')
     nc_outfile.setncattr('date_created', datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', 'autoRIFT S1 Corrections')
-    # nc_outfile.setncattr('autoRIFT_software_version', 'FIXME')
-    # nc_outfile.setncattr('autoRIFT_parameter_file', 'FIXME')
+    nc_outfile.setncattr('autoRIFT_software_version', version)
+    nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
 
     nc_outfile.createDimension('x', len(x))
     nc_outfile.createDimension('y', len(y))
@@ -196,6 +197,7 @@ def create_conversion_matrices(
         offset2vy: str = 'window_rdr_off2vel_y_vec.tif',
         scale_factor: str = 'window_scale_factor.tif',
         epsg: int = 4326,
+        parameter_file: str = DEFAULT_PARAMETER_FILE,
         **kwargs,  # noqa: consume kwargs we don't care about for convenience
 ) -> str:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
@@ -241,7 +243,7 @@ def create_conversion_matrices(
 
     conversion_nc = write_conversion_file(
         file_name=f'{scene}_conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
-        dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize
+        dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, parameter_file=parameter_file,
     )
 
     return conversion_nc
@@ -290,7 +292,9 @@ def generate_correction_data(
     #       I've got no idea why, or if there are other affects...
     gdal.AllRegister()
 
-    conversion_nc = create_conversion_matrices(scene=scene, epsg=parameter_info['epsg'], **parameter_info['autorift'])
+    conversion_nc = create_conversion_matrices(
+        scene=scene, epsg=parameter_info['epsg'], parameter_file=parameter_file, **parameter_info['autorift']
+    )
 
     return geogrid_info, conversion_nc
 
