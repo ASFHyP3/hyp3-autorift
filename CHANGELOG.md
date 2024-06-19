@@ -7,7 +7,7 @@ and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [ 0.18.0]
+## [0.18.0]
 ### Added
 * The Sentinel-1 correction workflow will now calculate and write the M11/M12 conversion matrices to a netCDF file.
 
