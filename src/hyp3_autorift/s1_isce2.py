@@ -166,7 +166,7 @@ def write_conversion_file(
         var.setncattr('spatial_epsg', epsg)
         var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))
     else:
-        raise Exception('Projection {0} not recognized for this program'.format(srs.GetAttrValue('PROJECTION')))
+        raise Exception(f'Projection {srs.GetAttrValue('PROJECTION')} not recognized for this program')
 
     var = nc_outfile.createVariable('M11', np.dtype('float64'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
@@ -211,7 +211,7 @@ def create_conversion_matrices(
         scale_factor: str = 'window_scale_factor.tif',
         epsg: int = 4326,
         parameter_file: str = DEFAULT_PARAMETER_FILE,
-        **kwargs,  # noqa: consume kwargs we don't care about for convenience
+        **kwargs,
 ) -> str:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
     yGrid, _, _, _, _ = utils.load_geospatial(grid_location, band=2)
@@ -302,7 +302,7 @@ def generate_correction_data(
     geogrid_info = runGeogrid(reference_meta, secondary_meta, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     # NOTE: After Geogrid is run, all drivers are no longer registered.
-    #       I've got no idea why, or if there are other affects...
+    #       I've got no idea why, or if there are other effects...
     gdal.AllRegister()
 
     conversion_nc = create_conversion_matrices(
