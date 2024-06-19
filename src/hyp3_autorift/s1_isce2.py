@@ -3,8 +3,8 @@ import logging
 import os
 import sys
 import textwrap
-from typing import List
 from datetime import datetime, timedelta
+from typing import List
 from pathlib import Path
 
 import numpy as np
