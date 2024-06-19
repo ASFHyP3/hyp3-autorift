@@ -93,7 +93,6 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
 def write_conversion_file(*, file_name: str, srs, epsg, tran, x, y, M11, M12, dr_2_vr_factor, ChunkSize,
                           NoDataValue=np.nan, parameter_file: str) -> str:
 
-    # FIXME: what else needs to be added to the netCDF file
     nc_outfile = Dataset(file_name, 'w', clobber=True, format='NETCDF4')
 
     nc_outfile.setncattr('GDAL_AREA_OR_POINT', 'Area')
