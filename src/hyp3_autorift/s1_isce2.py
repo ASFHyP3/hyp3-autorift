@@ -166,7 +166,7 @@ def write_conversion_file(
         var.setncattr('spatial_epsg', epsg)
         var.setncattr('GeoTransform', ' '.join(str(x) for x in tran))
     else:
-        raise Exception(f'Projection {srs.GetAttrValue('PROJECTION')} not recognized for this program')
+        raise Exception(f'Projection {srs.GetAttrValue("PROJECTION")} not recognized for this program')
 
     var = nc_outfile.createVariable('M11', np.dtype('float64'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
