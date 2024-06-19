@@ -4,8 +4,8 @@ import os
 import sys
 import textwrap
 from datetime import datetime, timedelta
-from typing import List
 from pathlib import Path
+from typing import List
 
 import numpy as np
 from autoRIFT import __version__ as version
