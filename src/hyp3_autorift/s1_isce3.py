@@ -183,7 +183,9 @@ def get_burst_ids(safe, burst_granule, orbit_file):
     swath_number = int(swath[2])
     pol = burst_granule.split('_')[4]
     bursts = s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
-    str_burst_ids = ', '.join(['t'+str(int(x.burst_id.track_number)).zfill(3)+'_'+str(x.burst_id.esa_burst_id).zfill(6)+'_'+x.burst_id.subswath.lower() for x in bursts])
+    str_burst_ids = ', '.join(['t'+str(int(x.burst_id.track_number)).zfill(3)
+                               +'_'+str(x.burst_id.esa_burst_id).zfill(6)+'_'
+                               +x.burst_id.subswath.lower() for x in bursts])
 
     return str_burst_ids
 
