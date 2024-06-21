@@ -9,18 +9,19 @@ from platform import system
 from typing import Tuple
 
 import asf_search
-import hyp3_autorift
 import numpy as np
 import rasterio
 import s1reader
 from dem_stitcher import stitch_dem
+from hyp3lib.get_orb import downloadSentinelOrbitFile
+from s1reader import s1_info
+
+import hyp3_autorift
 from hyp3_autorift import geometry, process, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata
 from hyp3_autorift.vend.testGeogridOptical import runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
-from hyp3lib.get_orb import downloadSentinelOrbitFile
-from s1reader import s1_info
 
 
 ESA_HOST = 'dataspace.copernicus.eu'
