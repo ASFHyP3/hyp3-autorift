@@ -114,6 +114,8 @@ def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
         info.time = s2_name.split('_')[2]
     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
         info.time = DS.GetDescription().split('_')[2]
+    elif re.findall("GS1",DS.GetDescription()).__len__() > 0:
+        info.time = DS.GetDescription().split('_')[5]
     else:
         raise Exception('Optical data NOT supported yet!')
 
@@ -140,6 +142,8 @@ def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
         info1.time = s2_name.split('_')[2]
     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
         info1.time = DS1.GetDescription().split('_')[2]
+    elif re.findall("GS1",DS1.GetDescription()).__len__() > 0:
+        info1.time = DS1.GetDescription().split('_')[5]
     else:
         raise Exception('Optical data NOT supported yet!')
 
@@ -166,8 +170,8 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     obj.YSize = info.YSize
     from datetime import date
     import numpy as np
-    d0 = date(np.int(info.time[0:4]),np.int(info.time[4:6]),np.int(info.time[6:8]))
-    d1 = date(np.int(info1.time[0:4]),np.int(info1.time[4:6]),np.int(info1.time[6:8]))
+    d0 = date(int(info.time[0:4]),int(info.time[4:6]),int(info.time[6:8]))
+    d1 = date(int(info1.time[0:4]),int(info1.time[4:6]),int(info1.time[6:8]))
     date_dt_base = d1 - d0
     obj.repeatTime = date_dt_base.total_seconds()
 #    obj.repeatTime = (info1.time - info.time) * 24.0 * 3600.0
