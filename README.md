@@ -19,20 +19,29 @@ The HyP3-autoRIFT plugin provides a set of workflows for feature tracking proces
    mamba env create -f environment.yml
    mamba activate hyp3-autorift
    ```
-4. Finally, install a development version of HyP3 autoRIFT
+4. Install a development version of HyP3 autoRIFT
    ```bash
    python -m pip install -e .
+   ```
+5. Finally, clone the `rtc` and `s1reader` repositories and install them
+   ```bash
+   git clone https://github.com/opera-adt/s1-reader.git
+   python -m pip install ./s1-reader
+   
+   git clone https://github.com/opera-adt/RTC.git
+   python -m pip install ./RTC
    ```
 
 ## Usage
 
 The HyP3-autoRIFT plugin provides workflows (accessible directly in Python or via a CLI) that can be used to process SAR  data or optical data using autoRIFT. HyP3-autoRIFT can process these satellite missions:
 * SAR:
-  * Sentinel-1
+  * Sentinel-1 (burst)
 * Optical:
   * Sentinel-2
   * Landsat 4,5,7,8,9 
-  
+> [!IMPORTANT]
+> The Sentinel-1 processing does not run with SLCs only bursts
 To see all available workflows, run:
 ```
 python -m hyp3_autorift ++help
