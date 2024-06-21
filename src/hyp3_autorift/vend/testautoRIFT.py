@@ -409,7 +409,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     import cv2
     kernel = np.ones((3,3),np.uint8)
     noDataMask = cv2.dilate(noDataMask.astype(np.uint8),kernel,iterations = 1)
-    noDataMask = noDataMask.astype(np.bool)
+    noDataMask = noDataMask.astype(bool)
 
 
     return obj.Dx, obj.Dy, obj.InterpMask, obj.ChipSizeX, obj.GridSpacingX, obj.ScaleChipSizeY, obj.SearchLimitX, obj.SearchLimitY, obj.origSize, noDataMask
@@ -539,7 +539,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
         # FIXME: Filter width is a magic variable here and not exposed well.
         preprocessing_filter_width = 5
-        if nc_sensor == 'S1':
+        if nc_sensor == 'S1' or nc_sensor=='GS1':
             preprocessing_filter_width = 21
 
         print(f'Preprocessing filter width {preprocessing_filter_width}')
@@ -1135,7 +1135,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         parameter_file=kwargs['parameter_file'],
                     )
 
-                elif nc_sensor is None:
+                elif nc_sensor is None  or nc_sensor=='GS1':
                     print('netCDF packaging not performed')
 
                 else:
