@@ -42,5 +42,5 @@ dependencies:
   - tifffile>=2024.0.0
   - asf_search
   - dateparser!=1.1.0
-  - dem-sticher
+  - dem_stitcher
   - burst2safe #get the develop version so it doesn't look for iw2
