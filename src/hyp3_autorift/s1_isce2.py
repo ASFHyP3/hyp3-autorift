@@ -103,7 +103,8 @@ def write_conversion_file(
         M12: np.ndarray,
         dr_2_vr_factor: float,
         ChunkSize: List[int],
-        NoDataValue=np.nan,
+        NoDataValue: int = -32767,
+        noDataMask: np.ndarray,
         parameter_file: str
 ) -> str:
 
@@ -168,7 +169,7 @@ def write_conversion_file(
     else:
         raise Exception(f'Projection {srs.GetAttrValue("PROJECTION")} not recognized for this program')
 
-    var = nc_outfile.createVariable('M11', np.dtype('float64'), ('y', 'x'), fill_value=NoDataValue,
+    var = nc_outfile.createVariable('M11', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'conversion_matrix_element_11')
     var.setncattr(
@@ -181,9 +182,20 @@ def write_conversion_file(
     var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
     var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
                                                  'pixel displacement dr to slant range velocity vr')
+
+    x1 = np.nanmin(M11[:])
+    x2 = np.nanmax(M11[:])
+    y1 = -50
+    y2 = 50
+
+    C = [(y2 - y1) / (x2 - x1), y1 - x1 * (y2 - y1) / (x2 - x1)]
+    var.setncattr('scale_factor', np.float32(1 / C[0]))
+    var.setncattr('add_offset', np.float32(-C[1] / C[0]))
+
+    M11[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
     var[:] = M11
 
-    var = nc_outfile.createVariable('M12', np.dtype('float64'), ('y', 'x'), fill_value=NoDataValue,
+    var = nc_outfile.createVariable('M12', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'conversion_matrix_element_12')
     var.setncattr(
@@ -196,6 +208,17 @@ def write_conversion_file(
     var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
     var.setncattr('dr_to_vr_factor_description',
                   'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
+
+    x1 = np.nanmin(M12[:])
+    x2 = np.nanmax(M12[:])
+    y1 = -50
+    y2 = 50
+
+    C = [(y2 - y1) / (x2 - x1), y1 - x1 * (y2 - y1) / (x2 - x1)]
+    var.setncattr('scale_factor', np.float32(1 / C[0]))
+    var.setncattr('add_offset', np.float32(-C[1] / C[0]))
+
+    M12[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
     var[:] = M12
 
     return file_name
@@ -205,7 +228,6 @@ def create_conversion_matrices(
         *,
         scene: str,
         grid_location: str = 'window_location.tif',
-        search_range: str = 'window_search_range.tif',
         offset2vx: str = 'window_rdr_off2vel_x_vec.tif',
         offset2vy: str = 'window_rdr_off2vel_y_vec.tif',
         scale_factor: str = 'window_scale_factor.tif',
@@ -214,7 +236,6 @@ def create_conversion_matrices(
         **kwargs,
 ) -> str:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
-    yGrid, _, _, _, _ = utils.load_geospatial(grid_location, band=2)
 
     offset2vy_1, _, _, _, _ = utils.load_geospatial(offset2vy, band=1)
     offset2vy_1[offset2vy_1 == nodata] = np.nan
@@ -234,29 +255,23 @@ def create_conversion_matrices(
     scale_factor_1, _, _, _, _ = utils.load_geospatial(scale_factor, band=1)
     scale_factor_1[scale_factor_1 == nodata] = np.nan
 
-    scale_factor_2, _, _, _, _ = utils.load_geospatial(scale_factor, band=2)
-    scale_factor_2[scale_factor_2 == nodata] = np.nan
-
-    SRx0, _, _, _, _ = utils.load_geospatial(search_range, band=1)
-    SRx0 = SRx0.astype('float64')
-    SRx0[SRx0 == nodata] = np.nan
-
     dimidY, dimidX = xGrid.shape
+    noDataMask = xGrid == nodata
 
     y = np.arange(tran[3], tran[3] + tran[5] * dimidY, tran[5])
     x = np.arange(tran[0], tran[0] + tran[1] * dimidX, tran[1])
+
+    chunk_lines = np.min([np.ceil(8192 / dimidY) * 128, dimidY])
+    ChunkSize = [chunk_lines, dimidX]
 
     M11 = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) / scale_factor_1
     M12 = -offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) / scale_factor_1
 
     dr_2_vr_factor = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))])
 
-    chunk_lines = np.min([np.ceil(8192 / dimidY) * 128, dimidY])
-    ChunkSize = [chunk_lines, dimidX]
-
     conversion_nc = write_conversion_file(
         file_name=f'{scene}_conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
-        dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, parameter_file=parameter_file,
+        dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, noDataMask=noDataMask, parameter_file=parameter_file,
     )
 
     return conversion_nc
