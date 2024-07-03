@@ -36,22 +36,7 @@ import numpy as np
 import pyproj
 import xarray as xr
 
-
-ENCODING_TEMPLATE = {
-        'interp_mask':      {'_FillValue': 0.0, 'dtype': 'ubyte', "zlib": True, "complevel": 2, "shuffle": True},
-        'chip_size_height': {'_FillValue': 0.0, 'dtype': 'ushort', "zlib": True, "complevel": 2, "shuffle": True},
-        'chip_size_width':  {'_FillValue': 0.0, 'dtype': 'ushort', "zlib": True, "complevel": 2, "shuffle": True},
-        'M11': {'_FillValue': -32767, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'M12': {'_FillValue': -32767, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'v':                {'_FillValue': -32767.0, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'vx':               {'_FillValue': -32767.0, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'vy':               {'_FillValue': -32767.0, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'v_error': {'_FillValue': -32767.0, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'va': {'_FillValue': -32767.0, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'vr': {'_FillValue': -32767.0, 'dtype': 'short', "zlib": True, "complevel": 2, "shuffle": True},
-        'x':                {'_FillValue': None},
-        'y':                {'_FillValue': None}
-    }
+ENCODING_ATTRS = ['_FillValue', 'dtype', "zlib", "complevel", "shuffle", 'add_offset', 'scale_factor']
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
@@ -114,10 +99,12 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         chunk_lines = np.min([np.ceil(8192 / dims['y']) * 128, dims['y']])
         two_dim_chunks_settings = (chunk_lines, dims['x'])
 
-        encoding = ENCODING_TEMPLATE.copy()
-        if not netcdf_file.name.startswith('S1'):
-            for radar_variable in ['M11', 'M12', 'va', 'vr']:
-                del encoding[radar_variable]
+        encoding = {}
+        for variable in ds.data_vars.keys():
+            if variable in ['img_pair_info', 'mapping']:
+                continue
+            attributes = {attr: ds[variable].encoding[attr] for attr in ENCODING_ATTRS if attr in ds[variable].encoding}
+            encoding[variable] = attributes
 
         for _, attributes in encoding.items():
             if attributes['_FillValue'] is not None:
