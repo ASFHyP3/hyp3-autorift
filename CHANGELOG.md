@@ -9,6 +9,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.18.0]
 ### Added
 * The Sentinel-1 correction workflow will now calculate and write the M11/M12 conversion matrices to a netCDF file.
+
+### Fixed
+* `hyp3_autorift.crop` will now preserve the `add_offset` and `scale_factor` encoding attributes for all variables, and in particular, for the M11/M12 conversion matrices. 
+
 ### Removed
 * Support for Python 3.8 has been dropped.
 
