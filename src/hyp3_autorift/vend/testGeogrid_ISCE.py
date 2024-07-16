@@ -85,8 +85,8 @@ def loadProduct(xmlname):
     '''
     Load the product using Product Manager.
     '''
-    import isce
-    from iscesys.Component.ProductManager import ProductManager as PM
+    #import isce
+    #from iscesys.Component.ProductManager import ProductManager as PM
 
     pm = PM()
     pm.configure()
@@ -96,59 +96,83 @@ def loadProduct(xmlname):
     return obj
 
 
-def getMergedOrbit(product):
-    import isce
-    from isceobj.Orbit.Orbit import Orbit
+def getMergedOrbit(safe,orbit_path,swath):
+    #import isce
+    #from isceobj.Orbit.Orbit import Orbit
+    from isce3.core import Orbit
+    from s1reader.s1_reader import load_bursts
 
     ###Create merged orbit
-    orb = Orbit()
-    orb.configure()
+    #orb = Orbit()
 
-    burst = product[0].bursts[0]
+    bursts = load_bursts(safe,orbit_path,swath)
+    burst = bursts[0]
+    #print(dir(burst.orbit))
+    #orb = Orbit(burst.orbit.getStateVectors())
+    #svs = []
     #Add first burst orbit to begin with
-    for sv in burst.orbit:
-        orb.addStateVector(sv)
+    #for sv in burst.orbit.getStateVectors():
+    #    svs.append(sv)
 
 
-    for pp in product:
+    #for pp in product:
         ##Add all state vectors
-        for bb in pp.bursts:
-            for sv in bb.orbit:
-                if (sv.time< orb.minTime) or (sv.time > orb.maxTime):
-                    orb.addStateVector(sv)
+    #    for bb in pp.bursts:
+    #        for sv in bb.orbit:
+    #            if (sv.time< orb.minTime) or (sv.time > orb.maxTime):
+    #                orb.addStateVector(sv)
 
-    return orb
+    return burst.orbit
 
 
-def loadMetadata(indir,buffer=0):
+def loadMetadata(safe,orbit_path,swath,buffer=0):
     '''
     Input file.
     '''
     import os
     import numpy as np
+    from datetime import datetime, timedelta
+    from s1reader import load_bursts
+    import isce3
 
-    frames = []
-    for swath in range(1,4):
-        inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
-        if os.path.exists(inxml):
-            ifg = loadProduct(inxml)
-            frames.append(ifg)
+    #frames = []
+    #for swath in range(2,3):
+    #    inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
+    #    if os.path.exists(inxml):
+    #        ifg = loadProduct(inxml)
+    #        frames.append(ifg)
+    bursts = load_bursts(safe,orbit_path,swath)
+    
+    for bur in bursts:
+        if int(bur.burst_id.subswath[2])==swath:
+            burst = bur
 
     info = Dummy()
-    info.sensingStart = min([x.sensingStart for x in frames])
-    info.sensingStop = max([x.sensingStop for x in frames])
-    info.startingRange = min([x.startingRange for x in frames])
-    info.farRange = max([x.farRange for x in frames])
-    info.prf = 1.0 / frames[0].bursts[0].azimuthTimeInterval
-    info.rangePixelSize = frames[0].bursts[0].rangePixelSize
-    info.lookSide = -1
+    #info.sensingStart = min([x.sensingStart for x in frames])
+    
+    info.prf = 1 / burst.azimuth_time_interval
+    info.startingRange = burst.starting_range
+    info.rangePixelSize = burst.range_pixel_spacing
+    info.wavelength = burst.wavelength
+    length, width = burst.shape
+    info.sensingStart = burst.sensing_start
+    info.aztime = float((isce3.core.DateTime(burst.sensing_start)-burst.orbit.reference_epoch).total_seconds())
+    #print('aztime',float(info.aztime))
+    info.sensingStop = (info.sensingStart + timedelta(seconds=(length-1.0)/info.prf))
+    info.orbitname = orbit_path
+    info.farRange = info.startingRange + (width-1.0)*info.rangePixelSize
+    
+    info.lookSide = isce3.core.LookSide.Right
         
     info.startingRange -= buffer * info.rangePixelSize
     info.farRange += buffer * info.rangePixelSize
     
     info.numberOfLines = int( np.round( (info.sensingStop - info.sensingStart).total_seconds() * info.prf)) + 1
     info.numberOfSamples = int( np.round( (info.farRange - info.startingRange)/info.rangePixelSize)) + 1  + 2 * buffer
-    info.orbit = getMergedOrbit(frames)
+    print(length,width)
+    print(info.numberOfLines,info.numberOfSamples)
+    
+    info.orbit = getMergedOrbit(safe,orbit_path,swath)
 
     return info
 
@@ -170,8 +194,8 @@ def loadParsedata(indir, orbit_dir, aux_dir, buffer=0):
     '''
     import os
     import numpy as np
-    import isce
-    from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
+    #import isce
+    #from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
     
 
     frames = []
@@ -217,8 +241,8 @@ def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
     import struct
     import re
 
-    import isce
-    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
+    #import isce
+    from geo_autoRIFT.geogrid import GeogridOptical
 #    from geogrid import GeogridOptical
 
     obj = GeogridOptical()
@@ -284,20 +308,23 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     Wire and run geogrid.
     '''
 
-    import isce
-    from components.contrib.geo_autoRIFT.geogrid import Geogrid
+    #import isce
+    from hyp3_autorift.vend.geo_autoRIFT.geogrid import Geogrid
 #    from geogrid import Geogrid
 
     from osgeo import gdal
     dem_info = gdal.Info(dem, format='json')
 
     obj = Geogrid()
-    obj.configure()
 
     obj.startingRange = info.startingRange
     obj.rangePixelSize = info.rangePixelSize
     obj.sensingStart = info.sensingStart
+    obj.sensingStop = info.sensingStop
+    obj.orbitname = info.orbitname
     obj.prf = info.prf
+    obj.aztime = info.aztime
+    obj.wavelength = info.wavelength
     obj.lookSide = info.lookSide
     obj.repeatTime = (info1.sensingStart - info.sensingStart).total_seconds()
     obj.numberOfLines = info.numberOfLines
@@ -364,8 +391,8 @@ def runGeogridOptical(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, cs
     Wire and run geogrid.
     '''
 
-    import isce
-    from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
+    #import isce
+    from geo_autoRIFT.geogrid import GeogridOptical
 #    from geogrid import GeogridOptical
 
     from osgeo import gdal

@@ -181,6 +181,8 @@ def least_precise_orbit_of(orbits):
 
 
 def get_datetime(scene_name):
+    if 'BURST' in scene_name:
+        return datetime.strptime(scene_name[14:29], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S1'):
         return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S2') and len(scene_name) > 25:  # ESA
@@ -194,6 +196,8 @@ def get_datetime(scene_name):
 
 
 def get_platform(scene: str) -> str:
+    if 'BURST' in scene:
+        return 'GS1'
     if scene.startswith('S1') or scene.startswith('S2'):
         return scene[0:2]
     elif scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
@@ -242,7 +246,7 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
 
 def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
-    image_array, image_transform, image_projection, _, image_nodata = utils.load_geospatial(image_path)
+    image_array, image_transform, image_projection, image_nodata = utils.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
@@ -361,7 +365,9 @@ def process(
     if platform == 'S1':
         from hyp3_autorift.s1_isce2 import process_sentinel1_with_isce2
         netcdf_file = process_sentinel1_with_isce2(reference, secondary, parameter_file)
-
+    elif platform == 'GS1':
+        from hyp3_autorift.s1_isce3 import process_burst_sentinel1_with_isce3_radar
+        netcdf_file = process_burst_sentinel1_with_isce3_radar(reference, secondary)
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
