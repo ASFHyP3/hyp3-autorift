@@ -720,7 +720,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                 if nc_sensor == "S1":
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
-                    import autorift.netcdf_output as no
+                    import hyp3_autorift.vend.netcdf_output as no
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
 
                 if geogrid_run_info is None:
@@ -860,7 +860,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         dt = geogrid_run_info['dt']
                         epsg = geogrid_run_info['epsg']
 
-                    from s1_isce3 import get_topsinsar_config
+                    from hyp3_autorift.s1_isce3 import get_topsinsar_config
                     conts = get_topsinsar_config()
                     master_filename = conts['reference_filename']
                     slave_filename = conts['secondary_filename']
@@ -940,9 +940,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, scale_factor_1, scale_factor_2, MM, VXref, VYref,
                         DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
-                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-                        parameter_file=kwargs['parameter_file'],
-                    )
+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector)
 
                 elif nc_sensor in ("L4", "L5", "L7", "L8", "L9"):
                     if geogrid_run_info is None:

@@ -88,8 +88,8 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
-    download_bursts(burst_granule_ref)
-    download_bursts(burst_granule_sec)
+    #download_bursts(burst_granule_ref)
+    #download_bursts(burst_granule_sec)
 
     safe_ref = sorted(glob.glob('./*.SAFE'))[0]
     safe_sec = sorted(glob.glob('./*.SAFE'))[1]
@@ -103,7 +103,7 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
 
     bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
+    #download_dem(bounds)
 
     orbit_file, prov = downloadSentinelOrbitFile(granule_ref, esa_credentials = esa_credentials)
     orbit_file_ref = orbit_file
@@ -113,13 +113,15 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_file_ref)
     burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_file_sec)
 
-    write_yaml_radar(safe_ref, orbit_file_ref)
-    s1_cslc.run('s1_cslc.yaml','radar')
-    ref = convert2isce(burst_id_ref)
+    #write_yaml_radar(safe_ref, orbit_file_ref)
+    #s1_cslc.run('s1_cslc.yaml','radar')
+    #ref = convert2isce(burst_id_ref)
+    ref = 'burst_ref_iw1.slc'
     
-    write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
-    s1_cslc.run('s1_cslc.yaml','radar')
-    sec = convert2isce(burst_id_sec,ref=False)
+    #write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
+    #s1_cslc.run('s1_cslc.yaml','radar')
+    #sec = convert2isce(burst_id_sec,ref=False)
+    sec = 'burst_sec_iw1.slc'
     
     swath = int(burst_granule_ref.split('_')[2][2])
     meta_r = loadMetadata(safe_ref, orbit_file_ref, swath = swath)
