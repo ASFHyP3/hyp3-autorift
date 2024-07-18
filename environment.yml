@@ -24,12 +24,12 @@ dependencies:
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
+  - eigen
   - gdal>=3
   - h5netcdf
   - h5py>=3.5
   - hyp3lib>=3,<4
   - isce3>=0.14
-  - autorift=1.5.0
   - opencv
   - boto3
   - matplotlib-base

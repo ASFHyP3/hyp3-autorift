@@ -169,8 +169,8 @@ def loadMetadata(safe,orbit_path,swath,buffer=0):
     
     info.numberOfLines = int( np.round( (info.sensingStop - info.sensingStart).total_seconds() * info.prf)) + 1
     info.numberOfSamples = int( np.round( (info.farRange - info.startingRange)/info.rangePixelSize)) + 1  + 2 * buffer
-    print(length,width)
-    print(info.numberOfLines,info.numberOfSamples)
+    #print(length,width)
+    #print(info.numberOfLines,info.numberOfSamples)
     
     info.orbit = getMergedOrbit(safe,orbit_path,swath)
 
@@ -309,13 +309,13 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
     '''
 
     #import isce
-    from hyp3_autorift.vend.geo_autoRIFT.geogrid import Geogrid
+    from geogrid import GeogridRadar
 #    from geogrid import Geogrid
 
     from osgeo import gdal
     dem_info = gdal.Info(dem, format='json')
 
-    obj = Geogrid()
+    obj = GeogridRadar()
 
     obj.startingRange = info.startingRange
     obj.rangePixelSize = info.rangePixelSize
@@ -361,7 +361,7 @@ def runGeogrid(info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, c
 #    obj.srs_min_search = 0
 
     obj.getIncidenceAngle()
-    obj.geogrid()
+    obj.geogridRadar()
 
     run_info = {
         'chipsizex0': obj.chipSizeX0,

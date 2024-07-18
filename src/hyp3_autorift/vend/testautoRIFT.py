@@ -722,7 +722,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
                     import hyp3_autorift.vend.netcdf_output as no
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
-
                 if geogrid_run_info is None:
                     vxrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[1]
                     vyrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[2]
@@ -747,7 +746,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     ycount = geogrid_run_info['ycount']
                     cen_lat = int(100*geogrid_run_info['cen_lat'])/100
                     cen_lon = int(100*geogrid_run_info['cen_lon'])/100
-
+                    
+                
+                #gdal.AllRegister()
                 ds = gdal.Open(vxrefname)
                 band = ds.GetRasterBand(1)
                 VXref = band.ReadAsArray(xoff, yoff, xcount, ycount)

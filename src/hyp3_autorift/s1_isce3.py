@@ -128,22 +128,25 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     meta_temp = loadMetadata(safe_sec, orbit_file_sec, swath = swath)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
-    print(meta_r.sensingStart,meta_s.sensingStart)
+    #print(meta_r.sensingStart,meta_s.sensingStart)
     meta_s.sensingStop = meta_temp.sensingStop
     
     burst_ref=get_burst(safe_ref, burst_granule_ref, orbit_file_ref)
     
     deg2rad = np.pi/180.0
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_file_ref, swath = swath)
-    print('LAT LIMITS',np.array(lat_limits))
-    print('LON LIMITS',np.array(lon_limits))
+    #print('LAT LIMITS',np.array(lat_limits))
+    #print('LON LIMITS',np.array(lon_limits))
 
     scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
-    print(scene_poly)
+    #print(scene_poly)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
     
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
-
+    
+    from osgeo import gdal
+    gdal.AllRegister()
+    
     netcdf_file = generateAutoriftProduct(
             ref, sec, nc_sensor='S1', optical_flag=False, ncname=None,
             geogrid_run_info=geogrid_info, **parameter_info['autorift'],
@@ -212,11 +215,11 @@ def bounding_box(safe, orbit_file, swath, epsg=4326):
         lat_limits: list containing the [minimum, maximum] latitudes
         lat_limits: list containing the [minimum, maximum] longitudes
     """
-    from hyp3_autorift.vend.geo_autoRIFT.geogrid import Geogrid
+    from geogrid import GeogridRadar
     
     info = loadMetadata(safe, orbit_file, swath = swath)
 
-    obj = Geogrid()
+    obj = GeogridRadar()
     
     obj.startingRange = info.startingRange
     obj.rangePixelSize = info.rangePixelSize
