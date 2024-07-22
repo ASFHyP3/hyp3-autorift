@@ -234,7 +234,7 @@ def create_conversion_matrices(
         epsg: int = 4326,
         parameter_file: str = DEFAULT_PARAMETER_FILE,
         **kwargs,
-) -> str:
+) -> Path:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
 
     offset2vy_1, _, _, _, _ = utils.load_geospatial(offset2vy, band=1)
@@ -274,14 +274,14 @@ def create_conversion_matrices(
         dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, noDataMask=noDataMask, parameter_file=parameter_file,
     )
 
-    return conversion_nc
+    return Path(conversion_nc)
 
 
 def generate_correction_data(
     scene: str,
     buffer: int = 0,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-) -> (dict, str):
+) -> (dict, Path):
     from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
     scene_path = Path(f'{scene}.zip')
     if not scene_path.exists():
