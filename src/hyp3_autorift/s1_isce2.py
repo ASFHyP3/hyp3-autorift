@@ -221,6 +221,9 @@ def write_conversion_file(
     M12[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
     var[:] = M12
 
+    nc_outfile.sync()
+    nc_outfile.close()
+
     return file_name
 
 
