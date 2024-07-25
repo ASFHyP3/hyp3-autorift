@@ -221,6 +221,9 @@ def write_conversion_file(
     M12[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
     var[:] = M12
 
+    nc_outfile.sync()
+    nc_outfile.close()
+
     return file_name
 
 
@@ -270,7 +273,7 @@ def create_conversion_matrices(
     dr_2_vr_factor = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))])
 
     conversion_nc = write_conversion_file(
-        file_name=f'{scene}_conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
+        file_name='conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
         dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, noDataMask=noDataMask, parameter_file=parameter_file,
     )
 
