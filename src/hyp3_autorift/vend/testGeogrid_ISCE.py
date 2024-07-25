@@ -97,31 +97,11 @@ def loadProduct(xmlname):
 
 
 def getMergedOrbit(safe,orbit_path,swath):
-    #import isce
-    #from isceobj.Orbit.Orbit import Orbit
-    from isce3.core import Orbit
-    from s1reader.s1_reader import load_bursts
-
-    ###Create merged orbit
-    #orb = Orbit()
+    from s1reader import load_bursts
 
     bursts = load_bursts(safe,orbit_path,swath)
     burst = bursts[0]
-    #print(dir(burst.orbit))
-    #orb = Orbit(burst.orbit.getStateVectors())
-    #svs = []
-    #Add first burst orbit to begin with
-    #for sv in burst.orbit.getStateVectors():
-    #    svs.append(sv)
-
-
-    #for pp in product:
-        ##Add all state vectors
-    #    for bb in pp.bursts:
-    #        for sv in bb.orbit:
-    #            if (sv.time< orb.minTime) or (sv.time > orb.maxTime):
-    #                orb.addStateVector(sv)
-
+    
     return burst.orbit
 
 
@@ -173,6 +153,61 @@ def loadMetadata(safe,orbit_path,swath,buffer=0):
     #print(info.numberOfLines,info.numberOfSamples)
     
     info.orbit = getMergedOrbit(safe,orbit_path,swath)
+
+    return info
+
+
+def loadMetadataSlc(safe,orbit_path,buffer=0,swaths=None):
+    '''
+    Input file.
+    '''
+    import os
+    import numpy as np
+    from datetime import datetime, timedelta
+    from s1reader import load_bursts
+    import isce3
+    
+    if swaths is None:
+        swaths=[1,2,3]
+
+    info = Dummy()
+    
+    orbit_file=orbit_path
+    total_width = 0
+    bursts = []
+    for swath in swaths:
+        burstst = load_bursts(safe, orbit_file, swath)
+        bursts += burstst
+        dt = bursts[0].azimuth_time_interval
+        sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[-1].shape[0]-1) * dt)
+        sensingStartt = burstst[0].sensing_start
+        if swath==1:
+            info.prf = 1 / burstst[0].azimuth_time_interval
+            info.sensingStart = sensingStartt
+            info.startingRange = burstst[0].starting_range
+            info.rangePixelSize = burstst[0].range_pixel_spacing
+            info.wavelength = burstst[0].wavelength
+            info.sensingStop = sensingStopt
+        if info.sensingStart > sensingStartt:
+            info.sensingStart = sensingStartt
+        if info.sensingStop < sensingStopt:
+            info.sensingStop = sensingStopt
+    
+    total_width = int(np.round((bursts[-1].starting_range-bursts[0].starting_range)/bursts[0].range_pixel_spacing))+bursts[-1].shape[1]
+    info.aztime = float((isce3.core.DateTime(info.sensingStart)-bursts[0].orbit.reference_epoch).total_seconds())
+    info.orbitname = orbit_path
+    info.farRange = info.startingRange + (total_width-1.0)*info.rangePixelSize
+    
+    info.lookSide = isce3.core.LookSide.Right
+    
+    info.startingRange -= buffer * info.rangePixelSize
+    info.farRange += buffer * info.rangePixelSize
+    
+    info.numberOfLines = int( np.round( (info.sensingStop - info.sensingStart).total_seconds() * info.prf)) + 1
+    info.numberOfSamples = int( np.round( (info.farRange - info.startingRange)/info.rangePixelSize)) + 1  + 2 * buffer
+    print('SIZE',info.numberOfLines,info.numberOfSamples)
+    
+    info.orbit = getMergedOrbit(safe,orbit_path,2)
 
     return info
 

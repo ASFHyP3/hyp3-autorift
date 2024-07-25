@@ -89,12 +89,17 @@ class Dummy(object):
 
 
 def loadProduct(filename):
+    import numpy as np
+
     ds = gdal.Open(filename, gdal.GA_ReadOnly)
-    img = ds.GetRasterBand(1).ReadAsArray()
-    transform = ds.GetGeoTransform()
+    band = ds.GetRasterBand(1)
+    img = band.ReadAsArray()
+    out = np.abs(img).astype(np.float32)
+    img = None
+    band = None
     ds = None
     
-    return img
+    return out
 
 
 def loadProductOptical(file_m, file_s):
@@ -139,6 +144,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 #    import isceobj
     import time
     import subprocess
+    from osgeo_utils import gdal_calc
 
 
     obj = autoRIFT()
@@ -151,9 +157,20 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 
     # take the amplitude only for the radar images
     if optflag == 0:
-        I1 = np.abs(I1)
-        I2 = np.abs(I2)
-
+        gdal.Translate('reference.tif','reference.slc',format='GTiff')
+        gdal_calc.Calc(calc='numpy.abs(A)',A='reference.tif',outfile='reference_abs.tif')
+        gdal.Translate('reference_abs.slc','reference_abs.tif',format='ENVI')
+        subprocess.call('rm -rf reference.tif reference_abs.tif',shell=True)
+        I1 = loadProduct('reference_abs.slc')
+        
+        gdal.Translate('secondary.tif','secondary.slc',format='GTiff')
+        gdal_calc.Calc(calc='numpy.abs(A)',A='secondary.tif',outfile='secondary_abs.tif')
+        gdal.Translate('secondary_abs.slc','secondary_abs.tif',format='ENVI')
+        subprocess.call('rm -rf secondary.tif secondary_abs.tif',shell=True)
+        I2 = loadProduct('secondary_abs.slc')
+        
+        subprocess.call('rm -rf reference_abs.slc secondary_abs.slc', shell=True)
+        
     obj.I1 = I1
     obj.I2 = I2
 

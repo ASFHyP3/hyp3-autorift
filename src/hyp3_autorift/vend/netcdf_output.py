@@ -1312,6 +1312,8 @@ def loadMetadata(indir):
     orbits = glob.glob('*.EOF')
     fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
     safes = glob.glob('*.SAFE')
+    if len(safes)==0:
+        safes = glob.glob('*.zip')
     fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
     
     if 'ref' in indir:
@@ -1321,27 +1323,32 @@ def loadMetadata(indir):
         safe = safes[np.argmax(fechas_safes)]
         orbit_path = orbits[np.argmax(fechas_orbits)]
 
-    #frames = []
-    #for swath in range(2,3):
-    #    inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
-    #    if os.path.exists(inxml):
-    #        ifg = loadProduct(inxml)
-    #        frames.append(ifg)
-    swath=int(indir.split('_')[2][2])
+    if '_' in indir:
+        swath = int(indir.split('_')[2][2])
+    else:
+        swath = 1 
     
     bursts = load_bursts(safe, orbit_path, swath)
     
-    for bur in bursts:
-        if int(bur.burst_id.subswath[2])==swath:
-            burst = bur
+    if '_' in indir:
+        for bur in bursts:
+            if int(bur.burst_id.subswath[2])==swath:
+                burst = bur
+    else:
+        burst = bursts[0]
+        
     return burst, burst.orbit_direction
 
 
 def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
                           tran, proj, GridSpacingX, ScaleChipSizeY, output_ref=[0.0, 0.0, 0.0, 0.0]):
 
-    burst, flight_direction = loadMetadata(os.path.basename(indir_m))
-    burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('ref','sec')))
+    if 'reference.slc' in indir_m:
+        burst, flight_direction = loadMetadata(os.path.basename(indir_m))
+        burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('reference','secondary')))
+    else:
+        burst, flight_direction = loadMetadata(os.path.basename(indir_m))
+        burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('ref','sec')))
 
     if flight_direction == 'Descending':
         flight_direction = 'descending'
