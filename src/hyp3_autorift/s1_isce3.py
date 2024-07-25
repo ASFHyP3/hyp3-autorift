@@ -92,8 +92,8 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
-    #download_burst(burst_granule_ref)
-    #download_burst(burst_granule_sec)
+    download_burst(burst_granule_ref)
+    download_burst(burst_granule_sec)
 
     safe_ref = sorted(glob.glob('./*.SAFE'))[0]
     safe_sec = sorted(glob.glob('./*.SAFE'))[1]
@@ -107,7 +107,7 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
 
     bounds = [lon_min, lat_min, lon_max, lat_max]
-    #download_dem(bounds)
+    download_dem(bounds)
 
     orbit_file, prov = downloadSentinelOrbitFile(granule_ref, esa_credentials = esa_credentials)
     orbit_file_ref = orbit_file
@@ -160,7 +160,7 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     
     for scene in [slc_ref, slc_sec]:
         scene_url = get_download_url(scene)
-        #download_file(scene_url, chunk_size=5242880)
+        download_file(scene_url, chunk_size=5242880)
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
