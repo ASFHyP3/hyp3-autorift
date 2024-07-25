@@ -1,16 +1,13 @@
+#!/usr/bin/env python3
 # Yang Lei, Jet Propulsion Laboratory
 # November 2017
-# Modifications Copyright 2021 Alaska Satellite Facility
 
 import datetime
 import os
-import subprocess
 
 import netCDF4
 import numpy as np
 import pandas as pd
-
-import hyp3_autorift
 
 
 def get_satellite_attribute(info):
@@ -158,7 +155,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                      offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, scale_factor_1, scale_factor_2, MM, VXref, VYref,
                      DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                      detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
-                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector, parameter_file):
+                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
 
     vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
     temp = vx_mean_shift
@@ -345,12 +342,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     # CHIPSIZEY = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype(np.uint16)
     # INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
 
-    source = f'NASA MEaSUREs ITS_LIVE project. Processed by ASF DAAC HyP3 {datetime.datetime.now().year} using the ' \
-             f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
+    source = f'NASA MEaSUREs ITS_LIVE project. Processed with autoRIFT version ' \
              f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
-    if pair_type == 'radar':
-        isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-        source += f' built with ISCE version {isce_version.strip()}'
     if IMG_INFO_DICT['mission_img1'].startswith('S'):
         source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
     if IMG_INFO_DICT['mission_img1'].startswith('L'):
@@ -364,10 +357,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                  '  and Its Application for Tracking Ice Displacement. Remote Sensing, 13(4), p.749.\n' \
                  '  https://doi.org/10.3390/rs13040749\n' \
                  '\n' \
-                 'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
+                 'Additionally, a DOI is provided for the software used to generate this data:\n' \
                  '* autoRIFT: https://doi.org/10.5281/zenodo.4025445\n' \
-                 '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
-                 '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581'
 
     tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
 
@@ -381,7 +372,6 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
-    nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('satellite', get_satellite_attribute(IMG_INFO_DICT))
     nc_outfile.setncattr('motion_detection_method', detection_method)
@@ -1310,46 +1300,75 @@ def loadProduct(xmlname):
 
 
 def loadMetadata(indir):
-    """
+    '''
     Input file.
-    """
+    '''
     import os
+    import numpy as np
+    from datetime import datetime, timedelta
+    from s1reader import load_bursts
+    import isce3
+    import glob
+    orbits = glob.glob('*.EOF')
+    fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
+    safes = glob.glob('*.SAFE')
+    if len(safes)==0:
+        safes = glob.glob('*.zip')
+    fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
+    
+    if 'ref' in indir:
+        safe = safes[np.argmin(fechas_safes)]
+        orbit_path = orbits[np.argmin(fechas_orbits)]
+    else:
+        safe = safes[np.argmax(fechas_safes)]
+        orbit_path = orbits[np.argmax(fechas_orbits)]
 
-    frames = []
-    for swath in range(1, 4):
-        inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
-        if os.path.exists(inxml):
-            ifg = loadProduct(inxml)
-            frames.append(ifg)
-    flight_direction = frames[0].bursts[0].passDirection[0]
-    return frames, flight_direction
+    if '_' in indir:
+        swath = int(indir.split('_')[2][2])
+    else:
+        swath = 1 
+    
+    bursts = load_bursts(safe, orbit_path, swath)
+    
+    if '_' in indir:
+        for bur in bursts:
+            if int(bur.burst_id.subswath[2])==swath:
+                burst = bur
+    else:
+        burst = bursts[0]
+        
+    return burst, burst.orbit_direction
 
 
 def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
                           tran, proj, GridSpacingX, ScaleChipSizeY, output_ref=[0.0, 0.0, 0.0, 0.0]):
 
-    frames, flight_direction = loadMetadata(os.path.dirname(indir_m)[:-6]+'fine_coreg')
-    frames_s, flight_direction_s = loadMetadata(os.path.dirname(indir_m)[:-6]+'secondary')
+    if 'reference.slc' in indir_m:
+        burst, flight_direction = loadMetadata(os.path.basename(indir_m))
+        burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('reference','secondary')))
+    else:
+        burst, flight_direction = loadMetadata(os.path.basename(indir_m))
+        burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('ref','sec')))
 
-    if flight_direction == 'D':
+    if flight_direction == 'Descending':
         flight_direction = 'descending'
-    elif flight_direction == 'A':
+    elif flight_direction == 'Ascending':
         flight_direction = 'ascending'
     else:
         flight_direction = 'N/A'
 
-    if flight_direction_s == 'D':
+    if flight_direction_s == 'Descending':
         flight_direction_s = 'descending'
-    elif flight_direction_s == 'A':
+    elif flight_direction_s == 'Ascending':
         flight_direction_s = 'ascending'
     else:
         flight_direction_s = 'N/A'
 
-    if frames[0].orbit.orbitSource[2] == frames_s[0].orbit.orbitSource[2]:
+    if burst.platform_id == burst_s.platform_id:
         print('subswath offset bias correction not performed for non-S1A/B combination')
         return DX, DY, flight_direction, flight_direction_s
     else:
-        if frames[0].orbit.orbitSource[2] == 'B':
+        if burst.platform_id[2] == 'B':
             output_ref = [-output_ref[0], -output_ref[1], -output_ref[2], -output_ref[3]]
 
     output = []
@@ -1362,12 +1381,18 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     azmind = azmind.astype(np.float32)
     rngind[rngind == nodata] = np.nan
     azmind[azmind == nodata] = np.nan
+    
+    length, width = burst.shape
+    farRange = burst.starting_range + (width-1.0)*burst.range_pixel_spacing
 
-    ncols = int(np.round((frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    #ncols = int(np.round((frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    ncols = int(np.round((farRange - burst.starting_range)/burst.range_pixel_spacing))
 
-    ind2 = int(np.round((frames[0].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    ind2 = ncols
+    
+    ind1 = 0
 
-    ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    #ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
 
     swath_border.append((ind1+ind2)/2)
     swath_border_full.append(ind1)
@@ -1387,8 +1412,8 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
         output.append(output_ref[0])
         output.append(output_ref[1])
 
-    ind2 = int(np.round((frames[1].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
-    ind1 = int(np.round((frames[2].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    ind2 = ncols
+    ind1 = 0
 
     swath_border.append((ind1+ind2)/2)
     swath_border_full.append(ind1)
