@@ -258,6 +258,9 @@ def create_conversion_matrices(
     scale_factor_1, _, _, _, _ = utils.load_geospatial(scale_factor, band=1)
     scale_factor_1[scale_factor_1 == nodata] = np.nan
 
+    # GDAL using upper-left of pixel -> netCDF using center of pixel
+    tran = [tran[0] + tran[1] / 2, tran[1], 0.0, tran[3] + tran[5] / 2, 0.0, tran[5]]
+
     dimidY, dimidX = xGrid.shape
     noDataMask = xGrid == nodata
 
