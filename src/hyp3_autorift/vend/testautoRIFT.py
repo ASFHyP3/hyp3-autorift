@@ -27,6 +27,8 @@
 #
 # Author: Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import glob
+import os
 import re
 import warnings
 from osgeo import gdal
@@ -157,13 +159,15 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 
     # take the amplitude only for the radar images
     if optflag == 0:
-        gdal.Translate('reference.tif','reference.slc',format='GTiff')
+        ref = os.path.basename(glob.glob('*ref*.slc')[0])
+        gdal.Translate('reference.tif',ref,format='GTiff')
         gdal_calc.Calc(calc='numpy.abs(A)',A='reference.tif',outfile='reference_abs.tif')
         gdal.Translate('reference_abs.slc','reference_abs.tif',format='ENVI')
         subprocess.call('rm -rf reference.tif reference_abs.tif',shell=True)
         I1 = loadProduct('reference_abs.slc')
         
-        gdal.Translate('secondary.tif','secondary.slc',format='GTiff')
+        sec = os.path.basename(glob.glob('*sec*.slc')[0])
+        gdal.Translate('secondary.tif',sec,format='GTiff')
         gdal_calc.Calc(calc='numpy.abs(A)',A='secondary.tif',outfile='secondary_abs.tif')
         gdal.Translate('secondary_abs.slc','secondary_abs.tif',format='ENVI')
         subprocess.call('rm -rf secondary.tif secondary_abs.tif',shell=True)
