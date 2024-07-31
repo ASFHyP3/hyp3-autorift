@@ -160,7 +160,7 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     
     for scene in [slc_ref, slc_sec]:
         scene_url = get_download_url(scene)
-        #download_file(scene_url, chunk_size=5242880)
+        download_file(scene_url, chunk_size=5242880)
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
@@ -171,7 +171,7 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
 
     bounds = [lon_min, lat_min, lon_max, lat_max]
-    #download_dem(bounds)
+    download_dem(bounds)
 
     orbit_file, prov = downloadSentinelOrbitFile(slc_ref, esa_credentials = esa_credentials)
     orbit_file_ref = orbit_file
@@ -182,15 +182,15 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     burst_ids_ref = get_burst_ids(safe_ref, orbit_file_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_file_sec)
 
-    #write_yaml_radar(safe_ref, orbit_file_ref)
-    #s1_cslc.run('s1_cslc.yaml','radar')
+    write_yaml_radar(safe_ref, orbit_file_ref)
+    s1_cslc.run('s1_cslc.yaml','radar')
     
-    #for burst_id_sec in burst_ids_sec:
-    #	write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
-    #	s1_cslc.run('s1_cslc.yaml','radar')
+    for burst_id_sec in burst_ids_sec:
+    	write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
+    	s1_cslc.run('s1_cslc.yaml','radar')
     
-    #mergeSwaths(ref=False)
-    #mergeSwaths()
+    mergeSwaths(ref=False)
+    mergeSwaths()
     
     meta_r = loadMetadataSlc(safe_ref, orbit_file_ref)
     meta_temp = loadMetadataSlc(safe_sec, orbit_file_sec)
