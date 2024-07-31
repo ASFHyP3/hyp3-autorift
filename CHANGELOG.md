@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1]
+### Changed
+* The conversion matrices netCDF file created bt the S1 correction workflow is now called `conversion_matricies.nc` and no longer includes the scene name per feedback from JPL. 
+
+### Fixed
+* `s2_isce2.generate_correction_data` now returns a Path instead of a str as expected by `hyp3lib.aws.upload_file_to_s3`.
+* `s2_isce2.create_conversion_matricies` now uses the pixel-center instead of the upper-left corner for the x,y dimensions.
+* `s2_isce2.create_conversion_matricies` now explicitly syncs data to and closes the netCDF file to prevent corrupt files from being uploaded.
+
 ## [0.18.0]
 ### Added
 * The Sentinel-1 correction workflow will now calculate and write the M11/M12 conversion matrices to a netCDF file.

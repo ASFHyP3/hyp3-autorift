@@ -221,6 +221,9 @@ def write_conversion_file(
     M12[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
     var[:] = M12
 
+    nc_outfile.sync()
+    nc_outfile.close()
+
     return file_name
 
 
@@ -234,7 +237,7 @@ def create_conversion_matrices(
         epsg: int = 4326,
         parameter_file: str = DEFAULT_PARAMETER_FILE,
         **kwargs,
-) -> str:
+) -> Path:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
 
     offset2vy_1, _, _, _, _ = utils.load_geospatial(offset2vy, band=1)
@@ -255,6 +258,9 @@ def create_conversion_matrices(
     scale_factor_1, _, _, _, _ = utils.load_geospatial(scale_factor, band=1)
     scale_factor_1[scale_factor_1 == nodata] = np.nan
 
+    # GDAL using upper-left of pixel -> netCDF using center of pixel
+    tran = [tran[0] + tran[1] / 2, tran[1], 0.0, tran[3] + tran[5] / 2, 0.0, tran[5]]
+
     dimidY, dimidX = xGrid.shape
     noDataMask = xGrid == nodata
 
@@ -270,18 +276,18 @@ def create_conversion_matrices(
     dr_2_vr_factor = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))])
 
     conversion_nc = write_conversion_file(
-        file_name=f'{scene}_conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
+        file_name='conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
         dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, noDataMask=noDataMask, parameter_file=parameter_file,
     )
 
-    return conversion_nc
+    return Path(conversion_nc)
 
 
 def generate_correction_data(
     scene: str,
     buffer: int = 0,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-) -> (dict, str):
+) -> (dict, Path):
     from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
     scene_path = Path(f'{scene}.zip')
     if not scene_path.exists():
