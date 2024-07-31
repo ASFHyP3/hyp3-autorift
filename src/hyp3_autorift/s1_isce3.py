@@ -18,7 +18,7 @@ import s1reader
 from dem_stitcher import stitch_dem
 from hyp3_autorift import geometry, process, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogrid_ISCE import runGeogrid, loadMetadata, loadMetadataSlc
+from hyp3_autorift.vend.testGeogrid_ISCE import runGeogrid, loadMetadata, loadMetadataSlc, getPol
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 from hyp3lib.fetch import download_file
 from hyp3lib.get_orb import downloadSentinelOrbitFile
@@ -160,7 +160,7 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     
     for scene in [slc_ref, slc_sec]:
         scene_url = get_download_url(scene)
-        download_file(scene_url, chunk_size=5242880)
+        #download_file(scene_url, chunk_size=5242880)
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
@@ -171,7 +171,7 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
 
     bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
+    #download_dem(bounds)
 
     orbit_file, prov = downloadSentinelOrbitFile(slc_ref, esa_credentials = esa_credentials)
     orbit_file_ref = orbit_file
@@ -182,15 +182,15 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     burst_ids_ref = get_burst_ids(safe_ref, orbit_file_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_file_sec)
 
-    write_yaml_radar(safe_ref, orbit_file_ref)
-    s1_cslc.run('s1_cslc.yaml','radar')
+    #write_yaml_radar(safe_ref, orbit_file_ref)
+    #s1_cslc.run('s1_cslc.yaml','radar')
     
-    for burst_id_sec in burst_ids_sec:
-    	write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
-    	s1_cslc.run('s1_cslc.yaml','radar')
+    #for burst_id_sec in burst_ids_sec:
+    #	write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
+    #	s1_cslc.run('s1_cslc.yaml','radar')
     
-    mergeSwaths(ref=False)
-    mergeSwaths()
+    #mergeSwaths(ref=False)
+    #mergeSwaths()
     
     meta_r = loadMetadataSlc(safe_ref, orbit_file_ref)
     meta_temp = loadMetadataSlc(safe_sec, orbit_file_sec)
@@ -255,10 +255,12 @@ def mergeSwaths(ref=True,swath=None):
         swaths=[1,2,3]
     else:
         swaths=[swath]
-    #firstcols = [0]
+    
+    pol = getPol(safe, orbit_file)
+    
     for swath in swaths:
         mergeBurstsSwath(swath,ref)
-        burstst = s1reader.load_bursts(safe, orbit_file, swath)
+        burstst = s1reader.load_bursts(safe, orbit_file, swath, pol)
         total_width += burstst[0].shape[1]
         bursts += burstst
         dt = burstst[0].azimuth_time_interval
@@ -334,6 +336,9 @@ def mergeBurstsSwath(swath, ref=True, outfile='output.slc',
     
     path = os.path.abspath(safe)
     orbit_path = os.path.abspath(orbit_file)
+    
+    pol = getPol(safe, orbit_path)
+    
     burst_idst = get_burst_ids(path, orbit_path)
     burst_ids = [burst_id for burst_id in burst_idst if 'iw'+str(swath) in burst_id]
     if ref:
@@ -346,7 +351,7 @@ def mergeBurstsSwath(swath, ref=True, outfile='output.slc',
     if len(burst_ids) != len(fileList):
         print('Warning : Not all the bursts were processed')
         
-    bursts = s1reader.load_bursts(safe, orbit_file, swath)
+    bursts = s1reader.load_bursts(safe, orbit_file, swath, pol)
 
     t0 = bursts[0].sensing_start
     dt = bursts[0].azimuth_time_interval
@@ -504,13 +509,15 @@ def get_topsinsar_config():
     else:
         swath = 1 
 
+    pol = getPol(safe_ref, orbit_path_ref)
+
     config_data = {}
     for name in ['reference', 'secondary']:
         if name=='reference':
-            burst = load_bursts(safe_ref,orbit_path_ref,swath)[0]
+            burst = load_bursts(safe_ref,orbit_path_ref,swath,pol)[0]
             safe = safe_ref
         else:
-            burst = load_bursts(safe_sec,orbit_path_sec,swath)[0]
+            burst = load_bursts(safe_sec,orbit_path_sec,swath,pol)[0]
             safe = safe_sec
             
         sensing_start = burst.sensing_start
@@ -722,9 +729,11 @@ def get_burst_id(safe, burst_granule, orbit_file):
 
 def get_burst_ids(safe, orbit_file):
     abspath = os.path.abspath(safe)
-    bursts=[]
+    bursts = []
+    pol = getPol(safe, orbit_file)
+    
     for swath_number in [1,2,3]:
-        bursts += s1reader.load_bursts(abspath, orbit_file, swath_number)
+        bursts += s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
     str_burst_ids =['t'+str(int(x.burst_id.track_number)).zfill(3)+'_'+str(x.burst_id.esa_burst_id).zfill(6)+'_'+x.burst_id.subswath.lower() for x in bursts]
 
     return str_burst_ids

@@ -96,10 +96,25 @@ def loadProduct(xmlname):
     return obj
 
 
+def getPol(safe, orbit_path):
+    from s1reader import load_bursts
+    
+    pols = ['vv', 'vh', 'hh', 'hv']
+    for pol in pols:
+        try:
+            bursts = load_bursts(safe,orbit_path,1,pol)
+            print('Polarization '+pol)
+            return pol
+        except:
+            pass
+
+
 def getMergedOrbit(safe,orbit_path,swath):
     from s1reader import load_bursts
+    
+    pol = getPol(safe, orbit_path)
 
-    bursts = load_bursts(safe,orbit_path,swath)
+    bursts = load_bursts(safe,orbit_path,swath,pol)
     burst = bursts[0]
     
     return burst.orbit
@@ -121,7 +136,8 @@ def loadMetadata(safe,orbit_path,swath,buffer=0):
     #    if os.path.exists(inxml):
     #        ifg = loadProduct(inxml)
     #        frames.append(ifg)
-    bursts = load_bursts(safe,orbit_path,swath)
+    pol = getPol(safe,orbit_path)
+    bursts = load_bursts(safe,orbit_path,swath,pol)
     
     for bur in bursts:
         if int(bur.burst_id.subswath[2])==swath:
@@ -169,6 +185,8 @@ def loadMetadataSlc(safe,orbit_path,buffer=0,swaths=None):
     
     if swaths is None:
         swaths=[1,2,3]
+        
+    pol = getPol(safe, orbit_path)
 
     info = Dummy()
     
@@ -176,7 +194,7 @@ def loadMetadataSlc(safe,orbit_path,buffer=0,swaths=None):
     total_width = 0
     bursts = []
     for swath in swaths:
-        burstst = load_bursts(safe, orbit_file, swath)
+        burstst = load_bursts(safe, orbit_file, swath, pol)
         bursts += burstst
         dt = bursts[0].azimuth_time_interval
         sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[-1].shape[0]-1) * dt)

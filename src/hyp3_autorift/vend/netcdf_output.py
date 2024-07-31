@@ -1299,6 +1299,19 @@ def loadProduct(xmlname):
     return obj
 
 
+def getPol(safe, orbit_path):
+    from s1reader import load_bursts
+    
+    pols = ['vv', 'vh', 'hh', 'hv']
+    for pol in pols:
+        try:
+            bursts = load_bursts(safe,orbit_path,1,pol)
+            print('Polarization '+pol)
+            return pol
+        except:
+            pass
+
+
 def loadMetadata(indir):
     '''
     Input file.
@@ -1327,8 +1340,10 @@ def loadMetadata(indir):
         swath = int(indir.split('_')[2][2])
     else:
         swath = 1 
+        
+    pol = getPol(safe, orbit_path)
     
-    bursts = load_bursts(safe, orbit_path, swath)
+    bursts = load_bursts(safe, orbit_path, swath, pol)
     
     if '_' in indir:
         for bur in bursts:
