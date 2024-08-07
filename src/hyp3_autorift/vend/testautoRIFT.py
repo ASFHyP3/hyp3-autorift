@@ -27,6 +27,8 @@
 #
 # Author: Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import glob
+import os
 import re
 import warnings
 from osgeo import gdal
@@ -89,17 +91,17 @@ class Dummy(object):
 
 
 def loadProduct(filename):
-    '''
-    Load the product using Product Manager.
-    '''
-    import isce
-    import logging
-    from imageMath import IML
+    import numpy as np
 
-    IMG = IML.mmapFromISCE(filename, logging)
-    img = IMG.bands[0]
-#    pdb.set_trace()
-    return img
+    ds = gdal.Open(filename, gdal.GA_ReadOnly)
+    band = ds.GetRasterBand(1)
+    img = band.ReadAsArray()
+    out = np.abs(img).astype(np.float32)
+    img = None
+    band = None
+    ds = None
+    
+    return out
 
 
 def loadProductOptical(file_m, file_s):
@@ -144,6 +146,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 #    import isceobj
     import time
     import subprocess
+    from osgeo_utils import gdal_calc
 
 
     obj = autoRIFT()
@@ -156,9 +159,22 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 
     # take the amplitude only for the radar images
     if optflag == 0:
-        I1 = np.abs(I1)
-        I2 = np.abs(I2)
-
+        ref = os.path.basename(glob.glob('*ref*.slc')[0])
+        gdal.Translate('reference.tif',ref,format='GTiff')
+        gdal_calc.Calc(calc='numpy.abs(A)',A='reference.tif',outfile='reference_abs.tif')
+        gdal.Translate('reference_abs.slc','reference_abs.tif',format='ENVI')
+        subprocess.call('rm -rf reference.tif reference_abs.tif',shell=True)
+        I1 = loadProduct('reference_abs.slc')
+        
+        sec = os.path.basename(glob.glob('*sec*.slc')[0])
+        gdal.Translate('secondary.tif',sec,format='GTiff')
+        gdal_calc.Calc(calc='numpy.abs(A)',A='secondary.tif',outfile='secondary_abs.tif')
+        gdal.Translate('secondary_abs.slc','secondary_abs.tif',format='ENVI')
+        subprocess.call('rm -rf secondary.tif secondary_abs.tif',shell=True)
+        I2 = loadProduct('secondary_abs.slc')
+        
+        subprocess.call('rm -rf reference_abs.slc secondary_abs.slc', shell=True)
+        
     obj.I1 = I1
     obj.I2 = I2
 
@@ -409,7 +425,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     import cv2
     kernel = np.ones((3,3),np.uint8)
     noDataMask = cv2.dilate(noDataMask.astype(np.uint8),kernel,iterations = 1)
-    noDataMask = noDataMask.astype(np.bool)
+    noDataMask = noDataMask.astype(bool)
 
 
     return obj.Dx, obj.Dy, obj.InterpMask, obj.ChipSizeX, obj.GridSpacingX, obj.ScaleChipSizeY, obj.SearchLimitX, obj.SearchLimitY, obj.origSize, noDataMask
@@ -539,7 +555,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
         # FIXME: Filter width is a magic variable here and not exposed well.
         preprocessing_filter_width = 5
-        if nc_sensor == 'S1':
+        if nc_sensor == 'S1' or nc_sensor == 'GS1':
             preprocessing_filter_width = 21
 
         print(f'Preprocessing filter width {preprocessing_filter_width}')
@@ -727,7 +743,6 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
                     import hyp3_autorift.vend.netcdf_output as no
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
-
                 if geogrid_run_info is None:
                     vxrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[1]
                     vyrefname = str.split(runCmd('fgrep "Velocities:" testGeogrid.txt'))[2]
@@ -752,7 +767,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     ycount = geogrid_run_info['ycount']
                     cen_lat = int(100*geogrid_run_info['cen_lat'])/100
                     cen_lon = int(100*geogrid_run_info['cen_lon'])/100
-
+                    
+                
+                #gdal.AllRegister()
                 ds = gdal.Open(vxrefname)
                 band = ds.GetRasterBand(1)
                 VXref = band.ReadAsArray(xoff, yoff, xcount, ycount)
@@ -865,7 +882,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                         dt = geogrid_run_info['dt']
                         epsg = geogrid_run_info['epsg']
 
-                    from hyp3_autorift.utils import get_topsinsar_config
+                    from hyp3_autorift.s1_isce3 import get_topsinsar_config
                     conts = get_topsinsar_config()
                     master_filename = conts['reference_filename']
                     slave_filename = conts['secondary_filename']
@@ -885,8 +902,12 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
     #                out_nc_filename = 'Jakobshavn.nc'
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
-                        out_nc_filename = f"./{master_filename[0:-4]}_X_{slave_filename[0:-4]}" \
-                                          f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        if '.zip' in master_filename:
+                            out_nc_filename = f"./{master_filename[0:-4]}_X_{slave_filename[0:-4]}" \
+                                              f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
+                        elif '.SAFE' in master_filename:
+                            out_nc_filename = f"./{master_filename[0:-5]}_X_{slave_filename[0:-5]}" \
+                                              f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     else:
                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2

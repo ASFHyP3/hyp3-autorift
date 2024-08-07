@@ -1,12 +1,12 @@
-name: hyp3-autorift
+name: hyp3-autorift-radar
 channels:
-  - hyp3
+#  - hyp3
   - conda-forge
   - nodefaults
 dependencies:
   - boto3
   - botocore
-  - python>=3.9,<3.10  # Top pin to fix ISCE2 incompatibility: https://github.com/isce-framework/isce2/issues/458
+  - python>=3.9
   - pip
   # For packaging, and testing
   - build
@@ -14,25 +14,45 @@ dependencies:
   - flake8-import-order
   - flake8-blind-except
   - flake8-builtins
-  - pillow
+  - pillow>=7.0
+  - pluggy
   - pytest
   - pytest-console-scripts
   - pytest-cov
+  - pytest-order
   - responses
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
+  - eigen
   - gdal>=3
   - h5netcdf
+  - h5py>=3.5
   - hyp3lib>=3,<4
-  - isce2=2.6.1.dev7
-  - autorift=1.5.0
+  - isce3>=0.14
   - opencv
   - boto3
   - matplotlib-base
   - netCDF4
-  - numpy<1.24 # https://github.com/isce-framework/isce2/pull/639
-  - pyproj
-  - requests
-  - scipy
+  - numpy>=1.20,<2.0
+  - pyproj>=3.3
+  - pysolid>=0.3
+  - ruamel.yaml>=0.15
+  - scipy>=1.0,<1.13
+  - yamale>=4.0
+  - requests>=2.0
+  - s1reader=0.2.2
+  - shapely>=2
+  - scikit-image
   - xarray
+  - packaging>=21.0
+  - lxml>=4.8
+  - tifffile>=2024.0.0
+  - asf_search
+  - dateparser!=1.1.0
+  - dem_stitcher
+  - burst2safe #get the develop version so it doesn't look for iw2
+  - pandas>=1.4
+  - progressbar
+  - rasterio
+  - gxx_linux-64>=9,<10
