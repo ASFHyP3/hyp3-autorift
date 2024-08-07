@@ -246,7 +246,7 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
 
 def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
-    image_array, image_transform, image_projection, image_nodata = utils.load_geospatial(image_path)
+    image_array, image_transform, image_projection, _, image_nodata = utils.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
@@ -363,8 +363,8 @@ def process(
     platform = get_platform(reference)
 
     if platform == 'S1':
-        from hyp3_autorift.s1_isce3 import  process_sentinel1_with_isce3_slc
-        netcdf_file =  process_sentinel1_with_isce3_slc(reference, secondary)
+        from hyp3_autorift.s1_isce3 import process_sentinel1_with_isce3_slc
+        netcdf_file = process_sentinel1_with_isce3_slc(reference, secondary)
     elif platform == 'GS1':
         from hyp3_autorift.s1_isce3 import process_burst_sentinel1_with_isce3_radar
         netcdf_file = process_burst_sentinel1_with_isce3_radar(reference, secondary)
