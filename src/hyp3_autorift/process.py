@@ -246,7 +246,7 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
 
 
 def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
-    image_array, image_transform, image_projection, image_nodata = utils.load_geospatial(image_path)
+    image_array, image_transform, image_projection, _, image_nodata = utils.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
     image_filtered, zero_mask = filter_function(image_array, image_nodata)

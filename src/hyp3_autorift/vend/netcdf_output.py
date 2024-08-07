@@ -1,13 +1,16 @@
-#!/usr/bin/env python3
 # Yang Lei, Jet Propulsion Laboratory
 # November 2017
+# Modifications Copyright 2021 Alaska Satellite Facility
 
 import datetime
 import os
+import subprocess
 
 import netCDF4
 import numpy as np
 import pandas as pd
+
+import hyp3_autorift
 
 
 def get_satellite_attribute(info):
@@ -155,7 +158,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                      offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, scale_factor_1, scale_factor_2, MM, VXref, VYref,
                      DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
                      detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
-                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
+                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector, parameter_file):
 
     vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
     temp = vx_mean_shift
@@ -342,8 +345,12 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     # CHIPSIZEY = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype(np.uint16)
     # INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
 
-    source = f'NASA MEaSUREs ITS_LIVE project. Processed with autoRIFT version ' \
+    source = f'NASA MEaSUREs ITS_LIVE project. Processed by ASF DAAC HyP3 {datetime.datetime.now().year} using the ' \
+             f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
              f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
+    if pair_type == 'radar':
+        isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
+        source += f' built with ISCE version {isce_version.strip()}'
     if IMG_INFO_DICT['mission_img1'].startswith('S'):
         source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
     if IMG_INFO_DICT['mission_img1'].startswith('L'):
@@ -357,8 +364,10 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
                  '  and Its Application for Tracking Ice Displacement. Remote Sensing, 13(4), p.749.\n' \
                  '  https://doi.org/10.3390/rs13040749\n' \
                  '\n' \
-                 'Additionally, a DOI is provided for the software used to generate this data:\n' \
+                 'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
                  '* autoRIFT: https://doi.org/10.5281/zenodo.4025445\n' \
+                 '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
+                 '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581'
 
     tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
 
@@ -372,6 +381,7 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
     nc_outfile.setncattr('title', title)
     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
+    nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
     nc_outfile.setncattr('scene_pair_type', pair_type)
     nc_outfile.setncattr('satellite', get_satellite_attribute(IMG_INFO_DICT))
     nc_outfile.setncattr('motion_detection_method', detection_method)
@@ -1313,9 +1323,9 @@ def getPol(safe, orbit_path):
 
 
 def loadMetadata(indir):
-    '''
+    """
     Input file.
-    '''
+    """
     import os
     import numpy as np
     from datetime import datetime, timedelta
