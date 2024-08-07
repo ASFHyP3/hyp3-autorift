@@ -184,8 +184,12 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
 
     write_yaml_radar(safe_ref, orbit_file_ref)
     s1_cslc.run('s1_cslc.yaml','radar')
+    print('Bursts ref',burst_ids_ref)
+    print('Bursts sec',burst_ids_sec)
+    burst_ids = list(set(burst_ids_sec)&set(burst_ids_ref))
     
-    for burst_id_sec in burst_ids_sec:
+    for burst_id_sec in burst_ids:
+    	print('Burst',burst_id_sec)
     	write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
     	s1_cslc.run('s1_cslc.yaml','radar')
     
