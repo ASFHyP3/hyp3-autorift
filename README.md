@@ -115,8 +115,6 @@ docker run -it --rm \
     -e AWS_SECRET_ACCESS_KEY=[YOUR_SECRET] \
     -e EARTHDATA_USERNAME=[YOUR_USERNAME_HERE] \
     -e EARTHDATA_PASSWORD=[YOUR_PASSWORD_HERE] \
-    -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
-    -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
     ghcr.io/asfhyp3/hyp3-autorift:latest \
     ++process hyp3_autorift \
     [WORKFLOW_ARGS]
@@ -144,8 +142,6 @@ To retain hyp3_autorift output files running via Docker there are two recommende
        -e AWS_SESSION_TOKEN=[YOUR_TOKEN] \  # Optional
        -e EARTHDATA_USERNAME=[YOUR_USERNAME_HERE] \
        -e EARTHDATA_PASSWORD=[YOUR_PASSWORD_HERE] \
-       -e ESA_USERNAME=[YOUR_USERNAME_HERE] \
-       -e ESA_PASSWORD=[YOUR_PASSWORD_HERE] \
        ghcr.io/asfhyp3/hyp3-autorift:latest \
          ++process hyp3_autorift \
          [WORKFLOW_ARGS] \
