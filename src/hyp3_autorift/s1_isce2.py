@@ -46,7 +46,7 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     reference_state_vec = fetch_for_scene(reference, dir=orbits)
     log.info(f'Downloaded orbit file {reference_state_vec} from s1-orbits')
 
-    secondary_state_vec = fetch_for_scene(reference, dir=orbits)
+    secondary_state_vec = fetch_for_scene(secondary, dir=orbits)
     log.info(f'Downloaded orbit file {secondary_state_vec} from s1-orbits')
 
     polarization = get_s1_primary_polarization(reference)
