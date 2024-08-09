@@ -85,23 +85,19 @@ export AWS_SESSION_TOKEN=your-token  # optional; for when using temporary creden
 
 For more information, please see: <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html>
 
-#### NASA Earthdata Login and ESA Copernicus Data Space Ecosystem (CDSE)
+#### NASA Earthdata Login
 
-To process Sentinel-1 images, you must provide Earthdata Login credentials and ESA Copernicus Data Space Ecosystem (CDSE) credentials in order to download input data.
+To process Sentinel-1 images, you must provide Earthdata Login credentials in order to download input data.
 * If you do not already have an Earthdata account, you can sign up [here](https://urs.earthdata.nasa.gov/home). 
-* If you do not already have a CDSE account, you can sign up [here](https://dataspace.copernicus.eu). 
 
-For Earthdata login and CDSE, you can provide credentials by exporting environment variables:
+For Earthdata login, you can provide credentials by exporting environment variables:
 ```
 export EARTHDATA_USERNAME=your-edl-username
 export EARTHDATA_PASSWORD=your-edl-password
-export ESA_USERNAME=your-esa-username
-export ESA_PASSWORD=your-esa-password
 ```
 or via your [`~/.netrc` file](https://everything.curl.dev/usingcurl/netrc) which should contain lines like these two:
 ```
 machine urs.earthdata.nasa.gov login your-edl-username password your-edl-password
-machine dataspace.copernicus.eu login your-esa-username password your-esa-password
 ```
 
 > [!TIP]
