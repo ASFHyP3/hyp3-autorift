@@ -10,14 +10,13 @@ from typing import List
 import numpy as np
 from autoRIFT import __version__ as version
 from hyp3lib.fetch import download_file
-from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal, osr
+from s1_orbits import fetch_for_scene
 
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.utils import get_esa_credentials
 
 log = logging.getLogger(__name__)
 
@@ -44,17 +43,11 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
 
-    esa_username, esa_password = utils.get_esa_credentials()
+    reference_state_vec = fetch_for_scene(reference, dir=orbits)
+    log.info(f'Downloaded orbit file {reference_state_vec} from s1-orbits')
 
-    reference_state_vec, reference_provider = downloadSentinelOrbitFile(
-        reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-    )
-    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-
-    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(
-        secondary, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-    )
-    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
+    secondary_state_vec = fetch_for_scene(secondary, dir=orbits)
+    log.info(f'Downloaded orbit file {secondary_state_vec} from s1-orbits')
 
     polarization = get_s1_primary_polarization(reference)
     lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=str(orbits))
@@ -297,12 +290,8 @@ def generate_correction_data(
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
 
-    esa_username, esa_password = get_esa_credentials()
-
-    state_vec, oribit_provider = downloadSentinelOrbitFile(
-        scene, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-    )
-    log.info(f'Downloaded orbit file {state_vec} from {oribit_provider}')
+    state_vec = fetch_for_scene(scene, dir=orbits)
+    log.info(f'Downloaded orbit file {state_vec} from s1-orbits')
 
     polarization = get_s1_primary_polarization(scene)
     lat_limits, lon_limits = bounding_box(f'{scene}.zip', polarization=polarization, orbits=str(orbits))
