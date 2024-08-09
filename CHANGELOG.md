@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0]
+### Changed
+* Orbits are now downloaded using `s1_orbits` rather than `hyp3lib`.
+
+### Removed
+* Removed support for the `--esa-username` and `--esa-password` command-line options and the `ESA_USERNAME` and `ESA_PASSWORD` environment variables.
+
 ## [0.18.1]
 ### Changed
 * The conversion matrices netCDF file created bt the S1 correction workflow is now called `conversion_matricies.nc` and no longer includes the scene name per feedback from JPL. 
