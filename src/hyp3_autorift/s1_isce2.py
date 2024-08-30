@@ -162,7 +162,7 @@ def write_conversion_file(
     else:
         raise Exception(f'Projection {srs.GetAttrValue("PROJECTION")} not recognized for this program')
 
-    var = nc_outfile.createVariable('M11', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
+    var = nc_outfile.createVariable('M11', np.dtype('float32'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'conversion_matrix_element_11')
     var.setncattr(
@@ -176,19 +176,10 @@ def write_conversion_file(
     var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
                                                  'pixel displacement dr to slant range velocity vr')
 
-    x1 = np.nanmin(M11[:])
-    x2 = np.nanmax(M11[:])
-    y1 = -50
-    y2 = 50
-
-    C = [(y2 - y1) / (x2 - x1), y1 - x1 * (y2 - y1) / (x2 - x1)]
-    var.setncattr('scale_factor', np.float32(1 / C[0]))
-    var.setncattr('add_offset', np.float32(-C[1] / C[0]))
-
-    M11[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
+    M11[noDataMask] = NoDataValue
     var[:] = M11
 
-    var = nc_outfile.createVariable('M12', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
+    var = nc_outfile.createVariable('M12', np.dtype('float32'), ('y', 'x'), fill_value=NoDataValue,
                                     zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
     var.setncattr('standard_name', 'conversion_matrix_element_12')
     var.setncattr(
@@ -202,16 +193,7 @@ def write_conversion_file(
     var.setncattr('dr_to_vr_factor_description',
                   'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
 
-    x1 = np.nanmin(M12[:])
-    x2 = np.nanmax(M12[:])
-    y1 = -50
-    y2 = 50
-
-    C = [(y2 - y1) / (x2 - x1), y1 - x1 * (y2 - y1) / (x2 - x1)]
-    var.setncattr('scale_factor', np.float32(1 / C[0]))
-    var.setncattr('add_offset', np.float32(-C[1] / C[0]))
-
-    M12[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
+    M12[noDataMask] = NoDataValue
     var[:] = M12
 
     nc_outfile.sync()
