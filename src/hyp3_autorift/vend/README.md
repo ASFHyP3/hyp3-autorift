@@ -74,3 +74,6 @@ We've replaced it  with `hyp3_autorift.s1_isce2.get_topsinsar_config`.
     to make it easier for users to correct for ionosphere streaks without needing to know the scale
     factor. These changes have been [proposed upstream](https://github.com/nasa-jpl/autoRIFT/pull/92) and should be
     applied in the next `nasa-jpl/autoRIFT` release.
+12. The changes listed in `CHANGES-UPSTREAM-12.diff` were applied from upstream ([nasa-jpl/autorift#101](https://github.com/nasa-jpl/autorift/pull/101))
+    in [ASFHyP3/hyp3-autorift#291](https://github.com/ASFHyP3/hyp3-autorift/pull/291) so that M11/M12 variables are
+    output as `float32` instead of compressed `int16` variables which did not even use the full dynamic range.
