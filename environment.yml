@@ -9,7 +9,7 @@ dependencies:
   - python>=3.9,<3.10  # Top pin to fix ISCE2 incompatibility: https://github.com/isce-framework/isce2/issues/458
   - pip
   # For packaging, and testing
-  - build
+  - python-build
   - flake8
   - flake8-import-order
   - flake8-blind-except
