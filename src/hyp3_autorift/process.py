@@ -108,7 +108,13 @@ def get_s2_manifest(scene_name):
     return response.text
 
 
-def get_s2_path(manifest_text: str, scene_name: str) -> str:
+def get_s2_path(scene_name: str) -> str:
+    bucket = 'its-live-project'
+    key = f's2-cache/{scene_name}_B08.jp2'
+    if s3_object_is_accessible(bucket, key):
+        return f'/vsis3/{bucket}/{key}'
+
+    manifest_text = get_s2_manifest(scene_name)
     root = ET.fromstring(manifest_text)
     elements = root.findall(".//fileLocation[@locatorType='URL'][@href]")
     hrefs = [element.attrib['href'] for element in elements if
@@ -140,8 +146,7 @@ def get_raster_bbox(path: str):
 
 
 def get_s2_metadata(scene_name):
-    manifest = get_s2_manifest(scene_name)
-    path = get_s2_path(manifest, scene_name)
+    path = get_s2_path(scene_name)
     bbox = get_raster_bbox(path)
     acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
 
