@@ -130,15 +130,6 @@ def test_get_lc2_path():
 
 
 @responses.activate
-def test_get_s2_metadata_not_found():
-    url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles////foo.SAFE/manifest.safe'
-    responses.add(responses.GET, url, status=404)
-    with pytest.raises(requests.exceptions.HTTPError) as http_error:
-        process.get_s2_metadata('foo')
-    assert http_error.value.response.status_code == 404
-
-
-@responses.activate
 @patch('hyp3_autorift.process.get_raster_bbox')
 @patch('hyp3_autorift.process.get_s2_path')
 def test_get_s2_metadata(mock_get_s2_path: MagicMock, mock_get_raster_bbox: MagicMock):
@@ -225,6 +216,19 @@ def test_get_s2_path_google_new_manifest(
     mock_s3_object_is_accessible.assert_called_once_with(
         'its-live-project', 's2-cache/S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056_B08.jp2',
     )
+
+
+@responses.activate
+@patch('hyp3_autorift.process.s3_object_is_accessible')
+def test_get_s2_path_not_found(mock_s3_object_is_accessible: MagicMock):
+    mock_s3_object_is_accessible.return_value = False
+
+    url = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles////foo.SAFE/manifest.safe'
+    responses.add(responses.GET, url, status=404)
+
+    with pytest.raises(requests.exceptions.HTTPError) as http_error:
+        process.get_s2_path('foo')
+    assert http_error.value.response.status_code == 404
 
 
 def test_get_raster_bbox(test_data_directory):
