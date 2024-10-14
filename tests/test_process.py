@@ -141,9 +141,7 @@ def test_get_s2_metadata_not_found():
 @responses.activate
 @patch('hyp3_autorift.process.get_raster_bbox')
 @patch('hyp3_autorift.process.get_s2_path')
-@patch('hyp3_autorift.process.get_s2_manifest')
-def test_get_s2_metadata(mock_get_s2_manifest: MagicMock, mock_get_s2_path: MagicMock, mock_get_raster_bbox: MagicMock):
-    mock_get_s2_manifest.return_value = 'manifest content'
+def test_get_s2_metadata(mock_get_s2_path: MagicMock, mock_get_raster_bbox: MagicMock):
     mock_get_s2_path.return_value = 's2 path'
     mock_get_raster_bbox.return_value = [0, 0, 1, 1]
 
@@ -157,9 +155,7 @@ def test_get_s2_metadata(mock_get_s2_manifest: MagicMock, mock_get_s2_path: Magi
     }
     assert process.get_s2_metadata('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == expected
 
-    mock_get_s2_manifest.assert_called_once_with('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
-    mock_get_s2_path.assert_called_once_with('manifest content',
-                                             'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
+    mock_get_s2_path.assert_called_once_with('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
     mock_get_raster_bbox.assert_called_once_with('s2 path')
 
 
@@ -182,23 +178,53 @@ def test_get_s2_manifest():
     assert process.get_s2_manifest('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500') == 'foo'
 
 
-def test_get_s2_path(test_data_directory):
-    scene_name = 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500'
-    with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
-        manifest_text = f.read()
-    path = process.get_s2_path(manifest_text, scene_name)
+@patch('hyp3_autorift.process.s3_object_is_accessible')
+def test_get_s2_path_aws(mock_s3_object_is_accessible: MagicMock):
+    mock_s3_object_is_accessible.return_value = True
+    assert process.get_s2_path('foo') == '/vsis3/its-live-project/s2-cache/foo_B08.jp2'
+
+    mock_s3_object_is_accessible.assert_called_once_with('its-live-project', 's2-cache/foo_B08.jp2')
+
+
+@patch('hyp3_autorift.process.s3_object_is_accessible')
+@patch('hyp3_autorift.process.get_s2_manifest')
+def test_get_s2_path_google_old_manifest(
+    mock_get_s2_manifest: MagicMock, mock_s3_object_is_accessible: MagicMock, test_data_directory: Path,
+):
+    manifest = test_data_directory / 'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.manifest.safe'
+    mock_get_s2_manifest.return_value = manifest.read_text()
+    mock_s3_object_is_accessible.return_value = False
+
+    path = process.get_s2_path('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
     assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/29/Q/KF/' \
                    'S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500.SAFE/./GRANULE' \
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_N02.04/IMG_DATA' \
                    '/S2A_OPER_MSI_L1C_TL_SGS__20160616T181414_A005139_T29QKF_B08.jp2'
 
-    scene_name = 'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056'
-    with open(f'{test_data_directory}/{scene_name}.manifest.safe', 'r') as f:
-        manifest_text = f.read()
-    path = process.get_s2_path(manifest_text, scene_name)
+    mock_get_s2_manifest.assert_called_once_with('S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500')
+    mock_s3_object_is_accessible.assert_called_once_with(
+        'its-live-project', 's2-cache/S2A_MSIL1C_20160616T112217_N0204_R137_T29QKF_20160617T193500_B08.jp2',
+    )
+
+
+@patch('hyp3_autorift.process.s3_object_is_accessible')
+@patch('hyp3_autorift.process.get_s2_manifest')
+def test_get_s2_path_google_new_manifest(
+        mock_get_s2_manifest: MagicMock, mock_s3_object_is_accessible: MagicMock, test_data_directory,
+):
+    manifest = test_data_directory / 'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056.manifest.safe'
+    mock_get_s2_manifest.return_value = manifest.read_text()
+    mock_s3_object_is_accessible.return_value = False
+
+    path = process.get_s2_path('S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056')
     assert path == '/vsicurl/https://storage.googleapis.com/gcp-public-data-sentinel-2/tiles/38/E/MQ/' \
                    'S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056.SAFE/./GRANULE' \
                    '/L1C_T38EMQ_A016290_20200419T060719/IMG_DATA/T38EMQ_20200419T060719_B08.jp2'
+
+    mock_get_s2_manifest.assert_called_once_with('S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056')
+    mock_s3_object_is_accessible.assert_called_once_with(
+        'its-live-project', 's2-cache/S2B_MSIL1C_20200419T060719_N0209_R105_T38EMQ_20200419T091056_B08.jp2',
+    )
 
 
 def test_get_raster_bbox(test_data_directory):
