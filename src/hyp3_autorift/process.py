@@ -490,6 +490,9 @@ def main():
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
 
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+
     g1, g2 = sorted(args.granules, key=get_datetime)
 
     product_file, browse_file, thumbnail_file = process(
