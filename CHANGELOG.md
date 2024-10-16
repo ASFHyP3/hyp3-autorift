@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0]
+### Added
+* Logger is now configured in process.main() so paths to reference/secondary scenes will now be logged.
+### Changed
+* Fetch Sentinel-2 scenes from AWS S3 (if present); otherwise continue to fetch from Google Cloud Storage.
+
 ## [0.20.0]
 ### Changed
 * The M11/M12 variables produced by the hyp3_autorift and s1_correction workflows will be written as `float32` instead of the previous compressed `int16` variables that did not take advantage of the full dynamic range and thus lost a significant amount of precision.
