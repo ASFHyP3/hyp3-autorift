@@ -1341,11 +1341,15 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     rngind[rngind == nodata] = np.nan
     azmind[azmind == nodata] = np.nan
 
-    ncols = int(np.round((frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    if len(frames) > 1:
+        ncols = int(np.round((frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+        ind2 = int(np.round((frames[0].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+        ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    else:
+        ncols = int(np.round((frames[0].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+        ind2 = ncols
+        ind1 = 0
 
-    ind2 = int(np.round((frames[0].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
-
-    ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
 
     swath_border.append((ind1+ind2)/2)
     swath_border_full.append(ind1)
@@ -1365,8 +1369,9 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
         output.append(output_ref[0])
         output.append(output_ref[1])
 
-    ind2 = int(np.round((frames[1].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
-    ind1 = int(np.round((frames[2].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    if len(frames) > 1:
+        ind2 = int(np.round((frames[1].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+        ind1 = int(np.round((frames[2].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
 
     swath_border.append((ind1+ind2)/2)
     swath_border_full.append(ind1)

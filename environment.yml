@@ -21,6 +21,7 @@ dependencies:
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
+  - burst2safe
   - gdal>=3
   - h5netcdf
   - hyp3lib>=3,<4
