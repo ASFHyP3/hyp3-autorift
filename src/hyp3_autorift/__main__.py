@@ -16,7 +16,7 @@ from hyp3lib.fetch import write_credentials_to_netrc_file
 def main():
     parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '++process', choices=['hyp3_autorift', 's1_correction'], default='hyp3_autorift',
+        '++process', choices=['hyp3_autorift', 's1_correction', 's1_alternate'], default='hyp3_autorift',
         help='Select the console_script entrypoint to use'  # console_script entrypoints are specified in `setup.py`
     )
     parser.add_argument('++omp-num-threads', type=int, help='The number of OpenMP threads to use for parallel regions')
