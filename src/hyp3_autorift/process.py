@@ -40,8 +40,9 @@ LANDSAT_SENSOR_MAPPING = {
     'L4': {'T': 'tm', 'M': 'mss'},
 }
 
-DEFAULT_PARAMETER_FILE = '/vsicurl/http://its-live-data.s3.amazonaws.com/' \
-                         'autorift_parameters/v001/autorift_landice_0120m.shp'
+DEFAULT_PARAMETER_FILE = (
+    '/vsicurl/http://its-live-data.s3.amazonaws.com/' 'autorift_parameters/v001/autorift_landice_0120m.shp'
+)
 
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
     'S1': 'sentinel1',
@@ -117,8 +118,11 @@ def get_s2_path(scene_name: str) -> str:
     manifest_text = get_s2_manifest(scene_name)
     root = ET.fromstring(manifest_text)
     elements = root.findall(".//fileLocation[@locatorType='URL'][@href]")
-    hrefs = [element.attrib['href'] for element in elements if
-             element.attrib['href'].endswith('_B08.jp2') and '/IMG_DATA/' in element.attrib['href']]
+    hrefs = [
+        element.attrib['href']
+        for element in elements
+        if element.attrib['href'].endswith('_B08.jp2') and '/IMG_DATA/' in element.attrib['href']
+    ]
     if len(hrefs) == 1:
         # post-2016-12-06 scene; only one tile
         file_path = hrefs[0]
@@ -253,20 +257,21 @@ def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[
     image_filtered, zero_mask = filter_function(image_array, image_nodata)
 
     image_new_path = create_filtered_filepath(image_path)
-    _ = utils.write_geospatial(image_new_path, image_filtered, image_transform, image_projection,
-                               nodata=None, dtype=gdal.GDT_Float32)
+    _ = utils.write_geospatial(
+        image_new_path, image_filtered, image_transform, image_projection, nodata=None, dtype=gdal.GDT_Float32
+    )
 
     zero_path = None
     if zero_mask is not None:
         zero_path = create_filtered_filepath(f'{Path(image_new_path).stem}_zeroMask{Path(image_new_path).suffix}')
-        _ = utils.write_geospatial(zero_path, zero_mask, image_transform, image_projection,
-                                   nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte)
+        _ = utils.write_geospatial(
+            zero_path, zero_mask, image_transform, image_projection, nodata=np.iinfo(np.uint8).max, dtype=gdal.GDT_Byte
+        )
 
     return image_new_path, zero_path
 
 
-def apply_landsat_filtering(reference_path: str, secondary_path: str) \
-        -> Tuple[str, Optional[str], str, Optional[str]]:
+def apply_landsat_filtering(reference_path: str, secondary_path: str) -> Tuple[str, Optional[str], str, Optional[str]]:
     reference_platform = get_platform(Path(reference_path).name)
     secondary_platform = get_platform(Path(secondary_path).name)
     if reference_platform > 'L7' and secondary_platform > 'L7':
@@ -309,11 +314,11 @@ def point_to_region(lat: float, lon: float) -> str:
     nw_hemisphere = 'N' if lat >= 0.0 else 'S'
     ew_hemisphere = 'E' if lon >= 0.0 else 'W'
 
-    region_lat = int(10*np.trunc(np.abs(lat/10.0)))
+    region_lat = int(10 * np.trunc(np.abs(lat / 10.0)))
     if region_lat == 90:  # if you are exactly at a pole, put in lat = 80 bin
         region_lat = 80
 
-    region_lon = int(10*np.trunc(np.abs(lon/10.0)))
+    region_lon = int(10 * np.trunc(np.abs(lon / 10.0)))
 
     if region_lon >= 180:  # if you are at the dateline, back off to the 170 bin
         region_lon = 170
@@ -329,12 +334,7 @@ def get_opendata_prefix(file: Path):
     lat, lon = get_lat_lon_from_ncfile(file)
     region = point_to_region(lat, lon)
 
-    return '/'.join([
-        'velocity_image_pair',
-        PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname],
-        'v02',
-        region
-    ])
+    return '/'.join(['velocity_image_pair', PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname], 'v02', region])
 
 
 def process(
@@ -365,6 +365,7 @@ def process(
 
     if platform == 'S1':
         from hyp3_autorift.s1_isce2 import process_sentinel1_with_isce2
+
         netcdf_file = process_sentinel1_with_isce2(reference, secondary, parameter_file)
 
     else:
@@ -398,8 +399,9 @@ def process(
                 # Log path here before we transform it
                 log.info(f'Reference scene path: {reference_path}')
                 log.info(f'Secondary scene path: {secondary_path}')
-                reference_path, reference_zero_path, secondary_path, secondary_zero_path = \
-                    apply_landsat_filtering(reference_path, secondary_path)
+                reference_path, reference_zero_path, secondary_path, secondary_zero_path = apply_landsat_filtering(
+                    reference_path, secondary_path
+                )
 
             if reference_metadata['properties']['proj:epsg'] != secondary_metadata['properties']['proj:epsg']:
                 log.info('Reference and secondary projections are different! Reprojecting.')
@@ -420,20 +422,28 @@ def process(
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
-        from hyp3_autorift.vend.testGeogridOptical import (
-            coregisterLoadMetadata, runGeogrid)
+        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+
         meta_r, meta_s = coregisterLoadMetadata(
-            reference_path, secondary_path,
+            reference_path,
+            secondary_path,
             reference_metadata=reference_metadata,
             secondary_metadata=secondary_metadata,
         )
         geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
         from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
+
         netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor=platform, optical_flag=True, ncname=None,
-            reference_metadata=reference_metadata, secondary_metadata=secondary_metadata,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
+            reference_path,
+            secondary_path,
+            nc_sensor=platform,
+            optical_flag=True,
+            ncname=None,
+            reference_metadata=reference_metadata,
+            secondary_metadata=secondary_metadata,
+            geogrid_run_info=geogrid_info,
+            **parameter_info['autorift'],
             parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
         )
 
@@ -458,7 +468,7 @@ def process(
 
     with Dataset(product_file) as nc:
         velocity = nc.variables['v']
-        data = np.ma.masked_values(velocity, -32767.).filled(0)
+        data = np.ma.masked_values(velocity, -32767.0).filled(0)
 
     browse_file = product_file.with_suffix('.png')
     image.make_browse(browse_file, data)
@@ -469,29 +479,37 @@ def process(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--publish-bucket', default='',
-                        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
-                             'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.')
-    parser.add_argument('--parameter-file', default=DEFAULT_PARAMETER_FILE,
-                        help='Shapefile for determining the correct search parameters by geographic location. '
-                             'Path to shapefile must be understood by GDAL')
-    parser.add_argument('--naming-scheme', default='ITS_LIVE_OD', choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
-                        help='Naming scheme to use for product files')
-    parser.add_argument('granules', type=str.split, nargs='+',
-                        help='Granule pair to process')
+    parser.add_argument(
+        '--publish-bucket',
+        default='',
+        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
+        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+    )
+    parser.add_argument(
+        '--parameter-file',
+        default=DEFAULT_PARAMETER_FILE,
+        help='Shapefile for determining the correct search parameters by geographic location. '
+        'Path to shapefile must be understood by GDAL',
+    )
+    parser.add_argument(
+        '--naming-scheme',
+        default='ITS_LIVE_OD',
+        choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
+        help='Naming scheme to use for product files',
+    )
+    parser.add_argument('granules', type=str.split, nargs='+', help='Granule pair to process')
     args = parser.parse_args()
 
     args.granules = [item for sublist in args.granules for item in sublist]
     if len(args.granules) != 2:
         parser.error('Must provide exactly two granules')
 
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
+    )
 
     g1, g2 = sorted(args.granules, key=get_datetime)
 
