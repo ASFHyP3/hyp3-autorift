@@ -78,14 +78,14 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                     'stable_surface_mask': 'window_stable_surface_mask.tif',
                     'scale_factor': 'window_scale_factor.tif',
                     'mpflag': 0,
-                }
+                },
             }
             break
 
     if parameter_info is None:
-        raise DemError('Could not determine appropriate DEM for:\n'
-                       f'    centroid: {centroid}'
-                       f'    using: {parameter_file}')
+        raise DemError(
+            'Could not determine appropriate DEM for:\n' f'    centroid: {centroid}' f'    using: {parameter_file}'
+        )
 
     dem_geotransform = gdal.Info(parameter_info['geogrid']['dem'], format='json')['geoTransform']
     parameter_info['xsize'] = abs(dem_geotransform[1])
@@ -108,8 +108,9 @@ def load_geospatial(infile: str, band: int = 1):
     return data, transform, projection, srs, nodata
 
 
-def write_geospatial(outfile: str, data, transform, projection, nodata,
-                     driver: str = 'GTiff', dtype: int = gdal.GDT_Float64) -> str:
+def write_geospatial(
+    outfile: str, data, transform, projection, nodata, driver: str = 'GTiff', dtype: int = gdal.GDT_Float64
+) -> str:
     driver = gdal.GetDriverByName(driver)
 
     rows, cols = data.shape
@@ -146,11 +147,23 @@ def ensure_same_projection(reference_path: Union[str, Path], secondary_path: Uni
     reprojected_reference = str(reprojection_dir / Path(reference_path).name)
     reprojected_secondary = str(reprojection_dir / Path(secondary_path).name)
 
-    gdal.Warp(reprojected_reference, str(reference_path), dstSRS=f'EPSG:{ref_epsg}',
-              xRes=ref_info['geoTransform'][1], yRes=ref_info['geoTransform'][5],
-              resampleAlg='lanczos', targetAlignedPixels=True)
-    gdal.Warp(reprojected_secondary, str(secondary_path), dstSRS=f'EPSG:{ref_epsg}',
-              xRes=ref_info['geoTransform'][1], yRes=ref_info['geoTransform'][5],
-              resampleAlg='lanczos', targetAlignedPixels=True)
+    gdal.Warp(
+        reprojected_reference,
+        str(reference_path),
+        dstSRS=f'EPSG:{ref_epsg}',
+        xRes=ref_info['geoTransform'][1],
+        yRes=ref_info['geoTransform'][5],
+        resampleAlg='lanczos',
+        targetAlignedPixels=True,
+    )
+    gdal.Warp(
+        reprojected_secondary,
+        str(secondary_path),
+        dstSRS=f'EPSG:{ref_epsg}',
+        xRes=ref_info['geoTransform'][1],
+        yRes=ref_info['geoTransform'][5],
+        resampleAlg='lanczos',
+        targetAlignedPixels=True,
+    )
 
     return reprojected_reference, reprojected_secondary
