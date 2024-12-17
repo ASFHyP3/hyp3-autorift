@@ -36,7 +36,8 @@ import numpy as np
 import pyproj
 import xarray as xr
 
-ENCODING_ATTRS = ['_FillValue', 'dtype', "zlib", "complevel", "shuffle", 'add_offset', 'scale_factor']
+
+ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
@@ -58,7 +59,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # Based on X/Y extends, mask original dataset
         mask_lon = (ds.x >= grid_x_min) & (ds.x <= grid_x_max)
         mask_lat = (ds.y >= grid_y_min) & (ds.y <= grid_y_max)
-        mask = (mask_lon & mask_lat)
+        mask = mask_lon & mask_lat
 
         cropped_ds = ds.where(mask).dropna(dim='x', how='all').dropna(dim='y', how='all')
         cropped_ds = cropped_ds.load()
@@ -74,11 +75,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Convert to lon/lat coordinates
         projection = ds['mapping'].attrs['spatial_epsg']
-        to_lon_lat_transformer = pyproj.Transformer.from_crs(
-            f"EPSG:{projection}",
-            'EPSG:4326',
-            always_xy=True
-        )
+        to_lon_lat_transformer = pyproj.Transformer.from_crs(f'EPSG:{projection}', 'EPSG:4326', always_xy=True)
 
         # Update centroid information for the granule
         center_lon_lat = to_lon_lat_transformer.transform(center_x, center_y)
@@ -91,7 +88,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         y_cell = y_values[1] - y_values[0]
 
         # It was decided to keep all values in GeoTransform center-based
-        cropped_ds['mapping'].attrs['GeoTransform'] = f"{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}"
+        cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
 
         # Compute chunking like AutoRIFT does:
         # https://github.com/ASFHyP3/hyp3-autorift/blob/develop/hyp3_autorift/vend/netcdf_output.py#L410-L411
