@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.interpolate import PchipInterpolator
 
+
 COLOR_MAP = np.array(
     [
         # data value, R, G, B, A

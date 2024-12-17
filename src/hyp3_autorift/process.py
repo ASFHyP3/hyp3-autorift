@@ -24,6 +24,7 @@ from osgeo import gdal
 from hyp3_autorift import geometry, image, utils
 from hyp3_autorift.crop import crop_netcdf_product
 
+
 log = logging.getLogger(__name__)
 
 gdal.UseExceptions()

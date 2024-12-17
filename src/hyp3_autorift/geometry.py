@@ -3,8 +3,8 @@
 import logging
 from typing import Tuple
 
-from osgeo import ogr
-from osgeo import osr
+from osgeo import ogr, osr
+
 
 log = logging.getLogger(__name__)
 
