@@ -413,6 +413,7 @@ def process(
 
                 reference_path, secondary_path = utils.ensure_same_projection(reference_path, secondary_path)
 
+        assert reference_metadata is not None
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])

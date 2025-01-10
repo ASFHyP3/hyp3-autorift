@@ -5,7 +5,7 @@ import sys
 import textwrap
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from autoRIFT import __version__ as version
@@ -297,7 +297,7 @@ def generate_correction_data(
     scene: str,
     buffer: int = 0,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-) -> (dict, Path):
+) -> Tuple[dict, Path]:
     from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
 
     scene_path = Path(f'{scene}.zip')

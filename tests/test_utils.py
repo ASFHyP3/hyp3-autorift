@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from hyp3lib import DemError
 
@@ -11,14 +13,14 @@ def test_upload_file_to_s3_credentials_missing(tmp_path, monkeypatch):
         m.setenv('PUBLISH_SECRET_ACCESS_KEY', 'publish_access_key_secret')
         msg = 'Please provide.*'
         with pytest.raises(ValueError, match=msg):
-            utils.upload_file_to_s3_with_publish_access_keys('file.zip', 'myBucket')
+            utils.upload_file_to_s3_with_publish_access_keys(Path('file.zip'), 'myBucket')
 
     with monkeypatch.context() as m:
         m.setenv('PUBLISH_ACCESS_KEY_ID', 'publish_access_key_id')
         m.delenv('PUBLISH_SECRET_ACCESS_KEY', raising=False)
         msg = 'Please provide.*'
         with pytest.raises(ValueError, match=msg):
-            utils.upload_file_to_s3_with_publish_access_keys('file.zip', 'myBucket')
+            utils.upload_file_to_s3_with_publish_access_keys(Path('file.zip'), 'myBucket')
 
 
 def test_find_jpl_parameter_info():
