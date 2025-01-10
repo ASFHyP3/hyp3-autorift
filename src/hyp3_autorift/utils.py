@@ -51,21 +51,21 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                 'name': f'{feature["name"]}',
                 'epsg': feature['epsg'],
                 'geogrid': {
-                    'dem': f"/vsicurl/{feature['h']}",
-                    'ssm': f"/vsicurl/{feature['StableSurfa']}",
-                    'dhdx': f"/vsicurl/{feature['dhdx']}",
-                    'dhdy': f"/vsicurl/{feature['dhdy']}",
-                    'vx': f"/vsicurl/{feature['vx0']}",
-                    'vy': f"/vsicurl/{feature['vy0']}",
-                    'srx': f"/vsicurl/{feature['vxSearchRan']}",
-                    'sry': f"/vsicurl/{feature['vySearchRan']}",
-                    'csminx': f"/vsicurl/{feature['xMinChipSiz']}",
-                    'csminy': f"/vsicurl/{feature['yMinChipSiz']}",
-                    'csmaxx': f"/vsicurl/{feature['xMaxChipSiz']}",
-                    'csmaxy': f"/vsicurl/{feature['yMaxChipSiz']}",
-                    'sp': f"/vsicurl/{feature['sp']}",
-                    'dhdxs': f"/vsicurl/{feature['dhdxs']}",
-                    'dhdys': f"/vsicurl/{feature['dhdys']}",
+                    'dem': f'/vsicurl/{feature["h"]}',
+                    'ssm': f'/vsicurl/{feature["StableSurfa"]}',
+                    'dhdx': f'/vsicurl/{feature["dhdx"]}',
+                    'dhdy': f'/vsicurl/{feature["dhdy"]}',
+                    'vx': f'/vsicurl/{feature["vx0"]}',
+                    'vy': f'/vsicurl/{feature["vy0"]}',
+                    'srx': f'/vsicurl/{feature["vxSearchRan"]}',
+                    'sry': f'/vsicurl/{feature["vySearchRan"]}',
+                    'csminx': f'/vsicurl/{feature["xMinChipSiz"]}',
+                    'csminy': f'/vsicurl/{feature["yMinChipSiz"]}',
+                    'csmaxx': f'/vsicurl/{feature["xMaxChipSiz"]}',
+                    'csmaxy': f'/vsicurl/{feature["yMaxChipSiz"]}',
+                    'sp': f'/vsicurl/{feature["sp"]}',
+                    'dhdxs': f'/vsicurl/{feature["dhdxs"]}',
+                    'dhdys': f'/vsicurl/{feature["dhdys"]}',
                 },
                 'autorift': {
                     'grid_location': 'window_location.tif',
@@ -83,9 +83,7 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
             break
 
     if parameter_info is None:
-        raise DemError(
-            'Could not determine appropriate DEM for:\n' f'    centroid: {centroid}' f'    using: {parameter_file}'
-        )
+        raise DemError(f'Could not determine appropriate DEM for:\n    centroid: {centroid}    using: {parameter_file}')
 
     dem_geotransform = gdal.Info(parameter_info['geogrid']['dem'], format='json')['geoTransform']
     parameter_info['xsize'] = abs(dem_geotransform[1])

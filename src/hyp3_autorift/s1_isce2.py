@@ -188,7 +188,7 @@ def write_conversion_file(
     var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
     var.setncattr(
         'dr_to_vr_factor_description',
-        'multiplicative factor that converts slant range ' 'pixel displacement dr to slant range velocity vr',
+        'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr',
     )
 
     M11[noDataMask] = NoDataValue
