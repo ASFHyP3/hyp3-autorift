@@ -91,3 +91,16 @@ convention = "google"
 [tool.ruff.lint.isort]
 case-sensitive = true
 lines-after-imports = 2
+
+[tool.mypy]
+python_version = "3.9"
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+strict_equality = true
+check_untyped_defs = true
+exclude = ["/vend/"]
+
+[[tool.mypy.overrides]]
+module = "hyp3_autorift.vend.*"
+follow_imports = "skip"

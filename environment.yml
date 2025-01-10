@@ -11,6 +11,8 @@ dependencies:
   # For packaging, and testing
   - python-build
   - ruff
+  - mypy
+  - types-requests
   - pillow
   - pytest
   - pytest-console-scripts

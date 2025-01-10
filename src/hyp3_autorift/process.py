@@ -42,7 +42,7 @@ LANDSAT_SENSOR_MAPPING = {
 }
 
 DEFAULT_PARAMETER_FILE = (
-    '/vsicurl/http://its-live-data.s3.amazonaws.com/' 'autorift_parameters/v001/autorift_landice_0120m.shp'
+    '/vsicurl/http://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
 )
 
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
@@ -413,6 +413,7 @@ def process(
 
                 reference_path, secondary_path = utils.ensure_same_projection(reference_path, secondary_path)
 
+        assert reference_metadata is not None
         bbox = reference_metadata['bbox']
         lat_limits = (bbox[1], bbox[3])
         lon_limits = (bbox[0], bbox[2])
