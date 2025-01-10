@@ -111,10 +111,10 @@ def load_geospatial(infile: str, band: int = 1):
 def write_geospatial(
     outfile: str, data, transform, projection, nodata, driver: str = 'GTiff', dtype: int = gdal.GDT_Float64
 ) -> str:
-    driver = gdal.GetDriverByName(driver)
+    driver_object = gdal.GetDriverByName(driver)
 
     rows, cols = data.shape
-    ds = driver.Create(outfile, cols, rows, 1, dtype)
+    ds = driver_object.Create(outfile, cols, rows, 1, dtype)
     ds.SetGeoTransform(transform)
     ds.SetProjection(projection)
 
