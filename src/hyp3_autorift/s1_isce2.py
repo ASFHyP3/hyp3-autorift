@@ -32,8 +32,8 @@ def get_s1_primary_polarization(granule_name):
 
 
 def process_sentinel1_with_isce2(reference, secondary, parameter_file):
-    import isce  # noqa
-    from topsApp import TopsInSAR
+    import isce  # noqa: F401, I001
+    from topsApp import TopsInSAR  # type: ignore[import-not-found]
     from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
     from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
 
@@ -438,9 +438,9 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         lat_limits: list containing the [minimum, maximum] longitudes
     """
     import isce  # noqa: F401
-    from contrib.geo_autoRIFT.geogrid import Geogrid
-    from isceobj.Orbit.Orbit import Orbit
-    from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
+    from contrib.geo_autoRIFT.geogrid import Geogrid  # type: ignore[import-not-found]
+    from isceobj.Orbit.Orbit import Orbit  # type: ignore[import-not-found]
+    from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1  # type: ignore[import-not-found]
 
     frames = []
     for swath in range(1, 4):
@@ -501,8 +501,8 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
     import isce  # noqa: F401
-    import isceobj
-    from contrib.demUtils import createDemStitcher
+    import isceobj  # type: ignore[import-not-found]
+    from contrib.demUtils import createDemStitcher  # type: ignore[import-not-found]
 
     if isce_dem is None:
         seamstress = createDemStitcher()
