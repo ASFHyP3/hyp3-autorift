@@ -5,6 +5,7 @@ import textwrap
 from pathlib import Path
 
 import numpy as np
+from burst2safe.burst2safe import burst2safe
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
@@ -16,33 +17,49 @@ from hyp3_autorift.s1 import get_s1_primary_polarization
 log = logging.getLogger(__name__)
 
 
-def process_sentinel1_with_isce2(reference, secondary, parameter_file):
+def _get_safe(scene: str) -> Path:
+    if scene.endswith('-BURST'):
+        log.info(f'Creating SAFE for {scene}')
+        return burst2safe([scene])
+
+    scene_url = get_download_url(scene)
+    safe_path = download_file(scene_url, chunk_size=5242880)
+
+    log.info(f'Downloaded {safe_path}')
+
+    return Path(safe_path)
+
+# TODO: TEST:
+#   S1_191577_IW2_20170221T204709_HH_8CBA-BURST S1_191577_IW2_20170227T204627_HH_EF59-BURST
+#   S1_191576_IW3_20170221T204707_HH_8CBA-BURST S1_191576_IW3_20170227T204625_HH_EF59-BURST
+def process_sentinel1_with_isce2(reference: str, secondary: str, parameter_file: str) -> str:
     import isce  # noqa
     from topsApp import TopsInSAR
     from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
     from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
 
-    for scene in [reference, secondary]:
-        scene_url = get_download_url(scene)
-        download_file(scene_url, chunk_size=5242880)
+    reference_safe = _get_safe(reference)
+    secondary_safe = _get_safe(secondary)
 
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
 
-    reference_state_vec = fetch_for_scene(reference, dir=orbits)
+    reference_state_vec = fetch_for_scene(reference_safe.stem, dir=orbits)
     log.info(f'Downloaded orbit file {reference_state_vec} from s1-orbits')
 
-    secondary_state_vec = fetch_for_scene(secondary, dir=orbits)
+    secondary_state_vec = fetch_for_scene(secondary_safe.stem, dir=orbits)
     log.info(f'Downloaded orbit file {secondary_state_vec} from s1-orbits')
 
-    polarization = get_s1_primary_polarization(reference)
-    lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=str(orbits))
+    polarization = get_s1_primary_polarization(reference_safe.stem)
+
+    swaths = [int(reference.split('_')[2][-1])] if reference.endswith('-BURST') else [1, 2, 3]
+    lat_limits, lon_limits = bounding_box(str(reference_safe), polarization=polarization, orbits=str(orbits), swaths=swaths)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
     isce_dem = prep_isce_dem(parameter_info['geogrid']['dem'], lat_limits, lon_limits)
-    format_tops_xml(reference, secondary, polarization, isce_dem, orbits)
+    format_tops_xml(reference_safe, secondary_safe, polarization, isce_dem, orbits, swaths)
 
     insar = TopsInSAR(name='topsApp', cmdline=['topsApp.xml', '--end=mergebursts'])
     insar.configure()
@@ -116,7 +133,7 @@ def get_topsinsar_config():
     return config_data
 
 
-def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='topsApp.xml'):
+def format_tops_xml(reference, secondary, polarization, dem, orbits, swaths, xml_file='topsApp.xml'):
     xml_template = f"""    <?xml version="1.0" encoding="UTF-8"?>
     <topsApp>
         <component name="topsinsar">
@@ -124,16 +141,17 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
                 <property name="orbit directory">{orbits}</property>
                 <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">reference</property>
-                <property name="safe">['{reference}.zip']</property>
+                <property name="safe">['{reference}']</property>
                 <property name="polarization">{polarization}</property>
             </component>
             <component name="secondary">
                 <property name="orbit directory">{orbits}</property>
                 <property name="auxiliary data directory">{orbits}</property>
                 <property name="output directory">secondary</property>
-                <property name="safe">['{secondary}.zip']</property>
+                <property name="safe">['{secondary}']</property>
                 <property name="polarization">{polarization}</property>
             </component>
+            <property name="swaths">{swaths}</property>
             <property name="demfilename">{dem}</property>
             <property name="do interferogram">False</property>
             <property name="do dense offsets">True</property>
@@ -154,7 +172,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, xml_file='t
         f.write(textwrap.dedent(xml_template))
 
 
-def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326):
+def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326, swaths=[1, 2, 3]):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
@@ -162,6 +180,8 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     :param polarization: Image polarization (default: 'hh')
     :param orbits: Path to the orbital files (default: './Orbits')
     :param epsg: Projection EPSG code (default: 4326)
+    :param swaths: Which swaths to include in the bounding box calculation (default: [1, 2, 3])
+
 
     :return: lat_limits (list), lon_limits (list)
         lat_limits: list containing the [minimum, maximum] latitudes
@@ -172,7 +192,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     from isceobj.Orbit.Orbit import Orbit
     from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
     frames = []
-    for swath in range(1, 4):
+    for swath in swaths:
         rdr = Sentinel1()
         rdr.configure()
         rdr.safe = [os.path.abspath(safe)]
