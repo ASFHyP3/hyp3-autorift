@@ -32,6 +32,16 @@ def _get_safe(scene: str) -> Path:
 
 
 def process_sentinel1_with_isce2(reference: str, secondary: str, parameter_file: str) -> str:
+    """Process a Sentinel-1 image pair with ISCE2
+
+    Args:
+        reference: Name of the reference Sentinel-1 or Sentinel-1 Burst scene
+        secondary: Name of the secondary Sentinel-1 or Sentinel-1 Burst scene
+        parameter_file: Shapefile for determining the correct search parameters by geographic location
+
+    Returns:
+        the autoRIFT product file
+    """
     import isce  # noqa: F401, I001
     from topsApp import TopsInSAR  # type: ignore[import-not-found]
     from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
@@ -185,7 +195,7 @@ def format_tops_xml(reference, secondary, polarization, dem, orbits, swaths, xml
         f.write(textwrap.dedent(xml_template))
 
 
-def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326, swaths=[1, 2, 3]):
+def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits', epsg=4326, swaths=(1, 2, 3)):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive

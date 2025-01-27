@@ -29,3 +29,16 @@ def test_get_s1_primary_polarization():
         s1_isce2.get_s1_primary_polarization('S1A_IW_SLC__1SVH_20150706T015744_20150706T015814_006684_008EF7_9B69')
     with pytest.raises(ValueError):
         s1_isce2.get_s1_primary_polarization('S1A_IW_GRDH_1SVV_20150706T015720_20150706T015749_006684_008EF7_54BA')
+
+    assert(
+        s1_isce2.get_s1_primary_polarization('S1_191577_IW2_20170221T204709_VV_FOOB-BURST')
+        == 'vv'
+    )
+
+    assert(
+        s1_isce2.get_s1_primary_polarization('S1_191577_IW2_20170221T204709_HH_8CBA-BURST')
+        == 'hh'
+    )
+
+    with pytest.raises(ValueError):
+        s1_isce2.get_s1_primary_polarization('S1_191577_IW2_20170221T204709_HH_8CBA')

@@ -281,7 +281,10 @@ def main():
         help='Shapefile for determining the correct search parameters by geographic location. '
         'Path to shapefile must be understood by GDAL',
     )
-    parser.add_argument('granule', help='Reference granule to process')
+    parser.add_argument(
+        'granule',
+        help='Reference Sentinel-1 or Sentinel-1 Burst granule (scene) to process'
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
