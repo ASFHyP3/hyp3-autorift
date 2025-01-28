@@ -30,49 +30,6 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 ESA_HOST = 'dataspace.copernicus.eu'
 
 
-def process_burst(
-    safe_ref,
-    safe_sec, 
-    orbit_ref,
-    orbit_sec,
-    granule_ref,
-    burst_id_ref,
-    burst_id_sec
-):
-    write_yaml(safe_ref, orbit_ref)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    ref = convert2isce(burst_id_ref)
-
-    write_yaml(safe_sec, orbit_sec, burst_id_sec)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    sec = convert2isce(burst_id_sec, ref=False)
-
-    swath = int(granule_ref.split('_')[2][2])
-    meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
-    meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
-
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swath=swath)
-
-    scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-
-    geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
-
-    from osgeo import gdal
-    gdal.AllRegister()
-
-    netcdf_file = generateAutoriftProduct(
-            ref, sec, nc_sensor='S1', optical_flag=False, ncname=None,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
-        )
-
-    return netcdf_file
-
-
 def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera=False):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
@@ -124,6 +81,49 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
         burst_ids_ref,
         burst_ids_sec
     )
+
+
+def process_burst(
+    safe_ref,
+    safe_sec, 
+    orbit_ref,
+    orbit_sec,
+    granule_ref,
+    burst_id_ref,
+    burst_id_sec
+):
+    write_yaml(safe_ref, orbit_ref)
+    s1_cslc.run('s1_cslc.yaml', 'radar')
+    ref = convert2isce(burst_id_ref)
+
+    write_yaml(safe_sec, orbit_sec, burst_id_sec)
+    s1_cslc.run('s1_cslc.yaml', 'radar')
+    sec = convert2isce(burst_id_sec, ref=False)
+
+    swath = int(granule_ref.split('_')[2][2])
+    meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
+    meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
+    meta_s = copy.copy(meta_r)
+    meta_s.sensingStart = meta_temp.sensingStart
+    meta_s.sensingStop = meta_temp.sensingStop
+
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swath=swath)
+
+    scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
+
+    geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+
+    from osgeo import gdal
+    gdal.AllRegister()
+
+    netcdf_file = generateAutoriftProduct(
+            ref, sec, nc_sensor='S1', optical_flag=False, ncname=None,
+            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
+            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+        )
+
+    return netcdf_file
 
 
 def process_slc(
