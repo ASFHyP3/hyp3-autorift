@@ -126,17 +126,17 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
     safe_sec = download_burst(burst_granule_sec)
     granule_ref = get_granule_name(safe_ref)
     granule_sec = get_granule_name(safe_sec)
- 
+
     get_dem_for_safes(safe_ref, safe_sec)
 
     orbit_ref, _ = downloadSentinelOrbitFile(granule_ref, esa_credentials=esa_credentials)
     orbit_sec, _ = downloadSentinelOrbitFile(granule_sec, esa_credentials=esa_credentials)
 
     if do_geocode:
-        burst_id_ref = get_burst_ids(safe_ref, granule_ref, orbit_ref)
-        burst_id_sec = get_burst_ids(safe_sec, granule_sec, orbit_sec)
+        burst_id_ref = get_burst_ids(safe_ref, orbit_ref)
+        burst_id_sec = get_burst_ids(safe_sec, orbit_sec)
         # Use geographic CRS
-        process_burst_geo(
+        return process_burst_geo(
             safe_ref,
             safe_sec, 
             orbit_ref,
@@ -147,10 +147,10 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
             burst_id_sec
         )
     else:
-        burst_id_ref = get_burst_id(safe_ref, orbit_ref)
-        burst_id_sec = get_burst_id(safe_sec, orbit_sec)
+        burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
+        burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
         # Use radar geometry
-        process_burst_radar(
+        return process_burst_radar(
             safe_ref,
             safe_sec, 
             orbit_ref,
@@ -618,11 +618,13 @@ def download_burst(burst_granule, all_anns=True):
 
 
 def get_burst_id(safe, burst_granule, orbit_file):
-    abspath = os.path.abspath(safe)
-    orbit_number = burst_granule.split('_')[1]
-    swath = burst_granule.split('_')[2]
+    burst_granule_parts = burst_granule.split('_')
+    orbit_number = burst_granule_parts[1]
+    swath = burst_granule_parts[2]
+    pol = burst_granule_parts[4]
     swath_number = int(swath[2])
-    pol = burst_granule.split('_')[4]
+
+    abspath = os.path.abspath(safe)
     bursts = s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
 
     str_burst_id = None
