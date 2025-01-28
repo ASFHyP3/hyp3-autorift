@@ -32,40 +32,28 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 ESA_HOST = 'dataspace.copernicus.eu'
 
 
-def process_burst_sentinel1_with_isce3(burst_granule_ref, burst_granule_sec):
-    esa_username, esa_password = get_esa_credentials()
-    esa_credentials = (esa_username, esa_password)
+def get_granule_name(safe_name):
+    return os.path.basename(safe_name).split('.')[0]
 
-    safe_ref = download_burst(burst_granule_ref)
-    safe_sec = download_burst(burst_granule_sec)
 
-    granule_ref = os.path.basename(safe_ref).split('.')[0]
-    granule_sec = os.path.basename(safe_sec).split('.')[0]
-
-    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
-    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
-    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
-    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
-
-    bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
-
-    orbit_file, prov = downloadSentinelOrbitFile(granule_ref, esa_credentials)
-    orbit_file_ref = orbit_file
-    orbit_file, prov = downloadSentinelOrbitFile(granule_sec, esa_credentials)
-    orbit_file_sec = orbit_file
-
-    burst_ids_ref = get_burst_ids(safe_ref, burst_granule_ref, orbit_file_ref)
-    burst_ids_sec = get_burst_ids(safe_sec, burst_granule_sec, orbit_file_sec)
-
-    write_yaml(safe_ref, orbit_file_ref, burst_ids_ref)
+def process_burst_geo(
+    safe_ref,
+    safe_sec, 
+    orbit_ref,
+    orbit_sec,
+    granule_ref,
+    granule_sec,
+    burst_id_ref,
+    burst_id_sec
+):
+    write_yaml(safe_ref, orbit_ref, burst_id_ref)
     run_rtc()
-    ref = correct_geocode_slc(safe_ref, burst_granule_ref, orbit_file_ref)
+    ref = correct_geocode_slc(safe_ref, granule_ref, orbit_ref)
     remove_temp_files(only_rtc=True)
 
-    write_yaml(safe_sec, orbit_file_sec, burst_ids_sec)
+    write_yaml(safe_sec, orbit_sec, burst_id_sec)
     run_rtc()
-    sec = correct_geocode_slc(safe_sec, burst_granule_sec, orbit_file_sec)
+    sec = correct_geocode_slc(safe_sec, granule_sec, orbit_sec)
 
     remove_temp_files()
 
@@ -87,48 +75,31 @@ def process_burst_sentinel1_with_isce3(burst_granule_ref, burst_granule_sec):
         )
 
 
-def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_sec):
-    esa_username, esa_password = get_esa_credentials()
-    esa_credentials = (esa_username, esa_password)
-
-    safe_ref = download_burst(burst_granule_ref)
-    safe_sec = download_burst(burst_granule_sec)
-
-    granule_ref = os.path.basename(safe_ref).split('.')[0]
-    granule_sec = os.path.basename(safe_sec).split('.')[0]
-
-    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
-    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
-    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
-    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
-
-    bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
-
-    orbit_file, prov = downloadSentinelOrbitFile(granule_ref, esa_credentials=esa_credentials)
-    orbit_file_ref = orbit_file
-    orbit_file, prov = downloadSentinelOrbitFile(granule_sec, esa_credentials=esa_credentials)
-    orbit_file_sec = orbit_file
-
-    burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_file_ref)
-    burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_file_sec)
-
-    write_yaml_radar(safe_ref, orbit_file_ref)
+def process_burst_radar(
+    safe_ref,
+    safe_sec, 
+    orbit_ref,
+    orbit_sec,
+    granule_ref,
+    burst_id_ref,
+    burst_id_sec
+):
+    write_yaml_radar(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     ref = convert2isce(burst_id_ref)
 
-    write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
+    write_yaml_radar(safe_sec, orbit_sec, burst_id_sec)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     sec = convert2isce(burst_id_sec, ref=False)
 
-    swath = int(burst_granule_ref.split('_')[2][2])
-    meta_r = loadMetadata(safe_ref, orbit_file_ref, swath=swath)
-    meta_temp = loadMetadata(safe_sec, orbit_file_sec, swath=swath)
+    swath = int(granule_ref.split('_')[2][2])
+    meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
+    meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_file_ref, swath=swath)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swath=swath)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -147,7 +118,47 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     return netcdf_file
 
 
-def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
+def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_radar=True):
+    esa_username, esa_password = get_esa_credentials()
+    esa_credentials = (esa_username, esa_password)
+
+    safe_ref = download_burst(burst_granule_ref)
+    safe_sec = download_burst(burst_granule_sec)
+    granule_ref = get_granule_name(safe_ref)
+    granule_sec = get_granule_name(safe_sec)
+ 
+    get_dem_for_safes(safe_ref, safe_sec)
+
+    orbit_ref, _ = downloadSentinelOrbitFile(granule_ref, esa_credentials)
+    orbit_sec, _ = downloadSentinelOrbitFile(granule_sec, esa_credentials)
+
+    burst_ids_ref = get_burst_ids(safe_ref, burst_granule_ref, orbit_ref)
+    burst_ids_sec = get_burst_ids(safe_sec, burst_granule_sec, orbit_sec)
+
+    if do_radar:
+        process_burst_radar(
+            safe_ref,
+            safe_sec, 
+            orbit_ref,
+            orbit_sec,
+            granule_ref,
+            granule_sec,
+            burst_ids_ref,
+            burst_ids_sec
+        )
+    else:
+        process_burst_radar(
+            safe_ref,
+            safe_sec, 
+            orbit_ref,
+            orbit_sec,
+            granule_ref,
+            burst_ids_ref,
+            burst_ids_sec
+        )
+
+
+def prepare_slcs(slc_ref, slc_sec):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
@@ -158,21 +169,20 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
 
-    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
-    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
-    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
-    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
+    orbit_ref, _ = downloadSentinelOrbitFile(slc_ref, esa_credentials=esa_credentials)
+    orbit_sec, _ = downloadSentinelOrbitFile(slc_sec, esa_credentials=esa_credentials)
 
-    bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
+    return safe_ref, orbit_ref, safe_sec, orbit_sec
 
-    orbit_file_ref, _ = downloadSentinelOrbitFile(slc_ref, esa_credentials=esa_credentials)
-    orbit_file_sec, _ = downloadSentinelOrbitFile(slc_sec, esa_credentials=esa_credentials)
 
-    burst_ids_ref = get_burst_ids(safe_ref, orbit_file_ref)
-    burst_ids_sec = get_burst_ids(safe_sec, orbit_file_sec)
+def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
+    safe_ref, orbit_ref, safe_sec, orbit_sec = prepare_slcs(slc_ref, slc_sec)
+    get_dem_for_safes(safe_ref, safe_sec)
 
-    write_yaml_radar(safe_ref, orbit_file_ref)
+    burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
+    burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
+
+    write_yaml_radar(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     print('Bursts ref', burst_ids_ref)
     print('Bursts sec', burst_ids_sec)
@@ -180,19 +190,19 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
-        write_yaml_radar(safe_sec, orbit_file_sec, burst_id_sec)
+        write_yaml_radar(safe_sec, orbit_sec, burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
     mergeSwaths(ref=False)
     mergeSwaths()
 
-    meta_r = loadMetadataSlc(safe_ref, orbit_file_ref)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_file_sec)
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref)
+    meta_temp = loadMetadataSlc(safe_sec, orbit_sec)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_file_ref)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -578,40 +588,6 @@ def convert2isce(burst_id, ref=True):
         return 'burst_sec_'+str(burst_id.split('_')[2])+'.slc'
 
 
-def geocode_burst_temp(burst_granule_ref, index):
-    esa_username, esa_password = get_esa_credentials()
-
-    safe_ref = sorted(glob.glob('./*.SAFE'))[index]
-    granule_ref = os.path.basename(safe_ref).split('.')[0]
-
-    orbit_file_ref, provider_ref = downloadSentinelOrbitFile(granule_ref, esa_credentials=(esa_username, esa_password))
-
-    str_burst_ids_ref = get_burst_ids(safe_ref, burst_granule_ref, orbit_file_ref)
-
-    write_yaml(safe_ref, orbit_file_ref, str_burst_ids_ref)
-    run_rtc()
-    correct_geocode_slc(safe_ref, burst_granule_ref, orbit_file_ref)
-
-
-def geocode_burst(burst_granule):
-    esa_username, esa_password = get_esa_credentials()
-
-    download_bursts(burst_granule)
-    safe = glob.glob('./*.SAFE')[0]
-
-    bounds = get_bounds_dem(safe)
-    download_dem(bounds)
-    granule = os.path.basename(safe).split('.')[0]
-    orbit_file, provider = downloadSentinelOrbitFile(granule, esa_credentials=(esa_username, esa_password))
-
-    str_burst_ids = get_burst_ids(safe, burst_granule, orbit_file)
-    write_yaml(safe, orbit_file, str_burst_ids)
-    run_rtc()
-    correct_geocode_slc(safe, burst_granule, orbit_file)
-
-    remove_temp_files()
-
-
 def get_esa_credentials() -> Tuple[str, str]:
     netrc_name = '_netrc' if system().lower() == 'windows' else '.netrc'
     netrc_file = Path.home() / netrc_name
@@ -636,73 +612,6 @@ def get_esa_credentials() -> Tuple[str, str]:
 
 def download_burst(burst_granule, all_anns=True):
     return burst2safe([burst_granule], all_anns=all_anns)
-
-
-# def download_bursts(burst_granule):
-#     start = (datetime.strptime(burst_granule.split('_')[3], '%Y%m%dT%H%M%S')-timedelta(days=1)).strftime('%Y-%m-%d')
-#     end = (datetime.strptime(burst_granule.split('_')[3], '%Y%m%dT%H%M%S')+timedelta(days=1)).strftime('%Y-%m-%d')
-#     pol = burst_granule.split('_')[4]
-#     results = asf_search.search(product_list=[burst_granule])
-#     burst_id = results[0].properties['burst']['fullBurstID']
-#     if burst_id[-1] == '1':
-#         burst_id1 = burst_id.replace('IW1', 'IW2')
-#         results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
-#         burst_add1 = results[0].properties['fileID']
-#         burst_id2 = burst_id.replace('IW1', 'IW3')
-#         results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
-#         burst_add2 = results[0].properties['fileID']
-#         bursts = [burst_granule, burst_add1, burst_add2]
-#     elif burst_id[-1] == '2':
-#         burst_id1 = burst_id.replace('IW2', 'IW1')
-#         results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
-#         burst_add1 = results[0].properties['fileID']
-#         burst_id2 = burst_id.replace('IW2', 'IW3')
-#         results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
-#         burst_add2 = results[0].properties['fileID']
-#         bursts = [burst_add1, burst_granule, burst_add2]
-#     elif burst_id[-1] == '3':
-#         burst_id1 = burst_id.replace('IW3', 'IW1')
-#         results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
-#         burst_add1 = results[0].properties['fileID']
-#         burst_id2 = burst_id.replace('IW3', 'IW2')
-#         results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
-#         burst_add2 = results[0].properties['fileID']
-#         bursts = [burst_add1, burst_add2, burst_granule]
-#     else:
-#         raise Exception('The name of the granule is not valid')
-
-#     subprocess.call('burst2safe '+' '.join(bursts), shell=True)
-
-
-def get_burst(safe, burst_granule, orbit_file):
-    abspath = os.path.abspath(safe)
-    swath = burst_granule.split('_')[2]
-    swath_number = int(swath[2])
-    pol = burst_granule.split('_')[4]
-    bursts = s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
-
-    return bursts[0]
-
-
-def get_burst_id(safe, burst_granule, orbit_file):
-    abspath = os.path.abspath(safe)
-    orbit_number = burst_granule.split('_')[1]
-    swath = burst_granule.split('_')[2]
-    swath_number = int(swath[2])
-    pol = burst_granule.split('_')[4]
-    bursts = s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
-
-    str_burst_id = None
-    for x in bursts:
-        burst_id_x = str(x.burst_id.esa_burst_id).zfill(6)+'_'+x.burst_id.subswath.lower()
-        orbit_id = orbit_number.lower()+'_'+swath.lower()
-        if burst_id_x == orbit_id:
-            str_burst_id = 't'+str(int(x.burst_id.track_number)).zfill(3)+'_'+burst_id_x
-
-    if str_burst_id is None:
-        raise Exception('The burst id from ' + burst_granule + ' was not found in ' + safe)
-
-    return str_burst_id
 
 
 def get_burst_ids(safe, orbit_file):
@@ -742,6 +651,15 @@ def get_bounds_dem1(safe):
     bounds = [bounds[0]-0.1, bounds[1], bounds[2]+0.1, bounds[3]]
 
     return bounds
+
+
+def get_dem_for_safes(safe_ref, safe_sec):
+    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
+    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
+    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
+    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
+    bounds = [lon_min, lat_min, lon_max, lat_max]
+    download_dem(bounds)
 
 
 def download_dem(bounds):
@@ -807,63 +725,6 @@ def write_yaml_radar(safe, orbit_file, burst_id=None):
         elif 'burst_ids' in line:
             if burst_id is None:
                 newstring += line.replace('burst_ids', '')
-            else:
-                newstring += line.replace('burst_ids', '[\''+burst_id+'\']')
-        elif 'bool_reference' in line:
-            if burst_id is None:
-                newstring += line.replace('bool_reference', 'True')
-            else:
-                newstring += line.replace('bool_reference', 'False')
-        elif 's1_ref_file' in line:
-            if burst_id is None:
-                newstring += line.replace('s1_ref_file', '')
-            else:
-                newstring += line.replace('s1_ref_file', ref)
-        elif 'product_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('product_folder', './product')
-            else:
-                newstring += line.replace('product_folder', './product_sec')
-        elif 'scratch_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('scratch_folder', './scratch')
-            else:
-                newstring += line.replace('scratch_folder', './product_sec')
-        elif 'output_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('output_folder', './output')
-            else:
-                newstring += line.replace('output_folder', './output_sec')
-        else:
-            newstring = line
-        yaml.write(newstring)
-    yaml.close()
-
-
-def write_yaml_burst(safe, orbit_file, burst_id_ref, burst_id=None):
-    abspath = os.path.abspath(safe)
-    yaml_folder = os.path.dirname(hyp3_autorift.__file__)+'/schemas'
-    yaml = open(f'{yaml_folder}/s1_cslc_template.yaml', 'r')
-    lines = yaml.readlines()
-    yaml.close()
-
-    if burst_id is None:
-        ref = ''
-    else:
-        ref = glob.glob('./product/'+burst_id+'/*')[0]
-        ref = os.path.abspath(ref)
-
-    yaml = open('s1_cslc.yaml', 'w')
-    newstring = ''
-    for line in lines:
-        if 's1_image' in line:
-            newstring += line.replace('s1_image', abspath)
-        elif 's1_orbit_file' in line:
-            orbit = os.path.abspath(orbit_file)
-            newstring += line.replace('s1_orbit_file', orbit)
-        elif 'burst_ids' in line:
-            if burst_id is None:
-                newstring += line.replace('burst_ids', '[\''+burst_id_ref+'\']')
             else:
                 newstring += line.replace('burst_ids', '[\''+burst_id+'\']')
         elif 'bool_reference' in line:
