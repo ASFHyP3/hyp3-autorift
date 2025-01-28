@@ -10,9 +10,11 @@ from platform import system
 from typing import Tuple
 
 import asf_search
+import burst2safe.burst2safe
 import numpy as np
 import rasterio
 import s1reader
+import burst2safe
 from compass import s1_cslc
 from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
@@ -35,11 +37,8 @@ def process_burst_sentinel1_with_isce3(burst_granule_ref, burst_granule_sec):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
-    download_bursts(burst_granule_ref)
-    download_bursts(burst_granule_sec)
-
-    safe_ref = sorted(glob.glob('./*.SAFE'))[0]
-    safe_sec = sorted(glob.glob('./*.SAFE'))[1]
+    safe_ref = download_burst(burst_granule_ref)
+    safe_sec = download_burst(burst_granule_sec)
 
     granule_ref = os.path.basename(safe_ref).split('.')[0]
     granule_sec = os.path.basename(safe_sec).split('.')[0]
@@ -93,11 +92,8 @@ def process_burst_sentinel1_with_isce3_radar(burst_granule_ref, burst_granule_se
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
-    download_burst(burst_granule_ref)
-    download_burst(burst_granule_sec)
-
-    safe_ref = sorted(glob.glob('./*.SAFE'))[0]
-    safe_sec = sorted(glob.glob('./*.SAFE'))[1]
+    safe_ref = download_burst(burst_granule_ref)
+    safe_sec = download_burst(burst_granule_sec)
 
     granule_ref = os.path.basename(safe_ref).split('.')[0]
     granule_sec = os.path.basename(safe_sec).split('.')[0]
@@ -156,12 +152,8 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
-    for scene in [slc_ref, slc_sec]:
-        scene_url = get_download_url(scene)
-        download_file(scene_url, chunk_size=5242880)
-
-    safe_ref = sorted(glob.glob('./*.zip'))[0]
-    safe_sec = sorted(glob.glob('./*.zip'))[1]
+    safe_ref = download_burst(slc_ref)
+    safe_sec = download_burst(slc_ref)
 
     lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
     lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
@@ -642,44 +634,44 @@ def get_esa_credentials() -> Tuple[str, str]:
     )
 
 
-def download_burst(burst_granule):
-    subprocess.call('burst2safe '+' '+burst_granule+' --all-anns', shell=True)
+def download_burst(burst_granule, all_anns=True):
+    return burst2safe.burst2safe(burst_granule, all_anns=all_anns)
 
 
-def download_bursts(burst_granule):
-    start = (datetime.strptime(burst_granule.split('_')[3], '%Y%m%dT%H%M%S')-timedelta(days=1)).strftime('%Y-%m-%d')
-    end = (datetime.strptime(burst_granule.split('_')[3], '%Y%m%dT%H%M%S')+timedelta(days=1)).strftime('%Y-%m-%d')
-    pol = burst_granule.split('_')[4]
-    results = asf_search.search(product_list=[burst_granule])
-    burst_id = results[0].properties['burst']['fullBurstID']
-    if burst_id[-1] == '1':
-        burst_id1 = burst_id.replace('IW1', 'IW2')
-        results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
-        burst_add1 = results[0].properties['fileID']
-        burst_id2 = burst_id.replace('IW1', 'IW3')
-        results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
-        burst_add2 = results[0].properties['fileID']
-        bursts = [burst_granule, burst_add1, burst_add2]
-    elif burst_id[-1] == '2':
-        burst_id1 = burst_id.replace('IW2', 'IW1')
-        results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
-        burst_add1 = results[0].properties['fileID']
-        burst_id2 = burst_id.replace('IW2', 'IW3')
-        results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
-        burst_add2 = results[0].properties['fileID']
-        bursts = [burst_add1, burst_granule, burst_add2]
-    elif burst_id[-1] == '3':
-        burst_id1 = burst_id.replace('IW3', 'IW1')
-        results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
-        burst_add1 = results[0].properties['fileID']
-        burst_id2 = burst_id.replace('IW3', 'IW2')
-        results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
-        burst_add2 = results[0].properties['fileID']
-        bursts = [burst_add1, burst_add2, burst_granule]
-    else:
-        raise Exception('The name of the granule is not valid')
+# def download_bursts(burst_granule):
+#     start = (datetime.strptime(burst_granule.split('_')[3], '%Y%m%dT%H%M%S')-timedelta(days=1)).strftime('%Y-%m-%d')
+#     end = (datetime.strptime(burst_granule.split('_')[3], '%Y%m%dT%H%M%S')+timedelta(days=1)).strftime('%Y-%m-%d')
+#     pol = burst_granule.split('_')[4]
+#     results = asf_search.search(product_list=[burst_granule])
+#     burst_id = results[0].properties['burst']['fullBurstID']
+#     if burst_id[-1] == '1':
+#         burst_id1 = burst_id.replace('IW1', 'IW2')
+#         results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
+#         burst_add1 = results[0].properties['fileID']
+#         burst_id2 = burst_id.replace('IW1', 'IW3')
+#         results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
+#         burst_add2 = results[0].properties['fileID']
+#         bursts = [burst_granule, burst_add1, burst_add2]
+#     elif burst_id[-1] == '2':
+#         burst_id1 = burst_id.replace('IW2', 'IW1')
+#         results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
+#         burst_add1 = results[0].properties['fileID']
+#         burst_id2 = burst_id.replace('IW2', 'IW3')
+#         results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
+#         burst_add2 = results[0].properties['fileID']
+#         bursts = [burst_add1, burst_granule, burst_add2]
+#     elif burst_id[-1] == '3':
+#         burst_id1 = burst_id.replace('IW3', 'IW1')
+#         results = asf_search.search(fullBurstID=burst_id1, start=start, end=end, polarization=pol)
+#         burst_add1 = results[0].properties['fileID']
+#         burst_id2 = burst_id.replace('IW3', 'IW2')
+#         results = asf_search.search(fullBurstID=burst_id2, start=start, end=end, polarization=pol)
+#         burst_add2 = results[0].properties['fileID']
+#         bursts = [burst_add1, burst_add2, burst_granule]
+#     else:
+#         raise Exception('The name of the granule is not valid')
 
-    subprocess.call('burst2safe '+' '.join(bursts), shell=True)
+#     subprocess.call('burst2safe '+' '.join(bursts), shell=True)
 
 
 def get_burst(safe, burst_granule, orbit_file):

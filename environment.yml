@@ -9,11 +9,6 @@ dependencies:
   - python>=3.9
   - pip
   # For packaging, and testing
-  - build
-  - flake8
-  - flake8-import-order
-  - flake8-blind-except
-  - flake8-builtins
   - pillow>=7.0
   - pluggy
   - pytest
@@ -55,4 +50,3 @@ dependencies:
   - pandas>=1.4
   - progressbar
   - rasterio
-  - gxx_linux-64>=9,<10
