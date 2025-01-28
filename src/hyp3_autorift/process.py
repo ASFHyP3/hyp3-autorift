@@ -363,9 +363,9 @@ def process(
     platform = get_platform(reference)
 
     if platform == 'S1':
-        from hyp3_autorift.s1_isce3 import process_sentinel1_with_isce3_slc, process_burst_sentinel1_with_isce3
+        from hyp3_autorift.s1_isce3 import process_sentinel1_with_isce3_slc, process_sentinel1_burst_isce3
         if reference.endswith('-BURST'):
-            netcdf_file = process_burst_sentinel1_with_isce3(reference, secondary)
+            netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
         else:
             netcdf_file = process_sentinel1_with_isce3_slc(reference, secondary)
     elif platform == 'GS1':
