@@ -129,13 +129,12 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
  
     get_dem_for_safes(safe_ref, safe_sec)
 
-    orbit_ref, _ = downloadSentinelOrbitFile(granule_ref, esa_credentials)
-    orbit_sec, _ = downloadSentinelOrbitFile(granule_sec, esa_credentials)
-
-    burst_ids_ref = get_burst_ids(safe_ref, burst_granule_ref, orbit_ref)
-    burst_ids_sec = get_burst_ids(safe_sec, burst_granule_sec, orbit_sec)
+    orbit_ref, _ = downloadSentinelOrbitFile(granule_ref, esa_credentials=esa_credentials)
+    orbit_sec, _ = downloadSentinelOrbitFile(granule_sec, esa_credentials=esa_credentials)
 
     if do_geocode:
+        burst_id_ref = get_burst_ids(safe_ref, granule_ref, orbit_ref)
+        burst_id_sec = get_burst_ids(safe_sec, granule_sec, orbit_sec)
         # Use geographic CRS
         process_burst_geo(
             safe_ref,
@@ -144,10 +143,12 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
             orbit_sec,
             granule_ref,
             granule_sec,
-            burst_ids_ref,
-            burst_ids_sec
+            burst_id_ref,
+            burst_id_sec
         )
     else:
+        burst_id_ref = get_burst_id(safe_ref, orbit_ref)
+        burst_id_sec = get_burst_id(safe_sec, orbit_sec)
         # Use radar geometry
         process_burst_radar(
             safe_ref,
@@ -155,8 +156,8 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
             orbit_ref,
             orbit_sec,
             granule_ref,
-            burst_ids_ref,
-            burst_ids_sec
+            burst_id_ref,
+            burst_id_sec
         )
 
 
@@ -614,6 +615,27 @@ def get_esa_credentials() -> Tuple[str, str]:
 
 def download_burst(burst_granule, all_anns=True):
     return burst2safe([burst_granule], all_anns=all_anns)
+
+
+def get_burst_id(safe, burst_granule, orbit_file):
+    abspath = os.path.abspath(safe)
+    orbit_number = burst_granule.split('_')[1]
+    swath = burst_granule.split('_')[2]
+    swath_number = int(swath[2])
+    pol = burst_granule.split('_')[4]
+    bursts = s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
+
+    str_burst_id = None
+    for x in bursts:
+        burst_id_x = str(x.burst_id.esa_burst_id).zfill(6)+'_'+x.burst_id.subswath.lower()
+        orbit_id = orbit_number.lower()+'_'+swath.lower()
+        if burst_id_x == orbit_id:
+            str_burst_id = 't'+str(int(x.burst_id.track_number)).zfill(3)+'_'+burst_id_x
+
+    if str_burst_id is None:
+        raise Exception('The burst id from ' + burst_granule + ' was not found in ' + safe)
+
+    return str_burst_id
 
 
 def get_burst_ids(safe, orbit_file):
