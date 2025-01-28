@@ -197,13 +197,16 @@ def get_datetime(scene_name):
 
 def get_platform(scene: str) -> str:
     if 'BURST' in scene:
-        return 'GS1'
-    if scene.startswith('S1') or scene.startswith('S2'):
+        return 'S1-BURST'
+    if 'OPERA' in scene:
+        return 'S1-OPERA'
+    if scene.startswith('S1'):
+        return 'S1-SLC'
+    if scene.startswith('S2'):
         return scene[0:2]
-    elif scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
+    if scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
         return scene[0] + scene[3]
-    else:
-        raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
+    raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
 def create_filtered_filepath(path: str) -> str:
@@ -362,12 +365,15 @@ def process(
 
     platform = get_platform(reference)
 
-    if platform == 'S1':
-        from hyp3_autorift.s1_isce3 import process_sentinel1_with_isce3_slc
-        netcdf_file = process_sentinel1_with_isce3_slc(reference, secondary)
-    elif platform == 'GS1':
+    if platform == 'S1-SLC':
+        from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
+        netcdf_file = process_sentinel1_slc_isce3(reference, secondary)
+    elif platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
         netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
+    elif platform == 'S1-OPERA':
+        from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, is_opera=True)
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')

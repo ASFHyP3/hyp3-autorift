@@ -118,7 +118,7 @@ def process_burst_radar(
     return netcdf_file
 
 
-def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geocode=False):
+def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera=False):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
@@ -131,7 +131,7 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
 
     get_dem_for_safes(safe_ref, safe_sec)
 
-    if do_geocode:
+    if is_opera:
         burst_id_ref = get_burst_ids(safe_ref, orbit_ref)
         burst_id_sec = get_burst_ids(safe_sec, orbit_sec)
         # Use geographic CRS
@@ -177,7 +177,7 @@ def prepare_slcs(slc_ref, slc_sec):
     return safe_ref, orbit_ref, safe_sec, orbit_sec
 
 
-def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
+def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     safe_ref, orbit_ref, safe_sec, orbit_sec = prepare_slcs(slc_ref, slc_sec)
     get_dem_for_safes(safe_ref, safe_sec)
 
