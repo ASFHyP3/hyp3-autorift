@@ -9,7 +9,6 @@ from pathlib import Path
 from platform import system
 from typing import Tuple
 
-import asf_search
 import numpy as np
 import rasterio
 import s1reader
@@ -23,9 +22,8 @@ from osgeo import gdal
 from s1reader import s1_info
 
 import hyp3_autorift
-from hyp3_autorift import geometry, process, utils
+from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata
 from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
@@ -41,11 +39,11 @@ def process_burst(
     burst_id_ref,
     burst_id_sec
 ):
-    write_yaml_radar(safe_ref, orbit_ref)
+    write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     ref = convert2isce(burst_id_ref)
 
-    write_yaml_radar(safe_sec, orbit_sec, burst_id_sec)
+    write_yaml(safe_sec, orbit_sec, burst_id_sec)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     sec = convert2isce(burst_id_sec, ref=False)
 
@@ -136,7 +134,7 @@ def process_slc(
     burst_ids_ref,
     burst_ids_sec
 ):
-    write_yaml_radar(safe_ref, orbit_ref)
+    write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     print('Bursts ref', burst_ids_ref)
     print('Bursts sec', burst_ids_sec)
@@ -144,7 +142,7 @@ def process_slc(
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
-        write_yaml_radar(safe_sec, orbit_sec, burst_id_sec)
+        write_yaml(safe_sec, orbit_sec, burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
     mergeSwaths(ref=False)
@@ -605,27 +603,9 @@ def get_burst_ids(safe, orbit_file):
     return str_burst_ids
 
 
-def get_beta(safe, burst_granule, orbit_file):
-    abspath = os.path.abspath(safe)
-    swath = burst_granule.split('_')[2]
-    swath_number = int(swath[2])
-    pol = burst_granule.split('_')[4]
-    bursts = s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
-    rad = str(bursts[0].burst_calibration.beta_naught)
-
-    return rad
-
-
 def get_bounds_dem(safe):
     bounds = s1_info.get_frame_bounds(os.path.basename(safe))
     bounds = [int(bounds[0])-1, int(bounds[1]), math.ceil(bounds[2])+1, math.ceil(bounds[3])]
-
-    return bounds
-
-
-def get_bounds_dem1(safe):
-    bounds = s1_info.get_frame_bounds(os.path.basename(safe))
-    bounds = [bounds[0]-0.1, bounds[1], bounds[2]+0.1, bounds[3]]
 
     return bounds
 
@@ -655,30 +635,7 @@ def download_dem(bounds):
     subprocess.call('rm -rf dem_temp.tif', shell=True)
 
 
-def write_yaml(safe, orbit_file, burst_id):
-    abspath = os.path.abspath(safe)
-    yaml_folder = os.path.dirname(hyp3_autorift.__file__)+'/schemas'
-    yaml = open(f'{yaml_folder}/rtc_s1_template.yaml', 'r')
-    lines = yaml.readlines()
-    yaml.close()
-
-    yaml = open('rtc_s1.yaml', 'w')
-    newstring = ''
-    for line in lines:
-        if 's1_rtc_image' in line:
-            newstring += line.replace('s1_rtc_image', abspath)
-        elif 's1_orbit_file' in line:
-            orbit = os.path.abspath(orbit_file)
-            newstring += line.replace('s1_orbit_file', orbit)
-        elif 'burst_ids' in line:
-            newstring += line.replace('burst_ids', burst_id)
-        else:
-            newstring = line
-        yaml.write(newstring)
-    yaml.close()
-
-
-def write_yaml_radar(safe, orbit_file, burst_id=None):
+def write_yaml(safe, orbit_file, burst_id=None):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__)+'/schemas'
     yaml = open(f'{yaml_folder}/s1_cslc_template.yaml', 'r')
@@ -733,22 +690,6 @@ def write_yaml_radar(safe, orbit_file, burst_id=None):
             newstring = line
         yaml.write(newstring)
     yaml.close()
-
-
-def run_rtc():
-    subprocess.call('rtc_s1_single_job.py rtc_s1.yaml', shell=True)
-
-
-def correct_geocode_slc(safe, burst_granule, orbit_file):
-    granule = os.path.basename(safe).split('.')[0]
-    rtc = glob.glob('./output_dir/OPERA*.tif')[0]
-
-    rad = get_beta(safe, burst_granule, orbit_file)
-
-    output = 'GS1_OPERA_BURST'+granule.split('IW_SLC')[1]+'.tif'
-    subprocess.call(f"gdal_calc.py --type=UInt16 -A {rtc} --calc='numpy.sqrt(A)*{rad}' --outfile={output}", shell=True)
-
-    return output
 
 
 def remove_temp_files(only_rtc=False):
