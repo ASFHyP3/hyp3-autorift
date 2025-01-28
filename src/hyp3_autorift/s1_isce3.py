@@ -32,50 +32,7 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 ESA_HOST = 'dataspace.copernicus.eu'
 
 
-def get_granule_name(safe_name):
-    return os.path.basename(safe_name).split('.')[0]
-
-
-def process_burst_geo(
-    safe_ref,
-    safe_sec, 
-    orbit_ref,
-    orbit_sec,
-    granule_ref,
-    granule_sec,
-    burst_id_ref,
-    burst_id_sec
-):
-    write_yaml(safe_ref, orbit_ref, burst_id_ref)
-    run_rtc()
-    ref = correct_geocode_slc(safe_ref, granule_ref, orbit_ref)
-    remove_temp_files(only_rtc=True)
-
-    write_yaml(safe_sec, orbit_sec, burst_id_sec)
-    run_rtc()
-    sec = correct_geocode_slc(safe_sec, granule_sec, orbit_sec)
-
-    remove_temp_files()
-
-    bbox = process.get_raster_bbox(ref)
-    y_limits = (bbox[1], bbox[3])
-    x_limits = (bbox[0], bbox[2])
-
-    scene_poly = geometry.polygon_from_bbox(x_limits, y_limits)
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-
-    meta_r, meta_s = coregisterLoadMetadata(ref, sec)
-
-    geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
-
-    generateAutoriftProduct(
-            ref, sec, nc_sensor='GS1', optical_flag=True, ncname=None,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
-        )
-
-
-def process_burst_radar(
+def process_burst(
     safe_ref,
     safe_sec, 
     orbit_ref,
@@ -128,39 +85,23 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera
     safe_granule_sec = os.path.basename(safe_sec).split('.')[0]
     orbit_ref, _ = downloadSentinelOrbitFile(safe_granule_ref, esa_credentials=esa_credentials)
     orbit_sec, _ = downloadSentinelOrbitFile(safe_granule_sec, esa_credentials=esa_credentials)
+    burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
+    burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
 
     get_dem_for_safes(safe_ref, safe_sec)
 
-    if is_opera:
-        burst_id_ref = get_burst_ids(safe_ref, orbit_ref)
-        burst_id_sec = get_burst_ids(safe_sec, orbit_sec)
-        # Use geographic CRS
-        return process_burst_geo(
-            safe_ref,
-            safe_sec, 
-            orbit_ref,
-            orbit_sec,
-            burst_granule_ref,
-            burst_granule_sec,
-            burst_id_ref,
-            burst_id_sec
-        )
-    else:
-        burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
-        burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
-        # Use radar geometry
-        return process_burst_radar(
-            safe_ref,
-            safe_sec, 
-            orbit_ref,
-            orbit_sec,
-            burst_granule_ref,
-            burst_id_ref,
-            burst_id_sec
-        )
+    return process_burst(
+        safe_ref,
+        safe_sec, 
+        orbit_ref,
+        orbit_sec,
+        burst_granule_ref,
+        burst_id_ref,
+        burst_id_sec
+    )
 
 
-def prepare_slcs(slc_ref, slc_sec):
+def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
@@ -170,20 +111,31 @@ def prepare_slcs(slc_ref, slc_sec):
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
-
     orbit_ref, _ = downloadSentinelOrbitFile(slc_ref, esa_credentials=esa_credentials)
     orbit_sec, _ = downloadSentinelOrbitFile(slc_sec, esa_credentials=esa_credentials)
-
-    return safe_ref, orbit_ref, safe_sec, orbit_sec
-
-
-def process_sentinel1_slc_isce3(slc_ref, slc_sec):
-    safe_ref, orbit_ref, safe_sec, orbit_sec = prepare_slcs(slc_ref, slc_sec)
-    get_dem_for_safes(safe_ref, safe_sec)
-
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
+    get_dem_for_safes(safe_ref, safe_sec)
+
+    return process_slc(
+        safe_ref,
+        safe_sec,
+        orbit_ref,
+        orbit_sec,
+        burst_ids_ref,
+        burst_ids_sec
+    )
+
+
+def process_slc(
+    safe_ref,
+    safe_sec,
+    orbit_ref,
+    orbit_sec,
+    burst_ids_ref,
+    burst_ids_sec
+):
     write_yaml_radar(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     print('Bursts ref', burst_ids_ref)
