@@ -635,7 +635,7 @@ def get_esa_credentials() -> Tuple[str, str]:
 
 
 def download_burst(burst_granule, all_anns=True):
-    return burst2safe.burst2safe([burst_granule], all_anns=all_anns)
+    return burst2safe([burst_granule], all_anns=all_anns)
 
 
 # def download_bursts(burst_granule):
