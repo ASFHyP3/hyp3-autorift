@@ -152,8 +152,12 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     esa_username, esa_password = get_esa_credentials()
     esa_credentials = (esa_username, esa_password)
 
-    safe_ref = download_burst(slc_ref)
-    safe_sec = download_burst(slc_ref)
+    for scene in [slc_ref, slc_sec]:
+        scene_url = get_download_url(scene)
+        download_file(scene_url, chunk_size=5242880)
+
+    safe_ref = sorted(glob.glob('./*.zip'))[0]
+    safe_sec = sorted(glob.glob('./*.zip'))[1]
 
     lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
     lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
@@ -163,11 +167,8 @@ def process_sentinel1_with_isce3_slc(slc_ref, slc_sec):
     bounds = [lon_min, lat_min, lon_max, lat_max]
     download_dem(bounds)
 
-    orbit_file, prov = downloadSentinelOrbitFile(slc_ref, esa_credentials=esa_credentials)
-    orbit_file_ref = orbit_file
-
-    orbit_file, prov = downloadSentinelOrbitFile(slc_sec, esa_credentials=esa_credentials)
-    orbit_file_sec = orbit_file
+    orbit_file_ref, _ = downloadSentinelOrbitFile(slc_ref, esa_credentials=esa_credentials)
+    orbit_file_sec, _ = downloadSentinelOrbitFile(slc_sec, esa_credentials=esa_credentials)
 
     burst_ids_ref = get_burst_ids(safe_ref, orbit_file_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_file_sec)
