@@ -363,14 +363,11 @@ def process(
     platform = get_platform(reference)
 
     if platform == 'S1':
-        from hyp3_autorift.s1_isce3 import process_sentinel1_with_isce3_slc, process_sentinel1_burst_isce3
-        if reference.endswith('-BURST'):
-            netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
-        else:
-            netcdf_file = process_sentinel1_with_isce3_slc(reference, secondary)
+        from hyp3_autorift.s1_isce3 import process_sentinel1_with_isce3_slc
+        netcdf_file = process_sentinel1_with_isce3_slc(reference, secondary)
     elif platform == 'GS1':
-        from hyp3_autorift.s1_isce3 import process_burst_sentinel1_with_isce3_radar
-        netcdf_file = process_burst_sentinel1_with_isce3_radar(reference, secondary)
+        from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
