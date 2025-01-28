@@ -124,13 +124,12 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
 
     safe_ref = download_burst(burst_granule_ref)
     safe_sec = download_burst(burst_granule_sec)
-    granule_ref = get_granule_name(safe_ref)
-    granule_sec = get_granule_name(safe_sec)
+    safe_granule_ref = os.path.basename(safe_ref).split('.')[0]
+    safe_granule_sec = os.path.basename(safe_sec).split('.')[0]
+    orbit_ref, _ = downloadSentinelOrbitFile(safe_granule_ref, esa_credentials=esa_credentials)
+    orbit_sec, _ = downloadSentinelOrbitFile(safe_granule_sec, esa_credentials=esa_credentials)
 
     get_dem_for_safes(safe_ref, safe_sec)
-
-    orbit_ref, _ = downloadSentinelOrbitFile(granule_ref, esa_credentials=esa_credentials)
-    orbit_sec, _ = downloadSentinelOrbitFile(granule_sec, esa_credentials=esa_credentials)
 
     if do_geocode:
         burst_id_ref = get_burst_ids(safe_ref, orbit_ref)
@@ -141,8 +140,8 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
             safe_sec, 
             orbit_ref,
             orbit_sec,
-            granule_ref,
-            granule_sec,
+            burst_granule_ref,
+            burst_granule_sec,
             burst_id_ref,
             burst_id_sec
         )
@@ -155,7 +154,7 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, do_geoco
             safe_sec, 
             orbit_ref,
             orbit_sec,
-            granule_ref,
+            burst_granule_ref,
             burst_id_ref,
             burst_id_sec
         )
