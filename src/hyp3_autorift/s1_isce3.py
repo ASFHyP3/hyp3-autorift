@@ -10,11 +10,10 @@ from platform import system
 from typing import Tuple
 
 import asf_search
-import burst2safe.burst2safe
 import numpy as np
 import rasterio
 import s1reader
-import burst2safe
+from burst2safe.burst2safe import burst2safe
 from compass import s1_cslc
 from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
@@ -636,7 +635,7 @@ def get_esa_credentials() -> Tuple[str, str]:
 
 
 def download_burst(burst_granule, all_anns=True):
-    return burst2safe.burst2safe(burst_granule, all_anns=all_anns)
+    return burst2safe.burst2safe([burst_granule], all_anns=all_anns)
 
 
 # def download_bursts(burst_granule):
