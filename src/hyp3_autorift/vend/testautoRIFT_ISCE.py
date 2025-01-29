@@ -201,16 +201,18 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     if 'wallis_fill' not in preprocessing_methods:
-        for ii in range(obj.xGrid.shape[0]):
-            for jj in range(obj.xGrid.shape[1]):
-                if (obj.yGrid[ii,jj] != nodata)&(obj.xGrid[ii,jj] != nodata):
-                    if (I1[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0)|(I2[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0):
-                        noDataMask[ii,jj] = True
+        ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid[ii,jj] != nodata)
+        ind_zero = np.logical_or(I1[obj.yGrid-1,obj.xGrid-1]==0,I2[obj.yGrid-1,obj.xGrid-1]==0)
+        noDataMask[np.logical_and(ind_data, ind_zero)] = True
+        ind_data = []
+        ind_zero = []
     elif zero_mask is not None:
-        for ii in range(obj.xGrid.shape[0]):
-            for jj in range(obj.xGrid.shape[1]):
-                if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
-                    noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
+        ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid[ii,jj] != nodata)
+        ind_data_shift = np.zeros(obj.xGrid.shape, dtype=bool)
+        ind_data_shift[:-1,:-1] = ind_data[1:,1:]
+        noDataMask[ind_data] = zero_mask[ind_data_shift]
+        ind_data = []
+        ind_data_shift = []
 
     ######### mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
 
