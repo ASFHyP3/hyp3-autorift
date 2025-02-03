@@ -207,7 +207,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         ind_data = []
         ind_zero = []
     elif zero_mask is not None:
-        ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid[ii,jj] != nodata)
+        ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid != nodata)
         ind_data_shift = np.zeros(obj.xGrid.shape, dtype=bool)
         ind_data_shift[:-1,:-1] = ind_data[1:,1:]
         noDataMask[ind_data] = zero_mask[ind_data_shift]
