@@ -201,7 +201,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     if 'wallis_fill' not in preprocessing_methods:
-        ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid[ii,jj] != nodata)
+        ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid != nodata)
         ind_zero = np.logical_or(I1[obj.yGrid-1,obj.xGrid-1]==0,I2[obj.yGrid-1,obj.xGrid-1]==0)
         noDataMask[np.logical_and(ind_data, ind_zero)] = True
         ind_data = []
