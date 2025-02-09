@@ -10,7 +10,6 @@ dependencies:
   - pip
   # For packaging, and testing
   - python-build
-  - types-requests
   - pillow
   - pytest
   - pytest-console-scripts
