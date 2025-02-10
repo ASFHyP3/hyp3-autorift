@@ -202,15 +202,35 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     if 'wallis_fill' not in preprocessing_methods:
         ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid != nodata)
-        ind_zero = np.logical_or(I1[obj.yGrid-1,obj.xGrid-1]==0,I2[obj.yGrid-1,obj.xGrid-1]==0)
-        noDataMask[np.logical_and(ind_data, ind_zero)] = True
+        xGrid_temp = np.ones(obj.xGrid.shape,dtype=obj.xGrid.dtype)
+        xGrid_temp[ind_data] = obj.xGrid[ind_data]
+        yGrid_temp = np.ones(obj.yGrid.shape,dtype=obj.yGrid.dtype)
+        yGrid_temp[ind_data] = obj.yGrid[ind_data]
+        ind_zero = np.logical_or(I1[yGrid_temp-1,xGrid_temp-1]==0, I2[yGrid_temp-1,xGrid_temp-1]==0)
+        
+        # create/modify noDataMask
+        if noDataMask is None:
+            noDataMask = np.logical_and(ind_data, ind_zero)
+        else:
+            noDataMask = np.logical_or(noDataMask, np.logical_and(ind_data, ind_zero))
+        
+        # clear temporary variables
         ind_data = []
+        xGrid_temp = []
+        yGrid_temp = []
         ind_zero = []
+    
     elif zero_mask is not None:
         ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid != nodata)
         ind_data_shift = np.zeros(obj.xGrid.shape, dtype=bool)
         ind_data_shift[:-1,:-1] = ind_data[1:,1:]
+        
+        # create/modify noDataMask
+        if noDataMask is None:
+            noDataMask = np.zeros(obj.xGrid.shape, dtype=bool)
         noDataMask[ind_data] = zero_mask[ind_data_shift]
+
+        # clear temporary variables
         ind_data = []
         ind_data_shift = []
 
@@ -472,9 +492,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
     if grid_location is not None:
         ds = gdal.Open(grid_location)
-        tran = ds.GetGeoTransform()
-        proj = ds.GetProjection()
-        srs = ds.GetSpatialRef()
+        tran = ds.GetGeoTransform()     # bug?: variable only exists if grid_location is not None
+        proj = ds.GetProjection()       # bug?: variable only exists if grid_location is not None
+        srs = ds.GetSpatialRef()        # bug?: variable only exists if grid_location is not None
         band = ds.GetRasterBand(1)
         nodata = band.GetNoDataValue()
         xGrid = band.ReadAsArray()
@@ -533,7 +553,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
     if os.path.exists(intermediate_nc_file):
         import hyp3_autorift.vend.netcdf_output as no
-        Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
+        Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)   # bug?: noDataMask is overwritten
     else:
         m_name = os.path.basename(indir_m)
         s_name = os.path.basename(indir_s)
@@ -547,9 +567,9 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
         preprocessing_methods = ['hps', 'hps']
         for ii, name in enumerate((m_name, s_name)):
-            if len(re.findall("L[EO]07_", name)) > 0:
+            if len(re.findall("L[EO]07_", name)) > 0:       # [EO] means 'E' or 'O', but not both
                 preprocessing_methods[ii] = 'wallis_fill'
-            elif len(re.findall("LT0[45]_", name)) > 0:
+            elif len(re.findall("LT0[45]_", name)) > 0:     # [45] means '4' or '5', but not both
                 preprocessing_methods[ii] = 'fft'
 
         zero_mask = None
@@ -571,7 +591,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                 noDataMask, optical_flag, nodata, mpflag, geogrid_run_info=geogrid_run_info,
                 preprocessing_methods=preprocessing_methods, preprocessing_filter_width=preprocessing_filter_width,
                 zero_mask=zero_mask
-            )
+            )                                                                                                                   # bug?: noDataMask is overwritten
         if nc_sensor is not None:
             import hyp3_autorift.vend.netcdf_output as no
             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
