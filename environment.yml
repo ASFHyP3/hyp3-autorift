@@ -10,9 +10,6 @@ dependencies:
   - pip
   # For packaging, and testing
   - python-build
-  - ruff
-  - mypy
-  - types-requests
   - pillow
   - pytest
   - pytest-console-scripts
@@ -36,3 +33,5 @@ dependencies:
   - scipy
   - xarray
   - s1_orbits
+  - pip:
+    - -r requirements-static.txt
