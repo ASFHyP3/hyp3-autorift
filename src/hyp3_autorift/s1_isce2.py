@@ -23,12 +23,26 @@ def _get_safe(scene: str) -> Path:
         log.info(f'Creating SAFE for {scene}')
         return burst2safe([scene])
 
+    # Local uncompressed SAFE's from external burst2safe usage
+    if scene.endswith('.SAFE'):
+        return Path(scene)
+
     scene_url = get_download_url(scene)
     safe_path = download_file(scene_url, chunk_size=5242880)
 
     log.info(f'Downloaded {safe_path}')
 
     return Path(safe_path)
+
+
+def _get_swaths(safe: Path) -> list[int]:
+    if safe.suffix == '.zip':
+        return [1, 2, 3]
+
+    annotations = safe / 'annotation'
+    # s1a-iw3-slc-hh-20170221t204710-20170221t204724-015387-0193f6-001.xml
+    swaths = {int(annotation.stem.split('-')[1][-1]) for annotation in annotations.glob('*.xml')}
+    return list(swaths)
 
 
 def process_sentinel1_with_isce2(reference: str, secondary: str, parameter_file: str) -> str:
@@ -61,7 +75,7 @@ def process_sentinel1_with_isce2(reference: str, secondary: str, parameter_file:
 
     polarization = get_s1_primary_polarization(reference_safe.stem)
 
-    swaths = [int(reference.split('_')[2][-1])] if reference.endswith('-BURST') else [1, 2, 3]
+    swaths = _get_swaths(secondary_safe)
     lat_limits, lon_limits = bounding_box(
         str(reference_safe), polarization=polarization, orbits=str(orbits), swaths=swaths
     )
