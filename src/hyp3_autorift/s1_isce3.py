@@ -109,8 +109,6 @@ def process_burst(
 
     download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    # get_dem_for_safes(lat_limits, lon_limits)
-
     scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
@@ -147,8 +145,8 @@ def process_slc(
         write_yaml(safe_sec, orbit_sec, burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    mergeSwaths(ref=False)
-    mergeSwaths()
+    merge_swaths(ref=False)
+    merge_swaths()
 
     meta_r = loadMetadataSlc(safe_ref, orbit_ref)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec)
@@ -178,104 +176,120 @@ def process_slc(
     return netcdf_file
 
 
-def mergeSwaths(ref=True, swath=None):
-    safes = glob.glob('*.zip')
-    orbits = glob.glob('*.EOF')
-    dates_safes = [datetime.strptime(safe.split('_')[5], '%Y%m%dT%H%M%S') for safe in safes]
-    dates_orbits = [datetime.strptime(orbit.split('_')[6], 'V%Y%m%dT%H%M%S') for orbit in orbits]
-    argmin_safe = np.argsort(dates_safes)
-    argmin_orbit = np.argsort(dates_orbits)
-
-    safe = safes[argmin_safe[0]]
-    orbit_file = orbits[argmin_orbit[0]]
-
+def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
+    safe_date = datetime.strptime(safe.split('_')[5], '%Y%m%dT%H%M%S')
+    orbit_date =  datetime.strptime(orbit.split('_')[6], 'V%Y%m%dT%H%M%S')
     path = os.path.abspath(safe)
-    orbit_path = os.path.abspath(orbit_file)
+    orbit_path = os.path.abspath(orbit)
     burst_ids = get_burst_ids(path, orbit_path)
-    if ref:
-        fileList = sorted(glob.glob('./product/*'))
-        output = 'reference.slc'
-    else:
-        fileList = sorted(glob.glob('./product_sec/*'))
-        output = 'secondary.slc'
+    product_path = './product/*' if is_ref else './product_sec/*'
+    output_path = 'reference.slc' if is_ref else 'secondary.slc'
+    burst_files = sorted(glob.glob(product_path))
 
     # Check against metadata
-    if len(burst_ids) != len(fileList):
+    if len(burst_ids) != len(burst_files):
         print('Warning : Not all the bursts were processed')
 
     bursts = []
-    total_width = 0
-    starts = []
-    offsx = [0]
-
-    if swath is None:
-        swaths = [1, 2, 3]
-    else:
-        swaths = [swath]
-
-    pol = getPol(safe, orbit_file)
+    sensing_starts = []
+    total_rng_samples = 0
+    rng_offsets = [0]
+    sensing_start = None
+    sensing_stop = None
+    az_time_interval = None
+    pol = getPol(safe, orbit)
 
     for swath in swaths:
-        mergeBurstsSwath(swath, ref)
-        burstst = s1reader.load_bursts(safe, orbit_file, swath, pol)
-        total_width += burstst[0].shape[1]
-        bursts += burstst
-        dt = burstst[0].azimuth_time_interval
-        sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[0].shape[0]-1) * dt)
-        starts.append(burstst[0].sensing_start)
-        sensingStartt = burstst[0].sensing_start
-        if swath == 1:
-            sensingStart = sensingStartt
-            dt = bursts[-1].azimuth_time_interval
-            sensingStop = sensingStopt
-        if sensingStart > sensingStartt:
-            sensingStart = sensingStartt
-        if sensingStop < sensingStopt:
-            sensingStop = sensingStopt
-        if swath > 1:
-            offsx.append(int(np.round((burstst[0].starting_range-bursts[0].starting_range) /
-                             bursts[0].range_pixel_spacing)))
+        merge_bursts_in_swath(swath, is_ref)
 
-    total_width = int(np.round((bursts[-1].starting_range-bursts[0].starting_range) /
-                      bursts[0].range_pixel_spacing))+bursts[-1].shape[1]
-    nLines = int(np.round((sensingStop - sensingStart).total_seconds() / dt)) + 1
-    outArray = np.zeros((nLines, total_width), dtype=complex)
+        bursts_from_swath = s1reader.load_bursts(safe, orbit, swath, pol)
+
+        num_az_samples, num_rng_samples = bursts_from_swath.shape
+        total_rng_samples += num_rng_samples
+
+        az_time_interval = bursts_from_swath[0].azimuth_time_interval
+        burst_length = timedelta(seconds=az_time_interval * (num_az_samples-1))
+        burst_sensing_start = bursts_from_swath[0].sensing_start
+        burst_sensing_stop = sensing_start + burst_length
+        burst_start_rng = bursts_from_swath[0].starting_range
+
+        bursts.extend(bursts_from_swath)
+        sensing_starts.append(burst_sensing_start)
+
+        # TODO: min(swaths) was previously 1
+        #       Does this intentially not support passing something like swaths=[2, 3]? 
+        if swath == min(swaths):
+            sensing_start = burst_sensing_start
+            az_time_interval = bursts[-1].azimuth_time_interval
+            sensing_stop = burst_sensing_stop
+
+        if sensing_start > burst_sensing_start:
+            sensing_start = burst_sensing_start
+
+        if sensing_stop < burst_sensing_stop:
+            sensing_stop = burst_sensing_stop
+
+        # TODO: min(swaths) was previously 1
+        #       Does this intentially not support passing something like swaths=[2, 3]? 
+        if swath > min(swaths):
+            rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
+            rng_offsets.append(int(np.round(rng_offset)))
+
+    first_start_rng = bursts[0].starting_range
+    last_start_rng = bursts[-1].starting_range
+    last_rng_samples = bursts[-1].shape[1]
+    rng_pixel_spacing = bursts[0].range_pixel_spacing
+
+    total_rng_samples = last_rng_samples + int(np.round(
+        (last_start_rng - first_start_rng) / rng_pixel_spacing
+    ))
+
+    total_az_samples = 1 + int(np.round(
+        (sensing_stop - sensing_start).total_seconds() / az_time_interval
+    ))
+
+    merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
     for swath in swaths:
-        offy = int(np.round((starts[swath-1]-sensingStart).total_seconds() / dt))
-        offx = offsx[swath-1]
+        az_offset = int(np.round(
+            (sensing_starts[swath-1]-sensing_start).total_seconds() / az_time_interval
+        ))
+        rng_offset = rng_offsets[swath-1]
+
+        print('Offsets', rng_offset, az_offset)
+
         slc = 'swath_iw'+str(swath)+'.slc'
         ds = gdal.Open(slc)
         band = ds.GetRasterBand(1)
         if swath == 1:
             tran = ds.GetGeoTransform()
             proj = ds.GetProjection()
-        current = band.ReadAsArray()
-        band = None
-        ds = None
-        print('Offsets', offx, offy)
+        slc_array = band.ReadAsArray()
+        del band, ds
+
+        az_end_index = az_offset+slc_array.shape[0]
+        rng_end_index = rng_offset+slc_array.shape[1]
         if swath == 1:
-            outArray[offy:offy+current.shape[0], offx:offx+current.shape[1]] = current
+            merged_array[az_offset:az_end_index, rng_offset:rng_end_index] = slc_array
         else:
-            temp = outArray[offy:offy+current.shape[0], offx:offx+current.shape[1]]
-            cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(current) == 0))
-            outArray[offy:offy+current.shape[0], offx:offx+current.shape[1]][cond] = current[cond]
+            temp = merged_array[az_offset:az_end_index, rng_offset:rng_end_index]
+            cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(slc_array) == 0))
+            merged_array[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
             temp = None
-            del temp
 
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
-    outRaster = driver.Create(output, total_width, nLines, 1, gdal.GDT_CFloat32)
-    outRaster.SetGeoTransform(tran)
-    outRaster.SetProjection(proj)
-    outband = outRaster.GetRasterBand(1)
-    outband.SetNoDataValue(nodata)
-    outband.WriteArray(outArray)
-    outband.FlushCache()
-    del outRaster
+    out_raster = driver.Create(output_path, total_rng_samples, total_az_samples, 1, gdal.GDT_CFloat32)
+    out_raster.SetGeoTransform(tran)
+    out_raster.SetProjection(proj)
+    out_band = out_raster.GetRasterBand(1)
+    out_band.SetNoDataValue(nodata)
+    out_band.WriteArray(merged_array)
+    out_band.FlushCache()
+    del out_raster
     subprocess.call('rm -rf swath_*iw*', shell=True)
 
 
-def mergeBurstsSwath(swath, ref=True, outfile='output.slc', method='top'):
+def merge_bursts_in_swath(swath, ref=True, outfile='output.slc', method='top'):
     '''
     Merge burst products into single file.
     Simple numpy based stitching
@@ -529,7 +543,6 @@ def convert2isce(burst_id, ref=True):
         ds = gdal.Open(slc)
         ds = gdal.Translate('burst_ref_'+str(burst_id.split('_')[2])+'.slc', ds, options="-of ISCE")
         ds = None
-
         return 'burst_ref_'+str(burst_id.split('_')[2])+'.slc'
     else:
         fol = glob.glob('./product_sec/'+burst_id+'/*')[0]
@@ -538,7 +551,6 @@ def convert2isce(burst_id, ref=True):
         ds = gdal.Translate('burst_sec_'+str(burst_id.split('_')[2])+'.slc', ds, options="-of ISCE")
         ds = None
         subprocess.call('rm -rf scratch scratch_sec product product_sec output output_sec', shell=True)
-
         return 'burst_sec_'+str(burst_id.split('_')[2])+'.slc'
 
 
@@ -591,6 +603,17 @@ def get_burst_id(safe, burst_granule, orbit_file):
     return str_burst_id
 
 
+def get_isce3_burst_id(burst):
+    track_number = 't' + str(int(burst.burst_id.track_number)).zfill(3)
+    esa_burst_id = str(burst.burst_id.esa_burst_id).zfill(6)
+    subswath = burst.burst_id.subswath.lower()
+    return '_'.join([
+        track_number,
+        esa_burst_id,
+        subswath
+    ])
+
+
 def get_burst_ids(safe, orbit_file):
     abspath = os.path.abspath(safe)
     bursts = []
@@ -598,23 +621,23 @@ def get_burst_ids(safe, orbit_file):
 
     for swath_number in [1, 2, 3]:
         bursts += s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
-    str_burst_ids = ['t'+str(int(x.burst_id.track_number)).zfill(3) + '_' +
-                     str(x.burst_id.esa_burst_id).zfill(6) + '_' +
-                     x.burst_id.subswath.lower() for x in bursts]
 
-    return str_burst_ids
+    return [get_isce3_burst_id(x) for x in bursts]
+
+
+def get_dem_for_safes(safe_ref, safe_sec):
+    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
+    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
+    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
+    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
+    bounds = [lon_min, lat_min, lon_max, lat_max]
+    download_dem(bounds)
 
 
 def get_bounds_dem(safe):
     bounds = s1_info.get_frame_bounds(os.path.basename(safe))
     bounds = [int(bounds[0])-1, int(bounds[1]), math.ceil(bounds[2])+1, math.ceil(bounds[3])]
-
     return bounds
-
-
-def get_dem_for_safes(safe_ref, safe_sec):
-
-    download_dem(bounds)
 
 
 def download_dem(bounds):
@@ -695,29 +718,3 @@ def remove_temp_files(only_rtc=False):
         subprocess.call('rm -rf output_dir scratch_dir rtc.log rtc_s1.yaml', shell=True)
     else:
         subprocess.call('rm -rf output_dir *SAFE *EOF scratch_dir dem.tif rtc.log rtc_s1.yaml', shell=True)
-
-["S1_191586_IW2_20170221T204734_HH_AB07-BURSTxS1_191586_IW2_20170227T204652_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204734_20170221T204734_015387_0193F6_F4B5_X_S1B_IW_SLC__1SSH_20170227T204652_20170227T204652_004491_007D11_1F30_G0120V02_P095_IL_ASF_OD.nc",
-"S1_191586_IW1_20170221T204733_HH_AB07-BURSTxS1_191586_IW1_20170227T204651_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204733_20170221T204733_015387_0193F6_6568_X_S1B_IW_SLC__1SSH_20170227T204651_20170227T204651_004491_007D11_F0BA_G0120V02_P096_IL_ASF_OD.nc",
-"S1_191585_IW3_20170221T204732_HH_AB07-BURSTxS1_191585_IW3_20170227T204650_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204732_20170221T204732_015387_0193F6_153C_X_S1B_IW_SLC__1SSH_20170227T204650_20170227T204650_004491_007D11_BC1B_G0120V02_P089_IL_ASF_OD.nc",
-"S1_191585_IW2_20170221T204731_HH_AB07-BURSTxS1_191585_IW2_20170227T204649_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204731_20170221T204731_015387_0193F6_9EDD_X_S1B_IW_SLC__1SSH_20170227T204649_20170227T204649_004491_007D11_478A_G0120V02_P096_IL_ASF_OD.nc",
-"S1_191585_IW1_20170221T204730_HH_AB07-BURSTxS1_191585_IW1_20170227T204648_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204730_20170221T204730_015387_0193F6_24FB_X_S1B_IW_SLC__1SSH_20170227T204648_20170227T204648_004491_007D11_2C61_G0120V02_P099_IL_ASF_OD.nc",
-"S1_191584_IW3_20170221T204729_HH_AB07-BURSTxS1_191584_IW3_20170227T204647_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204729_20170221T204729_015387_0193F6_857D_X_S1B_IW_SLC__1SSH_20170227T204647_20170227T204647_004491_007D11_9C22_G0120V02_P090_IL_ASF_OD.nc",
-"S1_191584_IW2_20170221T204728_HH_AB07-BURSTxS1_191584_IW2_20170227T204646_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204728_20170221T204728_015387_0193F6_3879_X_S1B_IW_SLC__1SSH_20170227T204646_20170227T204646_004491_007D11_0ABE_G0120V02_P097_IL_ASF_OD.nc",
-"S1_191584_IW1_20170221T204728_HH_AB07-BURSTxS1_191584_IW1_20170227T204645_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204728_20170221T204728_015387_0193F6_A550_X_S1B_IW_SLC__1SSH_20170227T204645_20170227T204645_004491_007D11_DF05_G0120V02_P099_IL_ASF_OD.nc",
-"S1_191583_IW3_20170221T204727_HH_AB07-BURSTxS1_191583_IW3_20170227T204645_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204727_20170221T204727_015387_0193F6_D1AE_X_S1B_IW_SLC__1SSH_20170227T204645_20170227T204645_004491_007D11_123A_G0120V02_P090_IL_ASF_OD.nc",
-"S1_191583_IW1_20170221T204725_HH_AB07-BURSTxS1_191583_IW1_20170227T204643_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204725_20170221T204725_015387_0193F6_9B04_X_S1B_IW_SLC__1SSH_20170227T204643_20170227T204643_004491_007D11_CB9C_G0120V02_P099_IL_ASF_OD.nc",
-"S1_191582_IW3_20170221T204724_HH_AB07-BURSTxS1_191582_IW3_20170227T204642_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204724_20170221T204724_015387_0193F6_213C_X_S1B_IW_SLC__1SSH_20170227T204642_20170227T204642_004491_007D11_2CB1_G0120V02_P094_IL_ASF_OD.nc",
-"S1_191582_IW2_20170221T204723_HH_AB07-BURSTxS1_191582_IW2_20170227T204641_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204723_20170221T204723_015387_0193F6_03F8_X_S1B_IW_SLC__1SSH_20170227T204641_20170227T204641_004491_007D11_FFEA_G0120V02_P088_IL_ASF_OD.nc",
-"S1_191582_IW1_20170221T204722_HH_AB07-BURSTxS1_191582_IW1_20170227T204640_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204722_20170221T204722_015387_0193F6_7E41_X_S1B_IW_SLC__1SSH_20170227T204640_20170227T204640_004491_007D11_A7C0_G0120V02_P098_IL_ASF_OD.nc",
-"S1_191581_IW3_20170221T204721_HH_AB07-BURSTxS1_191581_IW3_20170227T204639_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204721_20170221T204721_015387_0193F6_7D60_X_S1B_IW_SLC__1SSH_20170227T204639_20170227T204639_004491_007D11_7022_G0120V02_P096_IL_ASF_OD.nc",
-"S1_191581_IW2_20170221T204720_HH_AB07-BURSTxS1_191581_IW2_20170227T204638_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204720_20170221T204720_015387_0193F6_E4C8_X_S1B_IW_SLC__1SSH_20170227T204638_20170227T204638_004491_007D11_EC37_G0120V02_P092_IL_ASF_OD.nc",
-"S1_191581_IW1_20170221T204719_HH_AB07-BURSTxS1_191581_IW1_20170227T204637_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204719_20170221T204719_015387_0193F6_F40C_X_S1B_IW_SLC__1SSH_20170227T204637_20170227T204637_004491_007D11_5622_G0120V02_P096_IL_ASF_OD.nc",
-"S1_191580_IW3_20170221T204718_HH_AB07-BURSTxS1_191580_IW3_20170227T204636_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204718_20170221T204718_015387_0193F6_1B6B_X_S1B_IW_SLC__1SSH_20170227T204636_20170227T204636_004491_007D11_15E7_G0120V02_P094_IL_ASF_OD.nc",
-"S1_191580_IW2_20170221T204717_HH_AB07-BURSTxS1_191580_IW2_20170227T204635_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204717_20170221T204717_015387_0193F6_7E43_X_S1B_IW_SLC__1SSH_20170227T204635_20170227T204635_004491_007D11_E1BA_G0120V02_P096_IL_ASF_OD.nc",
-"S1_191580_IW1_20170221T204716_HH_AB07-BURSTxS1_191580_IW1_20170227T204634_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204716_20170221T204716_015387_0193F6_1B9D_X_S1B_IW_SLC__1SSH_20170227T204634_20170227T204634_004491_007D11_5C92_G0120V02_P098_IL_ASF_OD.nc",
-"S1_191579_IW3_20170221T204716_HH_AB07-BURSTxS1_191579_IW3_20170227T204633_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204716_20170221T204716_015387_0193F6_17CE_X_S1B_IW_SLC__1SSH_20170227T204633_20170227T204633_004491_007D11_00F0_G0120V02_P067_IL_ASF_OD.nc",
-"S1_191579_IW2_20170221T204715_HH_AB07-BURSTxS1_191579_IW2_20170227T204633_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204715_20170221T204715_015387_0193F6_B723_X_S1B_IW_SLC__1SSH_20170227T204633_20170227T204633_004491_007D11_9ABD_G0120V02_P093_IL_ASF_OD.nc",
-"S1_191579_IW1_20170221T204714_HH_AB07-BURSTxS1_191579_IW1_20170227T204632_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204714_20170221T204714_015387_0193F6_6687_X_S1B_IW_SLC__1SSH_20170227T204632_20170227T204632_004491_007D11_E208_G0120V02_P000_IL_ASF_OD.nc",
-"S1_191578_IW3_20170221T204713_HH_AB07-BURSTxS1_191578_IW3_20170227T204631_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204713_20170221T204713_015387_0193F6_9874_X_S1B_IW_SLC__1SSH_20170227T204631_20170227T204631_004491_007D11_1D44_G0120V02_P025_IL_ASF_OD.nc",
-"S1_191578_IW2_20170221T204712_HH_AB07-BURSTxS1_191578_IW2_20170227T204630_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204712_20170221T204712_015387_0193F6_D991_X_S1B_IW_SLC__1SSH_20170227T204630_20170227T204630_004491_007D11_40CF_G0120V02_P079_IL_ASF_OD.nc",
-"S1_191577_IW3_20170221T204710_HH_AB07-BURSTxS1_191577_IW3_20170227T204628_HH_6654-BURST/S1A_IW_SLC__1SSH_20170221T204710_20170221T204710_015387_0193F6_02DB_X_S1B_IW_SLC__1SSH_20170227T204628_20170227T204628_004491_007D11_C4E9_G0120V02_P032_IL_ASF_OD.nc"]
