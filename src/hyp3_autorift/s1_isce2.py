@@ -40,6 +40,9 @@ def _get_swaths(safe: Path) -> list[int]:
         return [1, 2, 3]
 
     annotations = safe / 'annotation'
+    if not annotations.exists():
+        raise FileNotFoundError(annotations)
+
     # s1a-iw3-slc-hh-20170221t204710-20170221t204724-015387-0193f6-001.xml
     swaths = {int(annotation.stem.split('-')[1][-1]) for annotation in annotations.glob('*.xml')}
     return list(swaths)
