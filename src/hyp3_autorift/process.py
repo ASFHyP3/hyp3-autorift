@@ -192,7 +192,10 @@ def least_precise_orbit_of(orbits):
 
 def get_datetime(scene_name):
     if scene_name.startswith('S1'):
-        return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
+        if scene_name.endswith('-BURST'):
+            return datetime.strptime(scene_name.split('_')[3], '%Y%m%dT%H%M%S')
+        else:
+            return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S2') and len(scene_name) > 25:  # ESA
         return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S2'):  # COG
@@ -347,8 +350,8 @@ def process(
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
-        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
-        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
+        reference: Name of the reference Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 scene
+        secondary: Name of the secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
 
@@ -502,7 +505,12 @@ def main():
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
         help='Naming scheme to use for product files',
     )
-    parser.add_argument('granules', type=str.split, nargs='+', help='Granule pair to process')
+    parser.add_argument(
+        'granules',
+        type=str.split,
+        nargs='+',
+        help='Pair of Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to process'
+    )
     args = parser.parse_args()
 
     args.granules = [item for sublist in args.granules for item in sublist]
