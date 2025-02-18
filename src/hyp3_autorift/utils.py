@@ -1,10 +1,8 @@
 """Helper utilities for autoRIFT"""
 
 import logging
-import netrc
 import os
 from pathlib import Path
-from platform import system
 from typing import Tuple, Union
 
 import boto3
@@ -15,31 +13,7 @@ from osgeo import gdal, ogr, osr
 from hyp3_autorift.geometry import fix_point_for_antimeridian, flip_point_coordinates
 
 
-ESA_HOST = 'dataspace.copernicus.eu'
-
 log = logging.getLogger(__name__)
-
-
-def get_esa_credentials() -> Tuple[str, str]:
-    netrc_name = '_netrc' if system().lower() == 'windows' else '.netrc'
-    netrc_file = Path.home() / netrc_name
-
-    if "ESA_USERNAME" in os.environ and "ESA_PASSWORD" in os.environ:
-        username = os.environ["ESA_USERNAME"]
-        password = os.environ["ESA_PASSWORD"]
-        return username, password
-
-    if netrc_file.exists():
-        netrc_credentials = netrc.netrc(netrc_file)
-        if ESA_HOST in netrc_credentials.hosts:
-            username = netrc_credentials.hosts[ESA_HOST][0]
-            password = netrc_credentials.hosts[ESA_HOST][2]
-            return username, password
-
-    raise ValueError(
-        "Please provide Copernicus Data Space Ecosystem (CDSE) credentials via the "
-        "ESA_USERNAME and ESA_PASSWORD environment variables, or your netrc file."
-    )
 
 
 def upload_file_to_s3_with_publish_access_keys(path_to_file: Path, bucket: str, prefix: str = ''):
@@ -77,21 +51,21 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                 'name': f'{feature["name"]}',
                 'epsg': feature['epsg'],
                 'geogrid': {
-                    'dem': f"/vsicurl/{feature['h']}",
-                    'ssm': f"/vsicurl/{feature['StableSurfa']}",
-                    'dhdx': f"/vsicurl/{feature['dhdx']}",
-                    'dhdy': f"/vsicurl/{feature['dhdy']}",
-                    'vx': f"/vsicurl/{feature['vx0']}",
-                    'vy': f"/vsicurl/{feature['vy0']}",
-                    'srx': f"/vsicurl/{feature['vxSearchRan']}",
-                    'sry': f"/vsicurl/{feature['vySearchRan']}",
-                    'csminx': f"/vsicurl/{feature['xMinChipSiz']}",
-                    'csminy': f"/vsicurl/{feature['yMinChipSiz']}",
-                    'csmaxx': f"/vsicurl/{feature['xMaxChipSiz']}",
-                    'csmaxy': f"/vsicurl/{feature['yMaxChipSiz']}",
-                    'sp': f"/vsicurl/{feature['sp']}",
-                    'dhdxs': f"/vsicurl/{feature['dhdxs']}",
-                    'dhdys': f"/vsicurl/{feature['dhdys']}",
+                    'dem': f'/vsicurl/{feature["h"]}',
+                    'ssm': f'/vsicurl/{feature["StableSurfa"]}',
+                    'dhdx': f'/vsicurl/{feature["dhdx"]}',
+                    'dhdy': f'/vsicurl/{feature["dhdy"]}',
+                    'vx': f'/vsicurl/{feature["vx0"]}',
+                    'vy': f'/vsicurl/{feature["vy0"]}',
+                    'srx': f'/vsicurl/{feature["vxSearchRan"]}',
+                    'sry': f'/vsicurl/{feature["vySearchRan"]}',
+                    'csminx': f'/vsicurl/{feature["xMinChipSiz"]}',
+                    'csminy': f'/vsicurl/{feature["yMinChipSiz"]}',
+                    'csmaxx': f'/vsicurl/{feature["xMaxChipSiz"]}',
+                    'csmaxy': f'/vsicurl/{feature["yMaxChipSiz"]}',
+                    'sp': f'/vsicurl/{feature["sp"]}',
+                    'dhdxs': f'/vsicurl/{feature["dhdxs"]}',
+                    'dhdys': f'/vsicurl/{feature["dhdys"]}',
                 },
                 'autorift': {
                     'grid_location': 'window_location.tif',
@@ -104,14 +78,12 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
                     'stable_surface_mask': 'window_stable_surface_mask.tif',
                     'scale_factor': 'window_scale_factor.tif',
                     'mpflag': 0,
-                }
+                },
             }
             break
 
     if parameter_info is None:
-        raise DemError('Could not determine appropriate DEM for:\n'
-                       f'    centroid: {centroid}'
-                       f'    using: {parameter_file}')
+        raise DemError(f'Could not determine appropriate DEM for:\n    centroid: {centroid}    using: {parameter_file}')
 
     dem_geotransform = gdal.Info(parameter_info['geogrid']['dem'], format='json')['geoTransform']
     parameter_info['xsize'] = abs(dem_geotransform[1])
@@ -134,12 +106,13 @@ def load_geospatial(infile: str, band: int = 1):
     return data, transform, projection, srs, nodata
 
 
-def write_geospatial(outfile: str, data, transform, projection, nodata,
-                     driver: str = 'GTiff', dtype: int = gdal.GDT_Float64) -> str:
-    driver = gdal.GetDriverByName(driver)
+def write_geospatial(
+    outfile: str, data, transform, projection, nodata, driver: str = 'GTiff', dtype: int = gdal.GDT_Float64
+) -> str:
+    driver_object = gdal.GetDriverByName(driver)
 
     rows, cols = data.shape
-    ds = driver.Create(outfile, cols, rows, 1, dtype)
+    ds = driver_object.Create(outfile, cols, rows, 1, dtype)
     ds.SetGeoTransform(transform)
     ds.SetProjection(projection)
 
@@ -172,11 +145,23 @@ def ensure_same_projection(reference_path: Union[str, Path], secondary_path: Uni
     reprojected_reference = str(reprojection_dir / Path(reference_path).name)
     reprojected_secondary = str(reprojection_dir / Path(secondary_path).name)
 
-    gdal.Warp(reprojected_reference, str(reference_path), dstSRS=f'EPSG:{ref_epsg}',
-              xRes=ref_info['geoTransform'][1], yRes=ref_info['geoTransform'][5],
-              resampleAlg='lanczos', targetAlignedPixels=True)
-    gdal.Warp(reprojected_secondary, str(secondary_path), dstSRS=f'EPSG:{ref_epsg}',
-              xRes=ref_info['geoTransform'][1], yRes=ref_info['geoTransform'][5],
-              resampleAlg='lanczos', targetAlignedPixels=True)
+    gdal.Warp(
+        reprojected_reference,
+        str(reference_path),
+        dstSRS=f'EPSG:{ref_epsg}',
+        xRes=ref_info['geoTransform'][1],
+        yRes=ref_info['geoTransform'][5],
+        resampleAlg='lanczos',
+        targetAlignedPixels=True,
+    )
+    gdal.Warp(
+        reprojected_secondary,
+        str(secondary_path),
+        dstSRS=f'EPSG:{ref_epsg}',
+        xRes=ref_info['geoTransform'][1],
+        yRes=ref_info['geoTransform'][5],
+        resampleAlg='lanczos',
+        targetAlignedPixels=True,
+    )
 
     return reprojected_reference, reprojected_secondary

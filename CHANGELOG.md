@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.2]
+### Added
+- Add `mypy` to [`static-analysis`](.github/workflows/static-analysis.yml)
+
+## [0.21.1]
+### Changed
+- The [`static-analysis`](.github/workflows/static-analysis.yml) Github Actions workflow now uses `ruff` rather than `flake8` for linting.
+
+## [0.21.0]
+### Added
+* Logger is now configured in process.main() so paths to reference/secondary scenes will now be logged.
+### Changed
+* Fetch Sentinel-2 scenes from AWS S3 (if present); otherwise continue to fetch from Google Cloud Storage.
+
+## [0.20.0]
+### Changed
+* The M11/M12 variables produced by the hyp3_autorift and s1_correction workflows will be written as `float32` instead of the previous compressed `int16` variables that did not take advantage of the full dynamic range and thus lost a significant amount of precision.
+
+## [0.19.0]
+### Changed
+* Orbits are now downloaded using `s1_orbits` rather than `hyp3lib`.
+
+### Removed
+* Removed support for the `--esa-username` and `--esa-password` command-line options and the `ESA_USERNAME` and `ESA_PASSWORD` environment variables.
+
 ## [0.18.1]
 ### Changed
 * The conversion matrices netCDF file created bt the S1 correction workflow is now called `conversion_matricies.nc` and no longer includes the scene name per feedback from JPL. 

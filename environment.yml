@@ -9,8 +9,8 @@ dependencies:
   - python>=3.9
   - pip
   # For packaging, and testing
-  - pillow>=7.0
-  - pluggy
+  - python-build
+  - pillow
   - pytest
   - pytest-console-scripts
   - pytest-cov
@@ -40,13 +40,6 @@ dependencies:
   - shapely>=2
   - scikit-image
   - xarray
-  - packaging>=21.0
-  - lxml>=4.8
-  - tifffile>=2024.0.0
-  - asf_search
-  - dateparser!=1.1.0
-  - dem_stitcher
-  - burst2safe #get the develop version so it doesn't look for iw2
-  - pandas>=1.4
-  - progressbar
-  - rasterio
+  - s1_orbits
+  - pip:
+    - -r requirements-static.txt

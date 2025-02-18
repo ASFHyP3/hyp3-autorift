@@ -5,19 +5,19 @@ import sys
 import textwrap
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from autoRIFT import __version__ as version
 from hyp3lib.fetch import download_file
-from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from netCDF4 import Dataset
 from osgeo import gdal, osr
+from s1_orbits import fetch_for_scene
 
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.utils import get_esa_credentials
+
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +32,8 @@ def get_s1_primary_polarization(granule_name):
 
 
 def process_sentinel1_with_isce2(reference, secondary, parameter_file):
-    import isce  # noqa
-    from topsApp import TopsInSAR
+    import isce  # noqa: F401, I001
+    from topsApp import TopsInSAR  # type: ignore[import-not-found]
     from hyp3_autorift.vend.testGeogrid_ISCE import loadMetadata, runGeogrid
     from hyp3_autorift.vend.testautoRIFT_ISCE import generateAutoriftProduct
 
@@ -44,17 +44,11 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
 
-    esa_username, esa_password = utils.get_esa_credentials()
+    reference_state_vec = fetch_for_scene(reference, dir=orbits)
+    log.info(f'Downloaded orbit file {reference_state_vec} from s1-orbits')
 
-    reference_state_vec, reference_provider = downloadSentinelOrbitFile(
-        reference, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-    )
-    log.info(f'Downloaded orbit file {reference_state_vec} from {reference_provider}')
-
-    secondary_state_vec, secondary_provider = downloadSentinelOrbitFile(
-        secondary, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-    )
-    log.info(f'Downloaded orbit file {secondary_state_vec} from {secondary_provider}')
+    secondary_state_vec = fetch_for_scene(secondary, dir=orbits)
+    log.info(f'Downloaded orbit file {secondary_state_vec} from s1-orbits')
 
     polarization = get_s1_primary_polarization(reference)
     lat_limits, lon_limits = bounding_box(f'{reference}.zip', polarization=polarization, orbits=str(orbits))
@@ -84,35 +78,39 @@ def process_sentinel1_with_isce2(reference, secondary, parameter_file):
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
-            reference_path, secondary_path, nc_sensor='S1', optical_flag=False, ncname=None,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=parameter_file.replace('/vsicurl/', ''),
-        )
+        reference_path,
+        secondary_path,
+        nc_sensor='S1',
+        optical_flag=False,
+        ncname=None,
+        geogrid_run_info=geogrid_info,
+        **parameter_info['autorift'],
+        parameter_file=parameter_file.replace('/vsicurl/', ''),
+    )
     return netcdf_file
 
 
 def write_conversion_file(
-        *,
-        file_name: str,
-        srs: osr.SpatialReference,
-        epsg: int,
-        tran: List[float],
-        x: np.ndarray,
-        y: np.ndarray,
-        M11: np.ndarray,
-        M12: np.ndarray,
-        dr_2_vr_factor: float,
-        ChunkSize: List[int],
-        NoDataValue: int = -32767,
-        noDataMask: np.ndarray,
-        parameter_file: str
+    *,
+    file_name: str,
+    srs: osr.SpatialReference,
+    epsg: int,
+    tran: List[float],
+    x: np.ndarray,
+    y: np.ndarray,
+    M11: np.ndarray,
+    M12: np.ndarray,
+    dr_2_vr_factor: float,
+    ChunkSize: List[int],
+    NoDataValue: int = -32767,
+    noDataMask: np.ndarray,
+    parameter_file: str,
 ) -> str:
-
     nc_outfile = Dataset(file_name, 'w', clobber=True, format='NETCDF4')
 
     nc_outfile.setncattr('GDAL_AREA_OR_POINT', 'Area')
     nc_outfile.setncattr('Conventions', 'CF-1.8')
-    nc_outfile.setncattr('date_created', datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+    nc_outfile.setncattr('date_created', datetime.now().strftime('%d-%b-%Y %H:%M:%S'))
     nc_outfile.setncattr('title', 'autoRIFT S1 Corrections')
     nc_outfile.setncattr('autoRIFT_software_version', version)
     nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
@@ -169,56 +167,58 @@ def write_conversion_file(
     else:
         raise Exception(f'Projection {srs.GetAttrValue("PROJECTION")} not recognized for this program')
 
-    var = nc_outfile.createVariable('M11', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
-                                    zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var = nc_outfile.createVariable(
+        'M11',
+        np.dtype('float32'),
+        ('y', 'x'),
+        fill_value=NoDataValue,
+        zlib=True,
+        complevel=2,
+        shuffle=True,
+        chunksizes=ChunkSize,
+    )
     var.setncattr('standard_name', 'conversion_matrix_element_11')
     var.setncattr(
         'description',
         'conversion matrix element (1st row, 1st column) that can be multiplied with vx to give range pixel '
-        'displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)'
+        'displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)',
     )
     var.setncattr('units', 'pixel/(meter/year)')
     var.setncattr('grid_mapping', mapping_var_name)
     var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
-    var.setncattr('dr_to_vr_factor_description', 'multiplicative factor that converts slant range '
-                                                 'pixel displacement dr to slant range velocity vr')
+    var.setncattr(
+        'dr_to_vr_factor_description',
+        'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr',
+    )
 
-    x1 = np.nanmin(M11[:])
-    x2 = np.nanmax(M11[:])
-    y1 = -50
-    y2 = 50
-
-    C = [(y2 - y1) / (x2 - x1), y1 - x1 * (y2 - y1) / (x2 - x1)]
-    var.setncattr('scale_factor', np.float32(1 / C[0]))
-    var.setncattr('add_offset', np.float32(-C[1] / C[0]))
-
-    M11[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
+    M11[noDataMask] = NoDataValue
     var[:] = M11
 
-    var = nc_outfile.createVariable('M12', np.dtype('int16'), ('y', 'x'), fill_value=NoDataValue,
-                                    zlib=True, complevel=2, shuffle=True, chunksizes=ChunkSize)
+    var = nc_outfile.createVariable(
+        'M12',
+        np.dtype('float32'),
+        ('y', 'x'),
+        fill_value=NoDataValue,
+        zlib=True,
+        complevel=2,
+        shuffle=True,
+        chunksizes=ChunkSize,
+    )
     var.setncattr('standard_name', 'conversion_matrix_element_12')
     var.setncattr(
         'description',
         'conversion matrix element (1st row, 2nd column) that can be multiplied with vy to give range pixel '
-        'displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)'
+        'displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)',
     )
     var.setncattr('units', 'pixel/(meter/year)')
     var.setncattr('grid_mapping', mapping_var_name)
     var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
-    var.setncattr('dr_to_vr_factor_description',
-                  'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr')
+    var.setncattr(
+        'dr_to_vr_factor_description',
+        'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr',
+    )
 
-    x1 = np.nanmin(M12[:])
-    x2 = np.nanmax(M12[:])
-    y1 = -50
-    y2 = 50
-
-    C = [(y2 - y1) / (x2 - x1), y1 - x1 * (y2 - y1) / (x2 - x1)]
-    var.setncattr('scale_factor', np.float32(1 / C[0]))
-    var.setncattr('add_offset', np.float32(-C[1] / C[0]))
-
-    M12[noDataMask] = NoDataValue * np.float32(1 / C[0]) + np.float32(-C[1] / C[0])
+    M12[noDataMask] = NoDataValue
     var[:] = M12
 
     nc_outfile.sync()
@@ -228,15 +228,15 @@ def write_conversion_file(
 
 
 def create_conversion_matrices(
-        *,
-        scene: str,
-        grid_location: str = 'window_location.tif',
-        offset2vx: str = 'window_rdr_off2vel_x_vec.tif',
-        offset2vy: str = 'window_rdr_off2vel_y_vec.tif',
-        scale_factor: str = 'window_scale_factor.tif',
-        epsg: int = 4326,
-        parameter_file: str = DEFAULT_PARAMETER_FILE,
-        **kwargs,
+    *,
+    scene: str,
+    grid_location: str = 'window_location.tif',
+    offset2vx: str = 'window_rdr_off2vel_x_vec.tif',
+    offset2vy: str = 'window_rdr_off2vel_y_vec.tif',
+    scale_factor: str = 'window_scale_factor.tif',
+    epsg: int = 4326,
+    parameter_file: str = DEFAULT_PARAMETER_FILE,
+    **kwargs,
 ) -> Path:
     xGrid, tran, _, srs, nodata = utils.load_geospatial(grid_location, band=1)
 
@@ -276,8 +276,18 @@ def create_conversion_matrices(
     dr_2_vr_factor = np.median(offset2vr[np.logical_not(np.isnan(offset2vr))])
 
     conversion_nc = write_conversion_file(
-        file_name='conversion_matrices.nc', srs=srs, epsg=epsg, tran=tran, x=x, y=y, M11=M11, M12=M12,
-        dr_2_vr_factor=dr_2_vr_factor, ChunkSize=ChunkSize, noDataMask=noDataMask, parameter_file=parameter_file,
+        file_name='conversion_matrices.nc',
+        srs=srs,
+        epsg=epsg,
+        tran=tran,
+        x=x,
+        y=y,
+        M11=M11,
+        M12=M12,
+        dr_2_vr_factor=dr_2_vr_factor,
+        ChunkSize=ChunkSize,
+        noDataMask=noDataMask,
+        parameter_file=parameter_file,
     )
 
     return Path(conversion_nc)
@@ -287,8 +297,9 @@ def generate_correction_data(
     scene: str,
     buffer: int = 0,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
-) -> (dict, Path):
+) -> Tuple[dict, Path]:
     from hyp3_autorift.vend.testGeogrid_ISCE import loadParsedata, runGeogrid
+
     scene_path = Path(f'{scene}.zip')
     if not scene_path.exists():
         scene_url = get_download_url(scene)
@@ -297,12 +308,8 @@ def generate_correction_data(
     orbits = Path('Orbits').resolve()
     orbits.mkdir(parents=True, exist_ok=True)
 
-    esa_username, esa_password = get_esa_credentials()
-
-    state_vec, oribit_provider = downloadSentinelOrbitFile(
-        scene, directory=str(orbits), esa_credentials=(esa_username, esa_password)
-    )
-    log.info(f'Downloaded orbit file {state_vec} from {oribit_provider}')
+    state_vec = fetch_for_scene(scene, dir=orbits)
+    log.info(f'Downloaded orbit file {state_vec} from s1-orbits')
 
     polarization = get_s1_primary_polarization(scene)
     lat_limits, lon_limits = bounding_box(f'{scene}.zip', polarization=polarization, orbits=str(orbits))
@@ -339,6 +346,7 @@ class SysArgvManager:
     A bug in the ISCE2 Application class causes sys.argv to always be parsed when
     no options are proved, even when setting `cmdline=[]`, preventing programmatic use.
     """
+
     def __init__(self):
         self.argv = sys.argv.copy()
 
@@ -351,8 +359,9 @@ class SysArgvManager:
 
 def get_topsinsar_config():
     from isce.applications.topsApp import TopsInSAR
+
     with SysArgvManager():
-        insar = TopsInSAR(name="topsApp")
+        insar = TopsInSAR(name='topsApp')
         insar.configure()
 
     config_data = {}
@@ -364,9 +373,7 @@ def get_topsinsar_config():
             scene.configure()
             scene.swathNumber = swath
             scene.parse()
-            sensing_times.append(
-                (scene.product.sensingStart, scene.product.sensingStop)
-            )
+            sensing_times.append((scene.product.sensingStart, scene.product.sensingStop))
 
         sensing_start = min([sensing_time[0] for sensing_time in sensing_times])
         sensing_stop = max([sensing_time[1] for sensing_time in sensing_times])
@@ -374,7 +381,7 @@ def get_topsinsar_config():
         sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
 
         config_data[f'{name}_filename'] = Path(scene.safe[0]).name
-        config_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+        config_data[f'{name}_dt'] = sensing_dt.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
     return config_data
 
@@ -431,9 +438,10 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
         lat_limits: list containing the [minimum, maximum] longitudes
     """
     import isce  # noqa: F401
-    from contrib.geo_autoRIFT.geogrid import Geogrid
-    from isceobj.Orbit.Orbit import Orbit
-    from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
+    from contrib.geo_autoRIFT.geogrid import Geogrid  # type: ignore[import-not-found]
+    from isceobj.Orbit.Orbit import Orbit  # type: ignore[import-not-found]
+    from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1  # type: ignore[import-not-found]
+
     frames = []
     for swath in range(1, 4):
         rdr = Sentinel1()
@@ -476,7 +484,7 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
     obj.prf = prf
     obj.lookSide = -1
     obj.numberOfLines = int(np.round((sensing_stop - sensing_start).total_seconds() * prf))
-    obj.numberOfSamples = int(np.round((far_range - starting_range)/range_pixel_size))
+    obj.numberOfSamples = int(np.round((far_range - starting_range) / range_pixel_size))
     obj.orbit = orb
     obj.epsg = epsg
 
@@ -493,8 +501,8 @@ def bounding_box(safe, priority='reference', polarization='hh', orbits='Orbits',
 
 def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
     import isce  # noqa: F401
-    import isceobj
-    from contrib.demUtils import createDemStitcher
+    import isceobj  # type: ignore[import-not-found]
+    from contrib.demUtils import createDemStitcher  # type: ignore[import-not-found]
 
     if isce_dem is None:
         seamstress = createDemStitcher()
@@ -505,9 +513,14 @@ def prep_isce_dem(input_dem, lat_limits, lon_limits, isce_dem=None):
 
     in_ds = gdal.OpenShared(input_dem, gdal.GA_ReadOnly)
     warp_options = gdal.WarpOptions(
-        format='ENVI', outputType=gdal.GDT_Int16, resampleAlg='cubic',
-        xRes=0.001, yRes=0.001, dstSRS='EPSG:4326', dstNodata=0,
-        outputBounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]]
+        format='ENVI',
+        outputType=gdal.GDT_Int16,
+        resampleAlg='cubic',
+        xRes=0.001,
+        yRes=0.001,
+        dstSRS='EPSG:4326',
+        dstNodata=0,
+        outputBounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
     )
     gdal.Warp(isce_dem, in_ds, options=warp_options)
 
