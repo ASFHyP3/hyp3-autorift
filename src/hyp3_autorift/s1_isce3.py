@@ -45,7 +45,7 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera
 
     return process_burst(
         safe_ref,
-        safe_sec, 
+        safe_sec,
         orbit_ref,
         orbit_sec,
         burst_granule_ref,
@@ -56,21 +56,13 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera
 
 def process_burst(
     safe_ref,
-    safe_sec, 
+    safe_sec,
     orbit_ref,
     orbit_sec,
     granule_ref,
     burst_id_ref,
     burst_id_sec
 ):
-    write_yaml(safe_ref, orbit_ref)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    ref = convert2isce(burst_id_ref)
-
-    write_yaml(safe_sec, orbit_sec, burst_id_sec)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    sec = convert2isce(burst_id_sec, ref=False)
-
     swath = int(granule_ref.split('_')[2][2])
     meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
     meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
@@ -81,6 +73,14 @@ def process_burst(
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swath=swath)
 
     download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+
+    write_yaml(safe_ref, orbit_ref)
+    s1_cslc.run('s1_cslc.yaml', 'radar')
+    ref = convert2isce(burst_id_ref)
+
+    write_yaml(safe_sec, orbit_sec, burst_id_sec)
+    s1_cslc.run('s1_cslc.yaml', 'radar')
+    sec = convert2isce(burst_id_sec, ref=False)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -245,7 +245,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         sensing_starts.append(burst_sensing_start)
 
         # TODO: min(swaths) was previously 1
-        #       Does this intentially not support passing something like swaths=[2, 3]? 
+        #       Does this intentially not support passing something like swaths=[2, 3]?
         if swath == min(swaths):
             sensing_start = burst_sensing_start
             az_time_interval = bursts[-1].azimuth_time_interval
@@ -258,7 +258,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
             sensing_stop = burst_sensing_stop
 
         # TODO: min(swaths) was previously 1
-        #       Does this intentially not support passing something like swaths=[2, 3]? 
+        #       Does this intentially not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
             rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
@@ -535,7 +535,6 @@ def convert2isce(burst_id, ref=True):
         ds = gdal.Open(slc)
         ds = gdal.Translate('burst_sec_'+str(burst_id.split('_')[2])+'.slc', ds, options="-of ISCE")
         ds = None
-        subprocess.call('rm -rf scratch scratch_sec product product_sec output output_sec', shell=True)
         return 'burst_sec_'+str(burst_id.split('_')[2])+'.slc'
 
 
@@ -629,7 +628,9 @@ def download_dem(bounds):
     X, p = stitch_dem(bounds,
                       dem_name='glo_30',  # Global Copernicus 30 meter resolution DEM
                       dst_ellipsoidal_height=False,
-                      dst_area_or_point='Point')
+                      dst_area_or_point='Point',
+                      dst_resolution=(0.001, 0.001)
+    )
 
     with rasterio.open('dem_temp.tif', 'w', **p) as ds:
         ds.write(X, 1)
@@ -703,3 +704,4 @@ def remove_temp_files(only_rtc=False):
         subprocess.call('rm -rf output_dir scratch_dir rtc.log rtc_s1.yaml', shell=True)
     else:
         subprocess.call('rm -rf output_dir *SAFE *EOF scratch_dir dem.tif rtc.log rtc_s1.yaml', shell=True)
+
