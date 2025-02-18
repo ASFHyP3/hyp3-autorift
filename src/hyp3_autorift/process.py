@@ -371,9 +371,11 @@ def process(
 
     if platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
+
         netcdf_file = process_sentinel1_slc_isce3(reference, secondary)
     elif platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
+
         netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT

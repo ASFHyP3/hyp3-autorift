@@ -27,6 +27,7 @@ from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
+
 ESA_HOST = 'dataspace.copernicus.eu'
 
 
@@ -43,26 +44,10 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera
     burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
 
-    return process_burst(
-        safe_ref,
-        safe_sec,
-        orbit_ref,
-        orbit_sec,
-        burst_granule_ref,
-        burst_id_ref,
-        burst_id_sec
-    )
+    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_granule_ref, burst_id_ref, burst_id_sec)
 
 
-def process_burst(
-    safe_ref,
-    safe_sec,
-    orbit_ref,
-    orbit_sec,
-    granule_ref,
-    burst_id_ref,
-    burst_id_sec
-):
+def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec):
     swath = int(granule_ref.split('_')[2][2])
     meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
     meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
@@ -88,13 +73,19 @@ def process_burst(
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     from osgeo import gdal
+
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
-            ref, sec, nc_sensor='S1', optical_flag=False, ncname=None,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
-        )
+        ref,
+        sec,
+        nc_sensor='S1',
+        optical_flag=False,
+        ncname=None,
+        geogrid_run_info=geogrid_info,
+        **parameter_info['autorift'],
+        parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+    )
 
     return netcdf_file
 
@@ -116,24 +107,10 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
     get_dem_for_safes(safe_ref, safe_sec)
 
-    return process_slc(
-        safe_ref,
-        safe_sec,
-        orbit_ref,
-        orbit_sec,
-        burst_ids_ref,
-        burst_ids_sec
-    )
+    return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec)
 
 
-def process_slc(
-    safe_ref,
-    safe_sec,
-    orbit_ref,
-    orbit_sec,
-    burst_ids_ref,
-    burst_ids_sec
-):
+def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec):
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     print(f'Reference Burst IDs: {burst_ids_ref}')
@@ -162,16 +139,22 @@ def process_slc(
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     from osgeo import gdal
+
     gdal.AllRegister()
 
     ref = 'reference.slc'
     sec = 'secondary.slc'
 
     netcdf_file = generateAutoriftProduct(
-            ref, sec, nc_sensor='S1', optical_flag=False, ncname=None,
-            geogrid_run_info=geogrid_info, **parameter_info['autorift'],
-            parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
-        )
+        ref,
+        sec,
+        nc_sensor='S1',
+        optical_flag=False,
+        ncname=None,
+        geogrid_run_info=geogrid_info,
+        **parameter_info['autorift'],
+        parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+    )
 
     return netcdf_file
 
@@ -186,14 +169,7 @@ def read_slc_gdal(slc_path):
     return slc_arr, tran, proj
 
 
-def write_slc_gdal(
-    data,
-    out_path,
-    transform,
-    projection,
-    num_rng_samples,
-    num_az_samples
-):
+def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_az_samples):
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_CFloat32)
@@ -236,7 +212,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         total_rng_samples += num_rng_samples
 
         az_time_interval = bursts_from_swath[0].azimuth_time_interval
-        burst_length = timedelta(seconds=az_time_interval * (num_az_samples-1))
+        burst_length = timedelta(seconds=az_time_interval * (num_az_samples - 1))
         burst_sensing_start = bursts_from_swath[0].sensing_start
         burst_sensing_stop = sensing_start + burst_length
         burst_start_rng = bursts_from_swath[0].starting_range
@@ -268,28 +244,22 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     last_rng_samples = bursts[-1].shape[1]
     rng_pixel_spacing = bursts[0].range_pixel_spacing
 
-    total_rng_samples = last_rng_samples + int(np.round(
-        (last_start_rng - first_start_rng) / rng_pixel_spacing
-    ))
+    total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
 
-    total_az_samples = 1 + int(np.round(
-        (sensing_stop - sensing_start).total_seconds() / az_time_interval
-    ))
+    total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
     merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
     for swath in swaths:
-        az_offset = int(np.round(
-            (sensing_starts[swath-1]-sensing_start).total_seconds() / az_time_interval
-        ))
-        rng_offset = rng_offsets[swath-1]
+        az_offset = int(np.round((sensing_starts[swath - 1] - sensing_start).total_seconds() / az_time_interval))
+        rng_offset = rng_offsets[swath - 1]
 
         print('Offsets', rng_offset, az_offset)
 
-        slc = 'swath_iw'+str(swath)+'.slc'
+        slc = 'swath_iw' + str(swath) + '.slc'
         slc_array, tran_temp, proj_temp = read_slc_gdal(slc)
 
-        az_end_index = az_offset+slc_array.shape[0]
-        rng_end_index = rng_offset+slc_array.shape[1]
+        az_end_index = az_offset + slc_array.shape[0]
+        rng_end_index = rng_offset + slc_array.shape[1]
         if swath == 1:
             tran = tran_temp
             proj = proj_temp
@@ -300,14 +270,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
             merged_array[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
             temp = None
 
-    write_slc_gdal(
-        merged_array,
-        output_path,
-        tran,
-        proj,
-        total_rng_samples,
-        total_az_samples
-    )
+    write_slc_gdal(merged_array, output_path, tran, proj, total_rng_samples, total_az_samples)
 
     subprocess.call('rm -rf swath_*iw*', shell=True)
 
@@ -334,16 +297,16 @@ def get_azimuth_reference_offsets(bursts):
 
 
 def merge_bursts_in_swath(bursts, burst_files, swath, pol, is_ref=True, outfile='output.slc', method='top'):
-    '''
+    """
     Merge burst products into single file.
     Simple numpy based stitching
-    '''
+    """
     num_bursts = len(bursts)
     az_time_interval = bursts[0].azimuth_time_interval
     num_az_samples, num_rng_samples = bursts[-1].shape
 
     last_burst_sensing_start = bursts[-1].sensing_start
-    burst_length = timedelta(seconds=(num_az_samples-1.0) * az_time_interval)
+    burst_length = timedelta(seconds=(num_az_samples - 1.0) * az_time_interval)
 
     sensing_start = bursts[0].sensing_start
     sensing_end = last_burst_sensing_start + burst_length
@@ -357,24 +320,26 @@ def merge_bursts_in_swath(bursts, burst_files, swath, pol, is_ref=True, outfile=
     for index in range(num_bursts):
         burst = bursts[index]
         burst_limit = az_reference_offsets[index]
-        burst_slc = glob.glob(glob.glob(burst_files[index]+'/*')[0]+'/*.slc')[0]
+        burst_slc = glob.glob(glob.glob(burst_files[index] + '/*')[0] + '/*.slc')[0]
         burst_arr, tran, proj = read_slc_gdal(burst_slc)
 
         # If middle burst
         if index > 0:
-            prev_burst = bursts[index-1]
-            prev_burst_slc = glob.glob(glob.glob(burst_files[index-1]+'/*')[0]+'/*.slc')[0]
+            prev_burst = bursts[index - 1]
+            prev_burst_slc = glob.glob(glob.glob(burst_files[index - 1] + '/*')[0] + '/*.slc')[0]
             prev_burst_arr, _, _ = read_slc_gdal(prev_burst_slc)
-            prev_burst_limit = az_reference_offsets[index-1]
+            prev_burst_limit = az_reference_offsets[index - 1]
 
             burst_overlap = prev_burst_limit[1] - burst_limit[0]
             burst_start_index = burst_overlap
             if burst_overlap <= 0:
-                raise ValueError(f'No overlap between bursts {index} and {index-1} in swath {swath}')
+                raise ValueError(f'No overlap between bursts {index} and {index - 1} in swath {swath}')
             print(f'Burst Overlap: {burst_overlap}')
 
-            burst_subset = burst_arr[burst.first_valid_line:burst.last_valid_line + 1, :][:burst_overlap, :]
-            prev_burst_subset = prev_burst_arr[prev_burst.first_valid_line:prev_burst.last_valid_line + 1, :][-burst_overlap:, :]
+            burst_subset = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][:burst_overlap, :]
+            prev_burst_subset = prev_burst_arr[prev_burst.first_valid_line : prev_burst.last_valid_line + 1, :][
+                -burst_overlap:, :
+            ]
 
             match method:
                 case 'avg':
@@ -386,49 +351,44 @@ def merge_bursts_in_swath(bursts, burst_files, swath, pol, is_ref=True, outfile=
                 case _:
                     raise ValueError(f'Method should one of "top", "bot", or "avg", but got {method}.')
 
-            merged_arr[merge_start_index:merge_start_index+burst_overlap, :] = data
+            merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = data
         else:
             burst_start_index = 0
 
         merge_start_index += burst_start_index
 
-        if index != (num_bursts-1):
-            next_burst_limit = az_reference_offsets[index+1]
+        if index != (num_bursts - 1):
+            next_burst_limit = az_reference_offsets[index + 1]
             burst_overlap = burst_limit[1] - next_burst_limit[0]
             if burst_overlap < 0:
-                raise ValueError(f'No overlap between bursts {index} and {index+1} in swath {swath}')
+                raise ValueError(f'No overlap between bursts {index} and {index + 1} in swath {swath}')
             burst_end_index = next_burst_limit[0] - burst_limit[0]
         else:
             burst_end_index = burst.last_valid_line - burst.first_valid_line + 1
 
         burst_length = burst_end_index - burst_start_index
 
-        burst_arr = burst_arr[burst.first_valid_line:burst.last_valid_line+1, :][burst_start_index:burst_end_index]
-        merged_arr[merge_start_index:merge_start_index+burst_length, :] = burst_arr
+        burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][burst_start_index:burst_end_index]
+        merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr
 
         merge_start_index += burst_length
 
-    output_path = "swath_iw"+str(swath)+".slc"
+    output_path = 'swath_iw' + str(swath) + '.slc'
 
-    write_slc_gdal(
-        merged_arr,
-        output_path,
-        tran,
-        proj,
-        num_rng_samples,
-        num_az_lines
-    )
+    write_slc_gdal(merged_arr, output_path, tran, proj, num_rng_samples, num_az_lines)
 
 
 def get_topsinsar_config():
-    '''
+    """
     Input file.
-    '''
-    import os
-    import numpy as np
-    from datetime import datetime, timedelta
-    from s1reader import load_bursts
+    """
     import glob
+    import os
+    from datetime import timedelta
+
+    import numpy as np
+    from s1reader import load_bursts
+
     orbits = glob.glob('*.EOF')
     fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
     safes = glob.glob('*.SAFE')
@@ -464,12 +424,12 @@ def get_topsinsar_config():
         length, width = burst.shape
         prf = 1 / burst.azimuth_time_interval
 
-        sensing_stop = (sensing_start + timedelta(seconds=(length-1.0)/prf))
+        sensing_stop = sensing_start + timedelta(seconds=(length - 1.0) / prf)
 
         sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
 
         config_data[f'{name}_filename'] = Path(safe).name
-        config_data[f'{name}_dt'] = sensing_dt.strftime("%Y%m%dT%H:%M:%S.%f").rstrip('0')
+        config_data[f'{name}_dt'] = sensing_dt.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
     return config_data
 
@@ -523,28 +483,28 @@ def bounding_box(safe, orbit_file, swath=0, epsg=4326):
 
 def convert2isce(burst_id, ref=True):
     if ref:
-        fol = glob.glob('./product/'+burst_id+'/*')[0]
-        slc = glob.glob(fol+'/*.slc')[0]
+        fol = glob.glob('./product/' + burst_id + '/*')[0]
+        slc = glob.glob(fol + '/*.slc')[0]
         ds = gdal.Open(slc)
-        ds = gdal.Translate('burst_ref_'+str(burst_id.split('_')[2])+'.slc', ds, options="-of ISCE")
+        ds = gdal.Translate('burst_ref_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
         ds = None
-        return 'burst_ref_'+str(burst_id.split('_')[2])+'.slc'
+        return 'burst_ref_' + str(burst_id.split('_')[2]) + '.slc'
     else:
-        fol = glob.glob('./product_sec/'+burst_id+'/*')[0]
-        slc = glob.glob(fol+'/*.slc')[0]
+        fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
+        slc = glob.glob(fol + '/*.slc')[0]
         ds = gdal.Open(slc)
-        ds = gdal.Translate('burst_sec_'+str(burst_id.split('_')[2])+'.slc', ds, options="-of ISCE")
+        ds = gdal.Translate('burst_sec_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
         ds = None
-        return 'burst_sec_'+str(burst_id.split('_')[2])+'.slc'
+        return 'burst_sec_' + str(burst_id.split('_')[2]) + '.slc'
 
 
 def get_esa_credentials() -> Tuple[str, str]:
     netrc_name = '_netrc' if system().lower() == 'windows' else '.netrc'
     netrc_file = Path.home() / netrc_name
 
-    if "ESA_USERNAME" in os.environ and "ESA_PASSWORD" in os.environ:
-        username = os.environ["ESA_USERNAME"]
-        password = os.environ["ESA_PASSWORD"]
+    if 'ESA_USERNAME' in os.environ and 'ESA_PASSWORD' in os.environ:
+        username = os.environ['ESA_USERNAME']
+        password = os.environ['ESA_PASSWORD']
         return username, password
 
     if netrc_file.exists():
@@ -555,8 +515,8 @@ def get_esa_credentials() -> Tuple[str, str]:
             return username, password
 
     raise ValueError(
-        "Please provide Copernicus Data Space Ecosystem (CDSE) credentials via the "
-        "ESA_USERNAME and ESA_PASSWORD environment variables, or your netrc file."
+        'Please provide Copernicus Data Space Ecosystem (CDSE) credentials via the '
+        'ESA_USERNAME and ESA_PASSWORD environment variables, or your netrc file.'
     )
 
 
@@ -576,10 +536,10 @@ def get_burst_id(safe, burst_granule, orbit_file):
 
     str_burst_id = None
     for x in bursts:
-        burst_id_x = str(x.burst_id.esa_burst_id).zfill(6)+'_'+x.burst_id.subswath.lower()
-        orbit_id = orbit_number.lower()+'_'+swath.lower()
+        burst_id_x = str(x.burst_id.esa_burst_id).zfill(6) + '_' + x.burst_id.subswath.lower()
+        orbit_id = orbit_number.lower() + '_' + swath.lower()
         if burst_id_x == orbit_id:
-            str_burst_id = 't'+str(int(x.burst_id.track_number)).zfill(3)+'_'+burst_id_x
+            str_burst_id = 't' + str(int(x.burst_id.track_number)).zfill(3) + '_' + burst_id_x
 
     if str_burst_id is None:
         raise Exception('The burst id from ' + burst_granule + ' was not found in ' + safe)
@@ -591,11 +551,7 @@ def get_isce3_burst_id(burst):
     track_number = 't' + str(int(burst.burst_id.track_number)).zfill(3)
     esa_burst_id = str(burst.burst_id.esa_burst_id).zfill(6)
     subswath = burst.burst_id.subswath.lower()
-    return '_'.join([
-        track_number,
-        esa_burst_id,
-        subswath
-    ])
+    return '_'.join([track_number, esa_burst_id, subswath])
 
 
 def get_burst_ids(safe, orbit_file):
@@ -620,16 +576,17 @@ def get_dem_for_safes(safe_ref, safe_sec):
 
 def get_bounds_dem(safe):
     bounds = s1_info.get_frame_bounds(os.path.basename(safe))
-    bounds = [int(bounds[0])-1, int(bounds[1]), math.ceil(bounds[2])+1, math.ceil(bounds[3])]
+    bounds = [int(bounds[0]) - 1, int(bounds[1]), math.ceil(bounds[2]) + 1, math.ceil(bounds[3])]
     return bounds
 
 
 def download_dem(bounds):
-    X, p = stitch_dem(bounds,
-                      dem_name='glo_30',  # Global Copernicus 30 meter resolution DEM
-                      dst_ellipsoidal_height=False,
-                      dst_area_or_point='Point',
-                      dst_resolution=(0.001, 0.001)
+    X, p = stitch_dem(
+        bounds,
+        dem_name='glo_30',  # Global Copernicus 30 meter resolution DEM
+        dst_ellipsoidal_height=False,
+        dst_area_or_point='Point',
+        dst_resolution=(0.001, 0.001),
     )
 
     with rasterio.open('dem_temp.tif', 'w', **p) as ds:
@@ -637,14 +594,14 @@ def download_dem(bounds):
         ds.update_tags(AREA_OR_POINT='Point')
     ds = None
     ds = gdal.Open('dem_temp.tif')
-    ds = gdal.Translate('dem.tif', ds, options="-ot Int16")
+    ds = gdal.Translate('dem.tif', ds, options='-ot Int16')
     ds = None
     subprocess.call('rm -rf dem_temp.tif', shell=True)
 
 
 def write_yaml(safe, orbit_file, burst_id=None):
     abspath = os.path.abspath(safe)
-    yaml_folder = os.path.dirname(hyp3_autorift.__file__)+'/schemas'
+    yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
     yaml = open(f'{yaml_folder}/s1_cslc_template.yaml', 'r')
     lines = yaml.readlines()
     yaml.close()
@@ -652,7 +609,7 @@ def write_yaml(safe, orbit_file, burst_id=None):
     if burst_id is None:
         ref = ''
     else:
-        ref = glob.glob('./product/'+burst_id+'/*')[0]
+        ref = glob.glob('./product/' + burst_id + '/*')[0]
         ref = os.path.abspath(ref)
 
     yaml = open('s1_cslc.yaml', 'w')
@@ -667,7 +624,7 @@ def write_yaml(safe, orbit_file, burst_id=None):
             if burst_id is None:
                 newstring += line.replace('burst_ids', '')
             else:
-                newstring += line.replace('burst_ids', '[\''+burst_id+'\']')
+                newstring += line.replace('burst_ids', "['" + burst_id + "']")
         elif 'bool_reference' in line:
             if burst_id is None:
                 newstring += line.replace('bool_reference', 'True')
@@ -704,4 +661,3 @@ def remove_temp_files(only_rtc=False):
         subprocess.call('rm -rf output_dir scratch_dir rtc.log rtc_s1.yaml', shell=True)
     else:
         subprocess.call('rm -rf output_dir *SAFE *EOF scratch_dir dem.tif rtc.log rtc_s1.yaml', shell=True)
-
