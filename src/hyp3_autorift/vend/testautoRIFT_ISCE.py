@@ -27,7 +27,7 @@
 #
 # Author: Yang Lei
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-import re
+# import re                     # no longer needed; re.findall was replaced with .find()
 import warnings
 from osgeo import gdal
 from datetime import datetime, timedelta
@@ -92,7 +92,7 @@ def loadProduct(filename):
     '''
     Load the product using Product Manager.
     '''
-    import isce
+    # import isce               # isce module is not used in this function
     import logging
     from imageMath import IML
 
@@ -103,11 +103,12 @@ def loadProduct(filename):
 
 
 def loadProductOptical(file_m, file_s):
-    import numpy as np
+    import numpy as np        # float32 is the only command used in numpy
+
     '''
     Load the product using Product Manager.
     '''
-    import isce
+    # import isce               # isce module is not used in this function
     from components.contrib.geo_autoRIFT.geogrid import GeogridOptical
 #    from geogrid import GeogridOptical
 
@@ -137,12 +138,12 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     Wire and run geogrid.
     '''
 
-    import isce
+    # import isce                       # isce module is not used in this function
     from components.contrib.geo_autoRIFT.autoRIFT import autoRIFT_ISCE
     import numpy as np
-    import isceobj
+    # import isceobj                    # isceobj module is not used in this function
     import time
-    import subprocess
+    # import subprocess                 # subprocess module is not used in this function
 
 
     obj = autoRIFT_ISCE()
@@ -182,13 +183,16 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     # create the grid if it does not exist
     if xGrid is None:
         m,n = obj.I1.shape
-        xGrid = np.arange(obj.SkipSampleX+10,n-obj.SkipSampleX,obj.SkipSampleX)
-        yGrid = np.arange(obj.SkipSampleY+10,m-obj.SkipSampleY,obj.SkipSampleY)
-        nd = xGrid.__len__()
-        md = yGrid.__len__()
-        obj.xGrid = np.int32(np.dot(np.ones((md,1)),np.reshape(xGrid,(1,xGrid.__len__()))))
-        obj.yGrid = np.int32(np.dot(np.reshape(yGrid,(yGrid.__len__(),1)),np.ones((1,nd))))
+        xGrid = np.arange(obj.SkipSampleX+10,n-obj.SkipSampleX,obj.SkipSampleX,dtype=np.int32)
+        yGrid = np.arange(obj.SkipSampleY+10,m-obj.SkipSampleY,obj.SkipSampleY,dtype=np.int32)
+        # nd = xGrid.__len__()
+        # md = yGrid.__len__()
+        # obj.xGrid = np.int32(np.dot(np.ones((md,1)),np.reshape(xGrid,(1,xGrid.__len__()))))
+        # obj.yGrid = np.int32(np.dot(np.reshape(yGrid,(yGrid.__len__(),1)),np.ones((1,nd))))
+        obj.xGrid, obj.yGrid = np.meshgrid(xGrid,yGrid)     # np.meshgrid is faster than dot products
+                                                            # COME BACK LATER: Consider using sparse arrays
         noDataMask = np.logical_not(obj.xGrid)
+        del xGrid, yGrid                                    # clear temporary variables
     else:
         obj.xGrid = xGrid
         obj.yGrid = yGrid
@@ -215,10 +219,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
             noDataMask = np.logical_or(noDataMask, np.logical_and(ind_data, ind_zero))
         
         # clear temporary variables
-        ind_data = []
-        xGrid_temp = []
-        yGrid_temp = []
-        ind_zero = []
+        del ind_data, xGrid_temp, yGrid_temp, ind_zero
     
     elif zero_mask is not None:
         ind_data = np.logical_and(obj.yGrid != nodata, obj.xGrid != nodata)
@@ -231,8 +232,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
         noDataMask[ind_data] = zero_mask[ind_data_shift]
 
         # clear temporary variables
-        ind_data = []
-        ind_data_shift = []
+        del ind_data, ind_data_shift
 
     ######### mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
 
@@ -430,7 +430,8 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
     import cv2
     kernel = np.ones((3,3),np.uint8)
     noDataMask = cv2.dilate(noDataMask.astype(np.uint8),kernel,iterations = 1)
-    noDataMask = noDataMask.astype(np.bool)
+    # noDataMask = noDataMask.astype(np.bool)
+    noDataMask = noDataMask.astype(bool)        # np.bool was removed in NumPy 1.24.0
 
 
     return obj.Dx, obj.Dy, obj.InterpMask, obj.ChipSizeX, obj.GridSpacingX, obj.ScaleChipSizeY, obj.SearchLimitX, obj.SearchLimitY, obj.origSize, noDataMask
@@ -459,7 +460,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
     import time
     import os
 
-    import isce
+    # import isce                           # isce module is not used in this function
     from components.contrib.geo_autoRIFT.autoRIFT import __version__ as version
     #  from autoRIFT import __version__ as version
 
@@ -567,9 +568,11 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
         preprocessing_methods = ['hps', 'hps']
         for ii, name in enumerate((m_name, s_name)):
-            if len(re.findall("L[EO]07_", name)) > 0:       # [EO] means 'E' or 'O', but not both
+            # if len(re.findall("L[EO]07_", name)) > 0:       # [EO] means 'E' or 'O', but not both
+            if name.find('LE07_')!=-1 or name.find('LO07_')!=-1:  # no longer uses re.findall or re module
                 preprocessing_methods[ii] = 'wallis_fill'
-            elif len(re.findall("LT0[45]_", name)) > 0:     # [45] means '4' or '5', but not both
+            # elif len(re.findall("LT0[45]_", name)) > 0:     # [45] means '4' or '5', but not both
+            elif name.find('LT04_')!=-1 or name.find('LT05_')!=-1:  # no longer uses re.findall or re module
                 preprocessing_methods[ii] = 'fft'
 
         zero_mask = None
@@ -599,8 +602,10 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
     if optical_flag == 0:
         Dy = -Dy
 
-    DX = np.zeros(origSize,dtype=np.float32) * np.nan
-    DY = np.zeros(origSize,dtype=np.float32) * np.nan
+    # DX = np.zeros(origSize,dtype=np.float32) * np.nan
+    DX = np.full(origSize,np.float32(np.nan))               # faster than np.zeros(...)*np.nan
+    # DY = np.zeros(origSize,dtype=np.float32) * np.nan
+    DY = np.full(origSize,np.float32(np.nan))               # faster than np.zeros(...)*np.nan
     INTERPMASK = np.zeros(origSize,dtype=np.float32)
     CHIPSIZEX = np.zeros(origSize,dtype=np.float32)
     SEARCHLIMITX = np.zeros(origSize,dtype=np.float32)
@@ -817,7 +822,8 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     V_temp_threshold = np.percentile(V_temp[np.logical_not(np.isnan(V_temp))],25)
                     SSM1 = (V_temp <= V_temp_threshold)
                 except IndexError:
-                    SSM1 = np.zeros(V_temp.shape).astype('bool')
+                    # SSM1 = np.zeros(V_temp.shape).astype('bool')
+                    SSM1 = np.zeros(V_temp.shape,dtype=bool)        # faster than np.zeros().astype('bool')
 
 #                stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)) & (DX-DXref > -5) & (DX-DXref < 5) & (DY-DYref > -5) & (DY-DYref < 5))
                 stable_count1 = np.sum(SSM1 & np.logical_not(np.isnan(DX)))
@@ -829,25 +835,33 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
 
                 if stable_count != 0:
                     temp = DX.copy() - DXref.copy()
-                    temp[np.logical_not(SSM)] = np.nan
+                    # temp[np.logical_not(SSM)] = np.nan
 #                    dx_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
-                    dx_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
+                    # dx_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
+                    dx_mean_shift = np.nanmedian(temp[SSM])         # faster than ( temp[not(SSM)]=nan; dx_mean_shift=median(temp[not(isnan(temp))]) )
+                    del temp                                        # clear temporary variables
 
                     temp = DY.copy() - DYref.copy()
-                    temp[np.logical_not(SSM)] = np.nan
+                    # temp[np.logical_not(SSM)] = np.nan
 #                    dy_mean_shift = np.median(temp[(temp > -5)&(temp < 5)])
-                    dy_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
+                    # dy_mean_shift = np.median(temp[np.logical_not(np.isnan(temp))])
+                    dy_mean_shift = np.nanmedian(temp[SSM])         # faster than ( temp[not(SSM)]=nan; dy_mean_shift=median(temp[not(isnan(temp))]) )
+                    del temp                                        # clear temporary variables
 
                 if stable_count1 != 0:
                     temp = DX.copy() - DXref.copy()
-                    temp[np.logical_not(SSM1)] = np.nan
+                    # temp[np.logical_not(SSM1)] = np.nan
 #                    dx_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
-                    dx_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
+                    # dx_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
+                    dx_mean_shift1 = np.nanmedian(temp[SSM1])       # faster than ( temp[not(SSM1)]=nan; dx_mean_shift1=median(temp[not(isnan(temp))]) )
+                    del temp                                        # clear temporary variables
 
                     temp = DY.copy() - DYref.copy()
-                    temp[np.logical_not(SSM1)] = np.nan
+                    # temp[np.logical_not(SSM1)] = np.nan
 #                    dy_mean_shift1 = np.median(temp[(temp > -5)&(temp < 5)])
-                    dy_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
+                    # dy_mean_shift1 = np.median(temp[np.logical_not(np.isnan(temp))])
+                    dy_mean_shift1 = np.nanmedian(temp[SSM1])       # faster than ( temp[not(SSM1)]=nan; dy_mean_shift1=median(temp[not(isnan(temp))]) )
+                    del temp                                        # clear temporary variables
 
                 if stable_count == 0:
                     if stable_count1 == 0:
@@ -899,7 +913,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     pair_type = 'radar'
                     detection_method = 'feature'
                     coordinates = 'radar, map'
-                    if np.sum(SEARCHLIMITX!=0)!=0:
+                    if np.sum(SEARCHLIMITX!=0)!=0:      # skipping for now, but np.any() would be more appropriate here
                         roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
                     else:
                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
@@ -999,7 +1013,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
-                    if np.sum(SEARCHLIMITX!=0)!=0:
+                    if np.sum(SEARCHLIMITX!=0)!=0:      # skipping for now, but np.any() would be more appropriate here
                         roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
                     else:
                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
@@ -1097,7 +1111,7 @@ def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
-                    if np.sum(SEARCHLIMITX!=0)!=0:
+                    if np.sum(SEARCHLIMITX!=0)!=0:      # skipping for now, but np.any() would be more appropriate here
                         roi_valid_percentage = int(round(np.sum(CHIPSIZEX!=0)/np.sum(SEARCHLIMITX!=0)*1000.0))/1000
                     else:
                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
