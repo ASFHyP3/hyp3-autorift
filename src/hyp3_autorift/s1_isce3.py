@@ -33,8 +33,8 @@ def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera
     safe_sec = download_burst(burst_granule_sec)
     safe_granule_ref = os.path.basename(safe_ref).split('.')[0]
     safe_granule_sec = os.path.basename(safe_sec).split('.')[0]
-    orbit_ref = str(fetch_for_scene(safe_ref.stem, dir='.'))
-    orbit_sec = str(fetch_for_scene(safe_sec.stem, dir='.'))
+    orbit_ref = str(fetch_for_scene(safe_ref.stem))
+    orbit_sec = str(fetch_for_scene(safe_sec.stem))
     burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
 
@@ -91,8 +91,8 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
-    orbit_ref = str(fetch_for_scene(slc_ref.stem, dir='.'))
-    orbit_sec = str(fetch_for_scene(slc_sec.stem, dir='.'))
+    orbit_ref = str(fetch_for_scene(slc_ref.stem))
+    orbit_sec = str(fetch_for_scene(slc_sec.stem))
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
