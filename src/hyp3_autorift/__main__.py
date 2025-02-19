@@ -35,7 +35,7 @@ def main():
     if not (Path.home() / '.netrc').exists():
         warnings.warn('Earthdata credentials must be present as environment variables, or in your netrc.', UserWarning)
 
-    eps = entry_points()['console_scripts']
+    eps = entry_points(group='console_scripts')
     (process_entry_point,) = {process for process in eps if process.name == args.process}
 
     sys.argv = [args.process, *unknowns]

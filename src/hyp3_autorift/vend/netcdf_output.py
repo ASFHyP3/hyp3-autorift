@@ -1287,47 +1287,91 @@ def loadProduct(xmlname):
     return obj
 
 
+def getPol(safe, orbit_path):
+    from s1reader import load_bursts
+    
+    pols = ['vv', 'vh', 'hh', 'hv']
+    for pol in pols:
+        try:
+            bursts = load_bursts(safe,orbit_path,1,pol)
+            print('Polarization '+pol)
+            return pol
+        except:
+            pass
+
+
 def loadMetadata(indir):
     """
     Input file.
     """
     import os
+    import numpy as np
+    from datetime import datetime, timedelta
+    from s1reader import load_bursts
+    import isce3
+    import glob
+    orbits = glob.glob('*.EOF')
+    fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
+    safes = glob.glob('*.SAFE')
+    if len(safes)==0:
+        safes = glob.glob('*.zip')
+    fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
+    
+    if 'ref' in indir:
+        safe = safes[np.argmin(fechas_safes)]
+        orbit_path = orbits[np.argmin(fechas_orbits)]
+    else:
+        safe = safes[np.argmax(fechas_safes)]
+        orbit_path = orbits[np.argmax(fechas_orbits)]
 
-    frames = []
-    for swath in range(1, 4):
-        inxml = os.path.join(indir, 'IW{0}.xml'.format(swath))
-        if os.path.exists(inxml):
-            ifg = loadProduct(inxml)
-            frames.append(ifg)
-    flight_direction = frames[0].bursts[0].passDirection[0]
-    return frames, flight_direction
+    if '_' in indir:
+        swath = int(indir.split('_')[2][2])
+    else:
+        swath = 1 
+        
+    pol = getPol(safe, orbit_path)
+    
+    bursts = load_bursts(safe, orbit_path, swath, pol)
+    
+    if '_' in indir:
+        for bur in bursts:
+            if int(bur.burst_id.subswath[2])==swath:
+                burst = bur
+    else:
+        burst = bursts[0]
+        
+    return burst, burst.orbit_direction
 
 
 def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
                           tran, proj, GridSpacingX, ScaleChipSizeY, output_ref=[0.0, 0.0, 0.0, 0.0]):
 
-    frames, flight_direction = loadMetadata(os.path.dirname(indir_m)[:-6]+'fine_coreg')
-    frames_s, flight_direction_s = loadMetadata(os.path.dirname(indir_m)[:-6]+'secondary')
+    if 'reference.slc' in indir_m:
+        burst, flight_direction = loadMetadata(os.path.basename(indir_m))
+        burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('reference','secondary')))
+    else:
+        burst, flight_direction = loadMetadata(os.path.basename(indir_m))
+        burst_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('ref','sec')))
 
-    if flight_direction == 'D':
+    if flight_direction == 'Descending':
         flight_direction = 'descending'
-    elif flight_direction == 'A':
+    elif flight_direction == 'Ascending':
         flight_direction = 'ascending'
     else:
         flight_direction = 'N/A'
 
-    if flight_direction_s == 'D':
+    if flight_direction_s == 'Descending':
         flight_direction_s = 'descending'
-    elif flight_direction_s == 'A':
+    elif flight_direction_s == 'Ascending':
         flight_direction_s = 'ascending'
     else:
         flight_direction_s = 'N/A'
 
-    if frames[0].orbit.orbitSource[2] == frames_s[0].orbit.orbitSource[2]:
+    if burst.platform_id == burst_s.platform_id:
         print('subswath offset bias correction not performed for non-S1A/B combination')
         return DX, DY, flight_direction, flight_direction_s
     else:
-        if frames[0].orbit.orbitSource[2] == 'B':
+        if burst.platform_id[2] == 'B':
             output_ref = [-output_ref[0], -output_ref[1], -output_ref[2], -output_ref[3]]
 
     output = []
@@ -1340,12 +1384,18 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     azmind = azmind.astype(np.float32)
     rngind[rngind == nodata] = np.nan
     azmind[azmind == nodata] = np.nan
+    
+    length, width = burst.shape
+    farRange = burst.starting_range + (width-1.0)*burst.range_pixel_spacing
 
-    ncols = int(np.round((frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    #ncols = int(np.round((frames[2].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    ncols = int(np.round((farRange - burst.starting_range)/burst.range_pixel_spacing))
 
-    ind2 = int(np.round((frames[0].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    ind2 = ncols
+    
+    ind1 = 0
 
-    ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    #ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
 
     swath_border.append((ind1+ind2)/2)
     swath_border_full.append(ind1)
@@ -1365,8 +1415,8 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
         output.append(output_ref[0])
         output.append(output_ref[1])
 
-    ind2 = int(np.round((frames[1].farRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
-    ind1 = int(np.round((frames[2].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
+    ind2 = ncols
+    ind1 = 0
 
     swath_border.append((ind1+ind2)/2)
     swath_border_full.append(ind1)

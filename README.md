@@ -10,7 +10,7 @@ The HyP3-autoRIFT plugin provides a set of workflows for feature tracking proces
 1. Ensure that conda is installed on your system (we recommend using [mambaforge](https://github.com/conda-forge/miniforge#mambaforge) to reduce setup times).
 2. Clone the `hyp3-autorift` repository and navigate to the root directory of this project
    ```bash
-   git clone https://github.com/ASFHyP3/hyp3-autorift.git
+   git clone https://github.com/mfangaritav/hyp3-autorift.git
    cd hyp3-autorift
    ```
 3. Create  and activate your Python environment
@@ -19,9 +19,24 @@ The HyP3-autoRIFT plugin provides a set of workflows for feature tracking proces
    mamba env create -f environment.yml
    mamba activate hyp3-autorift
    ```
-4. Finally, install a development version of HyP3 autoRIFT
+4. Install a development version of HyP3 autoRIFT
    ```bash
    python -m pip install -e .
+   cd ..
+   ```
+5. Clone the `COMPASS` repository and navigate to the root directory of this project and install it.
+   ```bash
+   git clone https://github.com/mfangaritav/COMPASS.git
+   cd COMPASS
+   python -m pip install -e .
+   cd ..
+   ```
+6. Clone the `autoRIFT` repository and navigate to the root directory of this project and install it.
+   ```bash
+   git clone https://github.com/mfangaritav/autoRIFT.git
+   cd autoRIFT
+   python setup.py install
+   cd ..
    ```
 
 ## Usage
@@ -52,11 +67,11 @@ For example:
 
 ```
 hyp3_autorift \
-  "S2B_MSIL1C_20200612T150759_N0209_R025_T22WEB_20200612T184700" \
-  "S2A_MSIL1C_20200627T150921_N0209_R025_T22WEB_20200627T170912"
+  "S1_105606_IW1_20230612T025537_VV_3F09-BURST" \
+  "S1_105606_IW1_20230624T025538_VV_8279-BURST"
 ```
 
-This command will run autorift for a pair of Sentinel-2 images.
+This command will run autorift for a pair of Sentinel-1 bursts.
 
 > [!IMPORTANT]
 > Credentials are necessary to access Landsat and Sentinel-1 data. See the Credentials section for more information.
