@@ -49,3 +49,4 @@ dependencies:
   - pandas>=1.4
   - progressbar
   - rasterio
+  - s1_orbits

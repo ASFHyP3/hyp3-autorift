@@ -16,10 +16,10 @@ from burst2safe.burst2safe import burst2safe
 from compass import s1_cslc
 from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
-from hyp3lib.get_orb import downloadSentinelOrbitFile
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
 from s1reader import s1_info
+from s1_orbits import fetch_for_scene
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
@@ -28,19 +28,13 @@ from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetada
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-ESA_HOST = 'dataspace.copernicus.eu'
-
-
 def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera=False):
-    esa_username, esa_password = get_esa_credentials()
-    esa_credentials = (esa_username, esa_password)
-
     safe_ref = download_burst(burst_granule_ref)
     safe_sec = download_burst(burst_granule_sec)
     safe_granule_ref = os.path.basename(safe_ref).split('.')[0]
     safe_granule_sec = os.path.basename(safe_sec).split('.')[0]
-    orbit_ref, _ = downloadSentinelOrbitFile(safe_granule_ref, esa_credentials=esa_credentials)
-    orbit_sec, _ = downloadSentinelOrbitFile(safe_granule_sec, esa_credentials=esa_credentials)
+    orbit_ref = str(fetch_for_scene(safe_ref.stem, dir='.'))
+    orbit_sec = str(fetch_for_scene(safe_sec.stem, dir='.'))
     burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
 
@@ -91,17 +85,14 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
 
 def process_sentinel1_slc_isce3(slc_ref, slc_sec):
-    esa_username, esa_password = get_esa_credentials()
-    esa_credentials = (esa_username, esa_password)
-
     for scene in [slc_ref, slc_sec]:
         scene_url = get_download_url(scene)
         download_file(scene_url, chunk_size=5242880)
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
-    orbit_ref, _ = downloadSentinelOrbitFile(slc_ref, esa_credentials=esa_credentials)
-    orbit_sec, _ = downloadSentinelOrbitFile(slc_sec, esa_credentials=esa_credentials)
+    orbit_ref = str(fetch_for_scene(slc_ref.stem, dir='.'))
+    orbit_sec = str(fetch_for_scene(slc_sec.stem, dir='.'))
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
@@ -496,28 +487,6 @@ def convert2isce(burst_id, ref=True):
         ds = gdal.Translate('burst_sec_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
         ds = None
         return 'burst_sec_' + str(burst_id.split('_')[2]) + '.slc'
-
-
-def get_esa_credentials() -> Tuple[str, str]:
-    netrc_name = '_netrc' if system().lower() == 'windows' else '.netrc'
-    netrc_file = Path.home() / netrc_name
-
-    if 'ESA_USERNAME' in os.environ and 'ESA_PASSWORD' in os.environ:
-        username = os.environ['ESA_USERNAME']
-        password = os.environ['ESA_PASSWORD']
-        return username, password
-
-    if netrc_file.exists():
-        netrc_credentials = netrc.netrc(netrc_file)
-        if ESA_HOST in netrc_credentials.hosts:
-            username = netrc_credentials.hosts[ESA_HOST][0]
-            password = netrc_credentials.hosts[ESA_HOST][2]
-            return username, password
-
-    raise ValueError(
-        'Please provide Copernicus Data Space Ecosystem (CDSE) credentials via the '
-        'ESA_USERNAME and ESA_PASSWORD environment variables, or your netrc file.'
-    )
 
 
 def download_burst(burst_granule, all_anns=True):
