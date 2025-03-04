@@ -1,13 +1,10 @@
 import copy
 import glob
 import math
-import netrc
 import os
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from platform import system
-from typing import Tuple
 
 import numpy as np
 import rasterio
@@ -18,8 +15,8 @@ from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
-from s1reader import s1_info
 from s1_orbits import fetch_for_scene
+from s1reader import s1_info
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
@@ -31,8 +28,6 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera=False):
     safe_ref = download_burst(burst_granule_ref)
     safe_sec = download_burst(burst_granule_sec)
-    safe_granule_ref = os.path.basename(safe_ref).split('.')[0]
-    safe_granule_sec = os.path.basename(safe_sec).split('.')[0]
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
     burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
