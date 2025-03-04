@@ -96,7 +96,7 @@ lines-after-imports = 2
 "tests/*" = ["D100", "D103", "ANN"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_unreachable = true
