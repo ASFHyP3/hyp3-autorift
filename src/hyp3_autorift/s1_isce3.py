@@ -86,8 +86,8 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
-    orbit_ref = str(fetch_for_scene(slc_ref.stem))
-    orbit_sec = str(fetch_for_scene(slc_sec.stem))
+    orbit_ref = str(fetch_for_scene(slc_ref.split('.')[0]))
+    orbit_sec = str(fetch_for_scene(slc_sec.split('.')[0]))
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
