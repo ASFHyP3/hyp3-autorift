@@ -190,9 +190,9 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     pol = getPol(safe, orbit)
 
     for swath in swaths:
-        merge_bursts_in_swath(swath, is_ref)
-
         bursts_from_swath = s1reader.load_bursts(safe, orbit, swath, pol)
+
+        merge_bursts_in_swath(bursts_from_swath, burst_files, swath)
 
         num_az_samples, num_rng_samples = bursts_from_swath.shape
         total_rng_samples += num_rng_samples
@@ -282,7 +282,7 @@ def get_azimuth_reference_offsets(bursts):
     return az_reference_offsets, start_index
 
 
-def merge_bursts_in_swath(bursts, burst_files, swath, pol, is_ref=True, outfile='output.slc', method='top'):
+def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', method='top'):
     """
     Merge burst products into single file.
     Simple numpy based stitching
