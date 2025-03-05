@@ -56,7 +56,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     s1_cslc.run('s1_cslc.yaml', 'radar')
     sec = convert2isce(burst_id_sec, ref=False)
 
-    scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
@@ -119,7 +119,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref)
 
-    scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
@@ -200,7 +200,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         az_time_interval = bursts_from_swath[0].azimuth_time_interval
         burst_length = timedelta(seconds=az_time_interval * (num_az_samples - 1))
         burst_sensing_start = bursts_from_swath[0].sensing_start
-        burst_sensing_stop = sensing_start + burst_length
+        burst_sensing_stop = burst_sensing_start + burst_length
         burst_start_rng = bursts_from_swath[0].starting_range
 
         bursts.extend(bursts_from_swath)
@@ -230,6 +230,8 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     last_rng_samples = bursts[-1].shape[1]
     rng_pixel_spacing = bursts[0].range_pixel_spacing
 
+    assert sensing_start and sensing_stop and rng_pixel_spacing
+
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
 
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
@@ -254,7 +256,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
             temp = merged_array[az_offset:az_end_index, rng_offset:rng_end_index]
             cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(slc_array) == 0))
             merged_array[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
-            temp = None
+            temp = np.array([])
 
     write_slc_gdal(merged_array, output_path, tran, proj, total_rng_samples, total_az_samples)
 
@@ -384,11 +386,11 @@ def get_topsinsar_config():
         safes = glob.glob('*.zip')
         fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
 
-    safe_ref = safes[np.argmin(fechas_safes)]
-    orbit_path_ref = orbits[np.argmin(fechas_orbits)]
+    safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type] 
+    orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
 
-    safe_sec = safes[np.argmax(fechas_safes)]
-    orbit_path_sec = orbits[np.argmax(fechas_orbits)]
+    safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type] 
+    orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type] 
 
     if len(glob.glob('*_ref*.slc')) > 0:
         swath = int(os.path.basename(glob.glob('*_ref*.slc')[0]).split('_')[2][2])
