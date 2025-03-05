@@ -220,7 +220,9 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         # TODO: min(swaths) was previously 1
         #       Does this intentially not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
-            rng_offset = (burst_start_rng - bursts_from_swath[0].starting_range) / bursts_from_swath[0].range_pixel_spacing
+            rng_offset = (burst_start_rng - bursts_from_swath[0].starting_range) / bursts_from_swath[
+                0
+            ].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
 
     first_start_rng = bursts[0].starting_range
@@ -349,7 +351,9 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
             burst_end_index = burst.last_valid_line - burst.first_valid_line + 1
 
         burst_length = burst_end_index - burst_start_index
-        burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][burst_start_index:burst_end_index, :]
+        burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][
+            burst_start_index:burst_end_index, :
+        ]
         merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr
 
         merge_start_index += burst_length
@@ -379,11 +383,11 @@ def get_topsinsar_config():
         safes = glob.glob('*.zip')
         fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
 
-    safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type] 
+    safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type]
     orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
 
-    safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type] 
-    orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type] 
+    safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
+    orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
 
     if len(glob.glob('*_ref*.slc')) > 0:
         swath = int(os.path.basename(glob.glob('*_ref*.slc')[0]).split('_')[2][2])
