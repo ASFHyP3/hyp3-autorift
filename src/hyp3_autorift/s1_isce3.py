@@ -61,8 +61,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-    from osgeo import gdal
-
+    # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
@@ -99,8 +98,6 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec):
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
-    print(f'Reference Burst IDs: {burst_ids_ref}')
-    print(f'Secondary burst IDs: {burst_ids_sec}')
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
     for burst_id_sec in burst_ids:
@@ -124,8 +121,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-    from osgeo import gdal
-
+    # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
     ref = 'reference.slc'
@@ -191,10 +187,12 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
 
     for swath in swaths:
         bursts_from_swath = s1reader.load_bursts(safe, orbit, swath, pol)
+        swath_burst_files = [b for b in burst_files if f'iw{swath}' in b]
+        merge_bursts_in_swath(bursts_from_swath, swath_burst_files, swath)
 
-        merge_bursts_in_swath(bursts_from_swath, burst_files, swath)
-
-        num_az_samples, num_rng_samples = bursts_from_swath.shape
+        num_bursts = len(bursts_from_swath)
+        burst_az_samples, num_rng_samples = bursts_from_swath[0].shape
+        num_az_samples = num_bursts * burst_az_samples
         total_rng_samples += num_rng_samples
 
         az_time_interval = bursts_from_swath[0].azimuth_time_interval
@@ -222,7 +220,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         # TODO: min(swaths) was previously 1
         #       Does this intentially not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
-            rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
+            rng_offset = (burst_start_rng - bursts_from_swath[0].starting_range) / bursts_from_swath[0].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
 
     first_start_rng = bursts[0].starting_range
@@ -231,17 +229,14 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     rng_pixel_spacing = bursts[0].range_pixel_spacing
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
-
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
-
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
     merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
     for swath in swaths:
         az_offset = int(np.round((sensing_starts[swath - 1] - sensing_start).total_seconds() / az_time_interval))
         rng_offset = rng_offsets[swath - 1]
-
-        print('Offsets', rng_offset, az_offset)
+        print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
 
         slc = 'swath_iw' + str(swath) + '.slc'
         slc_array, tran_temp, proj_temp = read_slc_gdal(slc)
@@ -291,7 +286,7 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
     """
     num_bursts = len(bursts)
     az_time_interval = bursts[0].azimuth_time_interval
-    num_az_samples, num_rng_samples = bursts[-1].shape
+    num_az_samples, num_rng_samples = bursts[0].shape
 
     last_burst_sensing_start = bursts[-1].sensing_start
     burst_length = timedelta(seconds=(num_az_samples - 1.0) * az_time_interval)
@@ -300,7 +295,6 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
     sensing_end = last_burst_sensing_start + burst_length
 
     num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
-    print(f'Expected Number of Azimuth Lines: {num_az_lines}')
 
     az_reference_offsets, merge_start_index = get_azimuth_reference_offsets(bursts)
 
@@ -355,8 +349,7 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
             burst_end_index = burst.last_valid_line - burst.first_valid_line + 1
 
         burst_length = burst_end_index - burst_start_index
-
-        burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][burst_start_index:burst_end_index]
+        burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][burst_start_index:burst_end_index, :]
         merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr
 
         merge_start_index += burst_length
