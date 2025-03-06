@@ -288,7 +288,9 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
     """
     num_bursts = len(bursts)
     az_time_interval = bursts[0].azimuth_time_interval
-    num_az_samples, num_rng_samples = bursts[0].shape
+    first_burst = glob.glob(glob.glob(burst_files[0] + '/*')[0] + '/*.slc')[0]
+    first_burst_arr, _, _ = read_slc_gdal(first_burst)
+    num_az_samples, num_rng_samples = first_burst_arr.shape
 
     last_burst_sensing_start = bursts[-1].sensing_start
     burst_length = timedelta(seconds=(num_az_samples - 1.0) * az_time_interval)
