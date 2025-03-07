@@ -43,11 +43,11 @@ RUN mamba env create -f /hyp3-autorift/environment.yml && \
     sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
     python -m pip install --no-cache-dir /hyp3-autorift
 
-RUN wget https://github.com/nasa-jpl/autoRIFT/pull/79.diff && \
-    export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
-    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 79.diff && \
-    patch -d ${PYTHON_SITE_PACKAGES}/isce/components/contrib/geo_autoRIFT/autoRIFT < 79.diff && \
-    rm 79.diff
+RUN export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
+    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < /hyp3-autorift/src/hyp3_autorift/vend/CHANGES-UPSTREAM-79.diff && \
+    patch -d ${PYTHON_SITE_PACKAGES}/isce/components/contrib/geo_autoRIFT/autoRIFT < /hyp3-autorift/src/hyp3_autorift/vend/CHANGES-UPSTREAM-79.diff && \
+    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < /hyp3-autorift/src/hyp3_autorift/vend/CHANGES-UPSTREAM-107.diff && \
+    patch -d ${PYTHON_SITE_PACKAGES}/isce/components/contrib/geo_autoRIFT/autoRIFT < /hyp3-autorift/src/hyp3_autorift/vend/CHANGES-UPSTREAM-107.diff
 
 ENTRYPOINT ["/hyp3-autorift/src/hyp3_autorift/etc/entrypoint.sh"]
 CMD ["-h"]

@@ -26,7 +26,9 @@ Changes, as listed in `CHANGES.diff`, were done to:
 **Note:** The `topsinsar_filename.py` included here is not used, but retained for reference.
 We've replaced it  with `hyp3_autorift.s1_isce2.get_topsinsar_config`. 
 
-## Additional Patches
+## Additional Local Patches
+
+These patches were applied to the code in this repository:
 
 1. The changes listed in `CHANGES-176.diff` were applied in [ASFHyP3/hyp3-autorift#176](https://github.com/ASFHyP3/hyp3-autorift/pull/176)
    and [ASFHyP3/hyp3-autorift#180](https://github.com/ASFHyP3/hyp3-autorift/pull/180) to:
@@ -77,3 +79,13 @@ We've replaced it  with `hyp3_autorift.s1_isce2.get_topsinsar_config`.
 12. The changes listed in `CHANGES-UPSTREAM-101.diff` were applied from upstream ([nasa-jpl/autorift#101](https://github.com/nasa-jpl/autorift/pull/101))
     in [ASFHyP3/hyp3-autorift#291](https://github.com/ASFHyP3/hyp3-autorift/pull/291) so that M11/M12 variables are
     output as `float32` instead of compressed `int16` variables which did not even use the full dynamic range.
+
+## Additional Upstream patches
+
+These patches have not been released upstream but are applied to the distributed autoRIFT package in the built docker
+container  and will need to be reflected in your local environment. See the [`Dockerfile`](../../../Dockerfile) for details.
+
+1. The changes listed in `CHANGES-UPSTREAM-79.diff` were applied to the Docker build from upstream ([nasa-jpl/autorift#79](https://github.com/nasa-jpl/autorift/pull/79))
+   in [ASFHyP3/hyp3-autorift#291](https://github.com/ASFHyP3/hyp3-autorift/pull/291) fix the variance and zero mask in the Wallis Filter.
+2. The changes listed in `CHANGES-UPSTREAM-107.diff` were applied to the Docker build from upstream ([nasa-jpl/autorift#107](https://github.com/nasa-jpl/autorift/pull/107))
+   in [ASFHyP3/hyp3-autorift#291](https://github.com/ASFHyP3/hyp3-autorift/pull/291) to allow processing of Sentinel-1 bursts in HyP3.
