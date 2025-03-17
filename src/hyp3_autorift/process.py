@@ -206,7 +206,7 @@ def get_datetime(scene_name):
 
 
 def get_platform(scene: str) -> str:
-    if 'BURST' in scene:
+    if 'BURST' in scene or isinstance(scene, list):
         return 'S1-BURST'
     if scene.startswith('S1'):
         return 'S1-SLC'
@@ -488,6 +488,18 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
+def nullable_granule_list(granule_string: str) -> list[str]:
+    granule_string = granule_string.replace('None', '').strip()
+    granule_list = [granule for granule in granule_string.split(' ') if granule]
+    return granule_list
+
+
+def sort_ref_sec(reference, secondary):
+    if get_datetime(reference[0]) < get_datetime(secondary[0]):
+        return secondary, reference
+    return reference, secondary
+
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
@@ -510,22 +522,48 @@ def main():
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
         help='Naming scheme to use for product files',
     )
-    parser.add_argument('granules', type=str.split, nargs='+', help='Granule pair to process')
+    parser.add_argument('granules', type=nullable_granule_list, nargs='+', help='Granule pair to process')
+    parser.add_argument('--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference scenes"')
+    parser.add_argument('--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary scenes"')
     args = parser.parse_args()
 
-    args.granules = [item for sublist in args.granules for item in sublist]
-    if len(args.granules) != 2:
+    granules = [item for sublist in args.granules for item in sublist]
+    reference = [item for sublist in args.reference for item in sublist]
+    secondary = [item for sublist in args.secondary for item in sublist]
+
+    has_granules = len(granules) > 0
+    has_ref_sec = len(reference) > 0 and len(secondary) > 0
+
+    if not (has_granules or has_ref_sec):
+        parser.error('Must provide either `granules` or `--reference` and `--secondary`.')
+
+    if has_granules and has_ref_sec:
+        parser.error('Must provide granules OR --reference and --secondary, not both.')
+
+    if has_granules and len(granules) != 2:
         parser.error('Must provide exactly two granules')
+
+    if len(reference) != len(secondary):
+        parser.error('Must provide the same number of reference and secondary scenes.')
 
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    g1, g2 = sorted(args.granules, key=get_datetime)
+    if has_granules:
+        g1, g2 = sorted(args.granules, key=get_datetime)
 
-    product_file, browse_file, thumbnail_file = process(
-        g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
-    )
+        product_file, browse_file, thumbnail_file = process(
+            g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        )
+
+    else:
+        if get_datetime(reference[0]) < get_datetime(secondary[0]):
+            reference, secondary = secondary, reference
+        
+        product_file, browse_file, thumbnail_file = process(
+            reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)

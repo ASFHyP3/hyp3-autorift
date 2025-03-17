@@ -25,15 +25,24 @@ from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetada
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera=False):
-    safe_ref = download_burst(burst_granule_ref)
-    safe_sec = download_burst(burst_granule_sec)
+def process_sentinel1_burst_isce3(reference, secondary):
+    safe_ref = download_burst(reference)
+    safe_sec = download_burst(secondary)
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
-    burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
-    burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
 
-    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_granule_ref, burst_id_ref, burst_id_sec)
+    if isinstance(reference, list):
+        burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
+        burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
+
+        swaths = [int(g.split('_')[2][2]) for g in reference]
+
+        return process_sentinel1_slc_isce3(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
+
+    burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
+    burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
+
+    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec)
 
 
 def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec):
@@ -95,7 +104,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec)
 
 
-def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec):
+def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=[1, 2, 3]):
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
@@ -486,6 +495,8 @@ def convert2isce(burst_id, ref=True):
 
 
 def download_burst(burst_granule, all_anns=True):
+    if isinstance(burst_granule, list):
+        return burst2safe(burst_granule, all_anns=all_anns)
     return burst2safe([burst_granule], all_anns=all_anns)
 
 
