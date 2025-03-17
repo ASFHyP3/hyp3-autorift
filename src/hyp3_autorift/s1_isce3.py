@@ -57,7 +57,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swath=swath)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swaths=[swath])
 
     download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
@@ -127,7 +127,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = get_limits_slc(safe_ref, orbit_ref)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swaths=swaths)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -153,27 +153,6 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
     return netcdf_file
 
-
-def get_limits_slc(safe_ref, orbit_ref, swaths):
-    if swaths == [1, 2, 3]:
-        return bounding_box(safe_ref, orbit_ref)
-
-    min_lat = -90
-    min_lon = -180
-    max_lat = 90
-    max_lon = 180
-
-    for swath in swaths:
-        lat, lon = bounding_box(safe_ref, orbit_ref, swath=swath)
-        min_lat = lat if min_lat > lat else min_lat
-        min_lon = lon if min_lon > lon else min_lon
-        max_lat = lat if max_lat < lat else max_lat
-        max_lon = lon if max_lon < lon else max_lon
-
-    lat_limits = [min_lat, max_lat]
-    lon_limits = [min_lon, max_lon]
-
-    return lat_limits, lon_limits
 
 def read_slc_gdal(slc_path):
     ds = gdal.Open(slc_path)
@@ -457,7 +436,7 @@ def get_topsinsar_config():
     return config_data
 
 
-def bounding_box(safe, orbit_file, swath=0, epsg=4326):
+def bounding_box(safe, orbit_file, swaths=[1, 2, 3], epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
@@ -472,10 +451,10 @@ def bounding_box(safe, orbit_file, swath=0, epsg=4326):
     """
     from geogrid import GeogridRadar
 
-    if swath > 0:
-        info = loadMetadata(safe, orbit_file, swath=swath)
+    if len(swaths) == 1:
+        info = loadMetadata(safe, orbit_file, swath=swaths[0])
     else:
-        info = loadMetadataSlc(safe, orbit_file)
+        info = loadMetadataSlc(safe, orbit_file, swaths=swaths)
 
     obj = GeogridRadar()
 
