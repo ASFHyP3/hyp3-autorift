@@ -522,7 +522,7 @@ def main():
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
         help='Naming scheme to use for product files',
     )
-    parser.add_argument('granules', type=nullable_granule_list, nargs='+', help='Granule pair to process')
+    parser.add_argument('granules', type=nullable_granule_list, nargs='*', help='Granule pair to process')
     parser.add_argument(
         '--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference scenes"'
     )
