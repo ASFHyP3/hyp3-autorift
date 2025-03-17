@@ -562,7 +562,7 @@ def main():
         )
 
     else:
-        if get_datetime(reference[0]) < get_datetime(secondary[0]):
+        if get_datetime(reference[0]) > get_datetime(secondary[0]):
             reference, secondary = secondary, reference
 
         product_file, browse_file, thumbnail_file = process(
