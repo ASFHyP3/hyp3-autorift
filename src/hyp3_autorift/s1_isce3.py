@@ -37,7 +37,9 @@ def process_sentinel1_burst_isce3(reference, secondary):
 
         swaths = [int(g.split('_')[2][2]) for g in reference]
 
-        return process_sentinel1_slc_isce3(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
+        return process_sentinel1_slc_isce3(
+            safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths
+        )
 
     burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)

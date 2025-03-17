@@ -523,8 +523,12 @@ def main():
         help='Naming scheme to use for product files',
     )
     parser.add_argument('granules', type=nullable_granule_list, nargs='+', help='Granule pair to process')
-    parser.add_argument('--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference scenes"')
-    parser.add_argument('--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary scenes"')
+    parser.add_argument(
+        '--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference scenes"'
+    )
+    parser.add_argument(
+        '--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary scenes"'
+    )
     args = parser.parse_args()
 
     granules = [item for sublist in args.granules for item in sublist]
@@ -560,7 +564,7 @@ def main():
     else:
         if get_datetime(reference[0]) < get_datetime(secondary[0]):
             reference, secondary = secondary, reference
-        
+
         product_file, browse_file, thumbnail_file = process(
             reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
         )
