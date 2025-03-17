@@ -37,6 +37,8 @@ def process_sentinel1_burst_isce3(reference, secondary):
 
         swaths = [int(g.split('_')[2][2]) for g in reference]
 
+        get_dem_for_safes(safe_ref, safe_sec)
+
         return process_slc(
             safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths
         )
@@ -116,8 +118,8 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(safe_sec, orbit_sec, burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    merge_swaths(safe_ref, orbit_ref)
-    merge_swaths(safe_sec, orbit_sec, is_ref=False)
+    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
+    merge_swaths(safe_sec, orbit_sec, is_ref=False, swaths=swaths)
 
     meta_r = loadMetadataSlc(safe_ref, orbit_ref)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec)
@@ -247,8 +249,13 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
 
     merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
     for swath in swaths:
-        az_offset = int(np.round((sensing_starts[swath - 1] - sensing_start).total_seconds() / az_time_interval))
-        rng_offset = rng_offsets[swath - 1]
+        if swath != min(swaths):
+            az_offset = int(np.round((sensing_starts[swath - 1] - sensing_start).total_seconds() / az_time_interval))
+            rng_offset = rng_offsets[swath - 1]
+        else:
+            az_offset = 0
+            rng_offset = 0
+
         print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
 
         slc = 'swath_iw' + str(swath) + '.slc'
