@@ -115,7 +115,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
-        write_yaml(safe_sec, orbit_sec, burst_id_sec)
+        write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
     merge_swaths(safe_ref, orbit_ref, swaths=swaths)
@@ -584,58 +584,48 @@ def download_dem(bounds):
 def write_yaml(safe, orbit_file, burst_id=None):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
-    yaml = open(f'{yaml_folder}/s1_cslc_template.yaml', 'r')
-    lines = yaml.readlines()
-    yaml.close()
+
+    with open(f'{yaml_folder}/s1_cslc_template.yaml', 'r') as yaml:
+        lines = yaml.readlines()
 
     if burst_id is None:
-        ref = ''
+        s1_ref_file = ''
+        burst_id_str = ''
+        bool_reference = True
+        product_folder = './product'
+        scratch_folder = './scratch'
+        output_folder = './output'
     else:
-        ref = glob.glob('./product/' + burst_id + '/*')[0]
-        ref = os.path.abspath(ref)
+        s1_ref_file = os.path.abspath(glob.glob('./product/' + burst_id + '/*')[0])
+        burst_id_str =  '[' + burst_id + ']'
+        bool_reference = False
+        product_folder = './product_sec'
+        scratch_folder = './product_sec'
+        output_folder = './output_sec'
 
-    yaml = open('s1_cslc.yaml', 'w')
-    newstring = ''
-    for line in lines:
-        if 's1_image' in line:
-            newstring += line.replace('s1_image', abspath)
-        elif 's1_orbit_file' in line:
-            orbit = os.path.abspath(orbit_file)
-            newstring += line.replace('s1_orbit_file', orbit)
-        elif 'burst_ids' in line:
-            if burst_id is None:
-                newstring += line.replace('burst_ids', '')
+    with open('s1_cslc.yaml', 'w') as yaml:
+        newstring = ''
+        for line in lines:
+            if 's1_image' in line:
+                newstring += line.replace('s1_image', abspath)
+            elif 's1_orbit_file' in line:
+                orbit = os.path.abspath(orbit_file)
+                newstring += line.replace('s1_orbit_file', orbit)
+            elif 'burst_ids' in line:
+                newstring += line.replace('burst_ids', burst_id_str)
+            elif 'bool_reference' in line:
+                newstring += line.replace('bool_reference', bool_reference)
+            elif 's1_ref_file' in line:
+                newstring += line.replace('s1_ref_file', s1_ref_file)
+            elif 'product_folder' in line:
+                newstring += line.replace('product_folder', product_folder)
+            elif 'scratch_folder' in line:
+                newstring += line.replace('scratch_folder', scratch_folder)
+            elif 'output_folder' in line:
+                newstring += line.replace('output_folder', output_folder)
             else:
-                newstring += line.replace('burst_ids', "['" + burst_id + "']")
-        elif 'bool_reference' in line:
-            if burst_id is None:
-                newstring += line.replace('bool_reference', 'True')
-            else:
-                newstring += line.replace('bool_reference', 'False')
-        elif 's1_ref_file' in line:
-            if burst_id is None:
-                newstring += line.replace('s1_ref_file', '')
-            else:
-                newstring += line.replace('s1_ref_file', ref)
-        elif 'product_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('product_folder', './product')
-            else:
-                newstring += line.replace('product_folder', './product_sec')
-        elif 'scratch_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('scratch_folder', './scratch')
-            else:
-                newstring += line.replace('scratch_folder', './product_sec')
-        elif 'output_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('output_folder', './output')
-            else:
-                newstring += line.replace('output_folder', './output_sec')
-        else:
-            newstring = line
-        yaml.write(newstring)
-    yaml.close()
+                newstring = line
+            yaml.write(newstring)
 
 
 def remove_temp_files(only_rtc=False):
