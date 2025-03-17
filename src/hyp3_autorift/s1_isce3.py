@@ -121,13 +121,13 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     merge_swaths(safe_ref, orbit_ref, swaths=swaths)
     merge_swaths(safe_sec, orbit_sec, is_ref=False, swaths=swaths)
 
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_sec)
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
+    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref)
+    lat_limits, lon_limits = get_limits_slc(safe_ref, orbit_ref)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -153,6 +153,27 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
     return netcdf_file
 
+
+def get_limits_slc(safe_ref, orbit_ref, swaths):
+    if swaths == [1, 2, 3]:
+        return bounding_box(safe_ref, orbit_ref)
+
+    min_lat = -90
+    min_lon = -180
+    max_lat = 90
+    max_lon = 180
+
+    for swath in swaths:
+        lat, lon = bounding_box(safe_ref, orbit_ref, swath=swath)
+        min_lat = lat if min_lat > lat else min_lat
+        min_lon = lon if min_lon > lon else min_lon
+        max_lat = lat if max_lat < lat else max_lat
+        max_lon = lon if max_lon < lon else max_lon
+
+    lat_limits = [min_lat, max_lat]
+    lon_limits = [min_lon, max_lon]
+
+    return lat_limits, lon_limits
 
 def read_slc_gdal(slc_path):
     ds = gdal.Open(slc_path)
@@ -247,14 +268,11 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
+    swath_index = 0
     merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
     for swath in swaths:
-        if swath != min(swaths):
-            az_offset = int(np.round((sensing_starts[swath - 1] - sensing_start).total_seconds() / az_time_interval))
-            rng_offset = rng_offsets[swath - 1]
-        else:
-            az_offset = 0
-            rng_offset = 0
+        az_offset = int(np.round((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
+        rng_offset = rng_offsets[swath_index]
 
         print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
 
@@ -263,7 +281,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
 
         az_end_index = az_offset + slc_array.shape[0]
         rng_end_index = rng_offset + slc_array.shape[1]
-        if swath == 1:
+        if swath == min(swaths):
             tran = tran_temp
             proj = proj_temp
             merged_array[az_offset:az_end_index, rng_offset:rng_end_index] = slc_array
