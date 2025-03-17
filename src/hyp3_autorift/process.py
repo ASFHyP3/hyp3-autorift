@@ -555,7 +555,7 @@ def main():
     )
 
     if has_granules:
-        g1, g2 = sorted(args.granules, key=get_datetime)
+        g1, g2 = sorted(granules, key=get_datetime)
 
         product_file, browse_file, thumbnail_file = process(
             g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
