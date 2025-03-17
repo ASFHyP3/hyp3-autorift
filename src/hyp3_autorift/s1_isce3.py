@@ -244,6 +244,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     rng_pixel_spacing = bursts[0].range_pixel_spacing
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
+
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
@@ -591,14 +592,14 @@ def write_yaml(safe, orbit_file, burst_id=None):
     if burst_id is None:
         s1_ref_file = ''
         burst_id_str = ''
-        bool_reference = True
+        bool_reference = 'True'
         product_folder = './product'
         scratch_folder = './scratch'
         output_folder = './output'
     else:
         s1_ref_file = os.path.abspath(glob.glob('./product/' + burst_id + '/*')[0])
         burst_id_str =  '[' + burst_id + ']'
-        bool_reference = False
+        bool_reference = 'False'
         product_folder = './product_sec'
         scratch_folder = './product_sec'
         output_folder = './output_sec'
