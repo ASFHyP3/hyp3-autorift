@@ -116,8 +116,8 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
-    merge_swaths(safe_sec, orbit_sec, is_ref=False, swaths=swaths)
+    num_rng, rng_offsets = merge_swaths(safe_ref, orbit_ref, swaths=swaths)
+    merge_swaths(safe_sec, orbit_sec, swaths=swaths, ref_rng_samples=num_rng, ref_rng_offsets=rng_offsets)
 
     meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
@@ -175,10 +175,11 @@ def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_a
     del out_raster
 
 
-def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
+def merge_swaths(safe, orbit, swaths=[1, 2, 3], ref_rng_samples=None, ref_rng_offsets=None):
     safe_path = os.path.abspath(safe)
     orbit_path = os.path.abspath(orbit)
     burst_ids = get_burst_ids(safe_path, orbit_path)
+    is_ref = not (ref_rng_samples and ref_rng_offsets)
     product_path = './product/*' if is_ref else './product_sec/*'
     output_path = 'reference.slc' if is_ref else 'secondary.slc'
     burst_files = sorted(glob.glob(product_path))
@@ -229,10 +230,8 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
 
         # TODO: min(swaths) was previously 1
         #       Does this intentially not support passing something like swaths=[2, 3]?
-        if swath > min(swaths):
-            rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts_from_swath[
-                0
-            ].range_pixel_spacing
+        if swath > min(swaths) and is_ref:
+            rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
             last_rng_samples = num_rng_samples
 
@@ -242,7 +241,12 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
 
-    total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
+    if not is_ref:
+        rng_offsets = ref_rng_offsets
+        total_rng_samples = ref_rng_samples
+    else:
+        total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
+
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
     swath_index = 0
@@ -272,6 +276,8 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     write_slc_gdal(merged_array, output_path, tran, proj, total_rng_samples, total_az_samples)
 
     subprocess.call('rm -rf swath_*iw*', shell=True)
+
+    return total_rng_samples, rng_offsets
 
 
 def get_azimuth_reference_offsets(bursts):
