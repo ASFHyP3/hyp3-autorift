@@ -270,6 +270,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
             cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(slc_array) == 0))
             merged_array[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
             temp = np.array([])
+        swath_index += 1
 
     write_slc_gdal(merged_array, output_path, tran, proj, total_rng_samples, total_az_samples)
 
