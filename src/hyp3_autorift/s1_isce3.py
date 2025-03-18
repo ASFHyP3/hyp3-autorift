@@ -39,9 +39,7 @@ def process_sentinel1_burst_isce3(reference, secondary):
 
         get_dem_for_safes(safe_ref, safe_sec)
 
-        return process_slc(
-            safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths
-        )
+        return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
 
     burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
@@ -601,7 +599,7 @@ def write_yaml(safe, orbit_file, burst_id=None):
         output_folder = './output'
     else:
         s1_ref_file = os.path.abspath(glob.glob('./product/' + burst_id + '/*')[0])
-        burst_id_str =  '[' + burst_id + ']'
+        burst_id_str = '[' + burst_id + ']'
         bool_reference = 'False'
         product_folder = './product_sec'
         scratch_folder = './product_sec'
