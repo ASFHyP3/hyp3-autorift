@@ -423,7 +423,6 @@ def get_topsinsar_config():
     burst = None
     safe = None
 
-
     config_data = {}
     for name in ['reference', 'secondary']:
         # Find the first swath with data in it
