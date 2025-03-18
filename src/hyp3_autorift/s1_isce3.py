@@ -230,14 +230,14 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         # TODO: min(swaths) was previously 1
         #       Does this intentially not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
-            rng_offset = (burst_start_rng - bursts_from_swath[0].starting_range) / bursts_from_swath[
+            rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts_from_swath[
                 0
             ].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
+            last_rng_samples = num_rng_samples
 
     first_start_rng = bursts[0].starting_range
     last_start_rng = bursts[-1].starting_range
-    last_rng_samples = bursts[-1].shape[1]
     rng_pixel_spacing = bursts[0].range_pixel_spacing
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
