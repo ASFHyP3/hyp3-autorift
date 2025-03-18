@@ -1324,22 +1324,24 @@ def loadMetadata(indir):
         safe = safes[np.argmax(fechas_safes)]
         orbit_path = orbits[np.argmax(fechas_orbits)]
 
+    pol = getPol(safe, orbit_path)
+
     if '_' in indir:
         swath = int(indir.split('_')[2][2])
-    else:
-        swath = 1 
-        
-    pol = getPol(safe, orbit_path)
-    
-    bursts = load_bursts(safe, orbit_path, swath, pol)
-    
-    if '_' in indir:
+        bursts = load_bursts(safe, orbit_path, swath, pol) 
         for bur in bursts:
             if int(bur.burst_id.subswath[2])==swath:
                 burst = bur
     else:
-        burst = bursts[0]
-        
+        # Find the first swath containing data
+        for swath in [1, 2, 3]:
+            try: 
+                bursts = load_bursts(safe, orbit_path, swath, pol) 
+                burst = bursts[0]
+            except:
+                continue
+            break
+
     return burst, burst.orbit_direction
 
 

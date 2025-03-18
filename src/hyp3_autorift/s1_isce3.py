@@ -417,18 +417,28 @@ def get_topsinsar_config():
     if len(glob.glob('*_ref*.slc')) > 0:
         swath = int(os.path.basename(glob.glob('*_ref*.slc')[0]).split('_')[2][2])
     else:
-        swath = 1
+        swath = None
 
     pol = getPol(safe_ref, orbit_path_ref)
+    burst = None
+    safe = None
+
 
     config_data = {}
     for name in ['reference', 'secondary']:
-        if name == 'reference':
-            burst = load_bursts(safe_ref, orbit_path_ref, swath, pol)[0]
-            safe = safe_ref
-        else:
-            burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
-            safe = safe_sec
+        # Find the first swath with data in it
+        swath_range = [swath] if swath else [1, 2, 3]
+        for swath in swath_range:
+            try:
+                if name == 'reference':
+                    burst = load_bursts(safe_ref, orbit_path_ref, swath, pol)[0]
+                    safe = safe_ref
+                else:
+                    burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
+                    safe = safe_sec
+            except:
+                continue
+            break
 
         sensing_start = burst.sensing_start
         length, width = burst.shape
