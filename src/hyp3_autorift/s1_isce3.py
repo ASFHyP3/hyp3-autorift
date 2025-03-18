@@ -35,7 +35,7 @@ def process_sentinel1_burst_isce3(reference, secondary):
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
         burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
 
-        swaths = sorted([int(g.split('_')[2][2]) for g in reference])
+        swaths = set([int(g.split('_')[2][2]) for g in reference])
 
         get_dem_for_safes(safe_ref, safe_sec)
 
