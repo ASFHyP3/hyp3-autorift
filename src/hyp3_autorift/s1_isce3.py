@@ -201,10 +201,9 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     for swath in swaths:
         bursts_from_swath = s1reader.load_bursts(safe, orbit, swath, pol)
         swath_burst_files = [b for b in burst_files if f'iw{swath}' in b]
-        merge_bursts_in_swath(bursts_from_swath, swath_burst_files, swath)
+        burst_az_samples, num_rng_samples = merge_bursts_in_swath(bursts_from_swath, swath_burst_files, swath)
 
         num_bursts = len(bursts_from_swath)
-        burst_az_samples, num_rng_samples = bursts_from_swath[0].shape
         num_az_samples = num_bursts * burst_az_samples
         total_rng_samples += num_rng_samples
 
@@ -298,15 +297,18 @@ def get_azimuth_reference_offsets(bursts):
     return az_reference_offsets, start_index
 
 
-def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', method='top'):
+def get_burst_path(burst_filename):
+    return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
+
+
+def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', method='top') -> tuple[int, int]:
     """
     Merge burst products into single file.
     Simple numpy based stitching
     """
     num_bursts = len(bursts)
     az_time_interval = bursts[0].azimuth_time_interval
-    first_burst = glob.glob(glob.glob(burst_files[0] + '/*')[0] + '/*.slc')[0]
-    first_burst_arr, _, _ = read_slc_gdal(first_burst)
+    first_burst_arr, _, _ = read_slc_gdal(get_burst_path(burst_files[0]))
     num_az_samples, num_rng_samples = first_burst_arr.shape
 
     last_burst_sensing_start = bursts[-1].sensing_start
@@ -323,14 +325,12 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
     for index in range(num_bursts):
         burst = bursts[index]
         burst_limit = az_reference_offsets[index]
-        burst_slc = glob.glob(glob.glob(burst_files[index] + '/*')[0] + '/*.slc')[0]
-        burst_arr, tran, proj = read_slc_gdal(burst_slc)
+        burst_arr, tran, proj = read_slc_gdal(get_burst_path(burst_files[index]))
 
         # If middle burst
         if index > 0:
             prev_burst = bursts[index - 1]
-            prev_burst_slc = glob.glob(glob.glob(burst_files[index - 1] + '/*')[0] + '/*.slc')[0]
-            prev_burst_arr, _, _ = read_slc_gdal(prev_burst_slc)
+            prev_burst_arr, _, _ = read_slc_gdal(get_burst_path(burst_files[index - 1]))
             prev_burst_limit = az_reference_offsets[index - 1]
 
             burst_overlap = prev_burst_limit[1] - burst_limit[0]
@@ -380,6 +380,8 @@ def merge_bursts_in_swath(bursts, burst_files, swath, outfile='output.slc', meth
     output_path = 'swath_iw' + str(swath) + '.slc'
 
     write_slc_gdal(merged_arr, output_path, tran, proj, num_rng_samples, num_az_lines)
+
+    return num_az_samples, num_rng_samples
 
 
 def get_topsinsar_config():
