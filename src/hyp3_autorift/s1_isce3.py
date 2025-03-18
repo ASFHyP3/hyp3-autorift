@@ -251,7 +251,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
     swath_index = 0
     merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
     for swath in swaths:
-        az_offset = int(np.round((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
+        az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
         rng_offset = rng_offsets[swath_index]
 
         print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
