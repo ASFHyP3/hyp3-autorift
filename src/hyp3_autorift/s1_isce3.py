@@ -326,7 +326,7 @@ def get_burst_path(burst_filename):
     return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
 
 
-def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath):
+def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, top_burst_overlap=True):
     """Merges the bursts within the provided swath.
        The secondary bursts are merged according to the reference bursts's metadata.
 
@@ -384,11 +384,12 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath):
             print(f'Burst Overlap: {burst_overlap}')
 
             def merge(burst_arr, prev_burst_arr):
-                current_slice = slice(burst.first_valid_line, burst.last_valid_line + 1)
-                previous_slice = slice(prev_burst.first_valid_line, prev_burst.last_valid_line + 1)
-                burst_subset = burst_arr[current_slice, :][: burst_overlap + 1, :]
-                prev_burst_subset = prev_burst_arr[previous_slice, :][-burst_overlap - 1 :, :]
-                return np.fmax(burst_subset, prev_burst_subset)[:-1]
+                if top_burst_overlap:
+                    current_slice = slice(burst.first_valid_line, burst.last_valid_line + 1)
+                    return burst_arr[current_slice, :][:burst_overlap, :]
+                else:
+                    previous_slice = slice(prev_burst.first_valid_line, prev_burst.last_valid_line + 1)
+                    return prev_burst_arr[previous_slice, :][-burst_overlap:, :]
 
             ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(
                 burst_arr_ref, prev_burst_arr_ref
