@@ -119,7 +119,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=swaths)
+    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
 
     meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
@@ -175,7 +175,15 @@ def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_a
     del out_raster
 
 
-def merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=[1, 2, 3]):
+def merge_swaths(safe_ref: str, orbit_ref: str, swaths=[1, 2, 3]) -> None:
+    """Merges the bursts within the provided swath(s) and then merges the swaths.
+       The secondary image is merged according to the reference image's metadata.
+
+    Args:
+        safe_ref: The filename of the reference safe. The secondary must be coregistered to this.
+        orbit_ref: The filename of the orbit file for the reference image.
+        swaths: Ascending sorted list containing the desired swath(s) to merge. Swaths must be adjacent.
+    """
     safe_path_ref = os.path.abspath(safe_ref)
     orbit_path_ref = os.path.abspath(orbit_ref)
 
@@ -196,7 +204,6 @@ def merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=[1, 2, 3]):
     bursts = []
     sensing_starts = []
     rng_offsets = [0]
-    az_offsets = []
     sensing_start = None
     sensing_stop = None
     az_time_interval = None
@@ -205,19 +212,9 @@ def merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=[1, 2, 3]):
     for swath in swaths:
         ref_bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
         ref_burst_files = [b for b in burst_files_ref if f'iw{swath}' in b]
-        sec_bursts = s1reader.load_bursts(safe_sec, orbit_sec, swath, pol)
         sec_burst_files = [b for b in burst_files_sec if f'iw{swath}' in b]
 
-        burst_az_samples, num_rng_samples = merge_bursts_in_swath(
-            ref_bursts,
-            sec_bursts,
-            ref_burst_files,
-            sec_burst_files,
-            swath
-        )
-
-        total_rng_samples += num_rng_samples
-        total_az_samples += burst_az_samples
+        burst_az_samples, num_rng_samples = merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath)
 
         az_time_interval = ref_bursts[0].azimuth_time_interval
         burst_length = timedelta(seconds=az_time_interval * (burst_az_samples - 1))
@@ -255,12 +252,10 @@ def merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=[1, 2, 3]):
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
 
-    print(f"Output Shape: {total_az_samples}  |  {total_rng_samples}")
-
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
-    print(f"Output Shape: {total_az_samples}  |  {total_rng_samples}")
+    print(f'Output Shape: {total_az_samples}  |  {total_rng_samples}')
 
     conds = []
     for slc in ['ref', 'sec']:
@@ -296,10 +291,17 @@ def merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=[1, 2, 3]):
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
-    return (total_az_samples, total_rng_samples), (az_offsets, rng_offsets)
-
 
 def get_azimuth_reference_offsets(bursts):
+    """Calculate the azimuth offsets and valid burst indexes
+
+    Args:
+        bursts: List of burst objects
+
+    Returns:
+        az_reference_offsets: The azimuth offsets
+        start_index: The starting index for merging
+    """
     sensing_start = bursts[0].sensing_start
     az_time_interval = bursts[0].azimuth_time_interval
     az_reference_offsets = []
@@ -324,14 +326,24 @@ def get_burst_path(burst_filename):
     return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
 
 
-def merge_bursts_in_swath(ref_bursts, sec_bursts, ref_burst_files, sec_burst_files, swath, method='bot'):
+def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath):
+    """Merges the bursts within the provided swath.
+       The secondary bursts are merged according to the reference bursts's metadata.
+
+    Args:
+        ref_bursts: List of the reference burst objects
+        ref_burst_files: List of the filenames of the reference burst slcs
+        sec_burst_files: List of the filenames of the secondary burst slcs
+        swath: The swath containing the bursts to merge.
+
+    Returns:
+        num_az_samples: Merged image size in the azimuth direction
+        num_rng_samples: Merged image size in the range direction
+    """
     num_bursts = len(ref_bursts)
-    print(ref_bursts)
     az_time_interval = ref_bursts[0].azimuth_time_interval
     burst_arr, tran, proj = read_slc_gdal(get_burst_path(ref_burst_files[0]))
     num_az_samples, num_rng_samples = burst_arr.shape
-
-    print(f'Burst Az Samples: {num_az_samples}')
 
     ref_output_path = 'ref_swath_iw' + str(swath) + '.slc'
     sec_output_path = 'sec_swath_iw' + str(swath) + '.slc'
@@ -374,13 +386,16 @@ def merge_bursts_in_swath(ref_bursts, sec_bursts, ref_burst_files, sec_burst_fil
             def merge(burst_arr, prev_burst_arr):
                 current_slice = slice(burst.first_valid_line, burst.last_valid_line + 1)
                 previous_slice = slice(prev_burst.first_valid_line, prev_burst.last_valid_line + 1)
-                burst_subset = burst_arr[current_slice, :][:burst_overlap+1, :]
-                prev_burst_subset = prev_burst_arr[previous_slice, :][-burst_overlap-1:, :]
-
+                burst_subset = burst_arr[current_slice, :][: burst_overlap + 1, :]
+                prev_burst_subset = prev_burst_arr[previous_slice, :][-burst_overlap - 1 :, :]
                 return np.fmax(burst_subset, prev_burst_subset)[:-1]
 
-            ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_ref, prev_burst_arr_ref)
-            sec_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_sec, prev_burst_arr_sec)
+            ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(
+                burst_arr_ref, prev_burst_arr_ref
+            )
+            sec_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(
+                burst_arr_sec, prev_burst_arr_sec
+            )
         else:
             burst_start_index = 0
 
@@ -460,7 +475,7 @@ def get_topsinsar_config():
                 else:
                     burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
                     safe = safe_sec
-            except:
+            except IndexError:
                 continue
             break
 
