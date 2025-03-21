@@ -31,12 +31,6 @@ def process_sentinel1_burst_isce3(reference, secondary):
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
 
-    # safe_ref = "S1A_IW_SLC__1SSH_20170221T204731_20170221T204732_015387_0193F6_6A78.SAFE"
-    # safe_sec = "S1A_IW_SLC__1SSH_20170221T204731_20170221T204732_015387_0193F6_6A78.SAFE"
-
-    # orbit_ref = "S1A_OPER_AUX_POEORB_OPOD_20210301T135718_V20170220T225942_20170222T005942.EOF"
-    # orbit_sec = "S1B_OPER_AUX_POEORB_OPOD_20210306T120402_V20170226T225942_20170228T005942.EOF"
-
     if isinstance(reference, list):
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
         burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
