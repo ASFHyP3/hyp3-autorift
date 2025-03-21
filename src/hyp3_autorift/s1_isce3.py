@@ -38,8 +38,6 @@ def process_sentinel1_burst_isce3(reference, secondary):
         swaths = set([int(g.split('_')[2][2]) for g in reference])
         swaths = sorted(list(swaths))
 
-        get_dem_for_safes(safe_ref, safe_sec)
-
         return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
 
     burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
@@ -108,6 +106,10 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
 
 def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=[1, 2, 3]):
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swaths=swaths)
+
+    download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
@@ -124,8 +126,6 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
-
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swaths=swaths)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -278,26 +278,23 @@ def merge_swaths(safe_ref, orbit_ref, safe_sec, orbit_sec, swaths=[1, 2, 3]):
             az_end_index = az_offset + slc_array.shape[0]
             rng_end_index = rng_offset + slc_array.shape[1]
 
-            if slc == 'ref' and swath == min(swaths):
-                tran = tran_temp
-                proj = proj_temp
-
-            temp = merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]
-
             if slc == 'ref':
+                if swath == min(swaths):
+                    tran = tran_temp
+                    proj = proj_temp
+                temp = merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]
                 cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(slc_array) == 0))
                 conds.append(cond)
+                temp = np.array([])
             else:
                 cond = conds[swath_index]
-
             merged_arr[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
-            temp = np.array([])
 
             swath_index += 1
         output_path = 'reference.slc' if slc == 'ref' else 'secondary.slc'
         write_slc_gdal(merged_arr, output_path, tran, proj, total_rng_samples, total_az_samples)
 
-    subprocess.call('rm -rf swath_*iw*', shell=True)
+    subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
     return (total_az_samples, total_rng_samples), (az_offsets, rng_offsets)
 
@@ -414,92 +411,6 @@ def merge_bursts_in_swath(ref_bursts, sec_bursts, ref_burst_files, sec_burst_fil
     write_slc_gdal(sec_merged_arr, sec_output_path, tran, proj, num_rng_samples, num_az_lines)
 
     return num_az_lines, num_rng_samples
-
-
-# def merge_bursts_in_swath_(bursts, burst_files, swath, outfile='output.slc', method='top') -> tuple[int, int]:
-#     """
-#     Merge burst products into single file.
-#     Simple numpy based stitching
-#     """
-#     num_bursts = len(bursts)
-#     az_time_interval = bursts[0].azimuth_time_interval
-#     first_burst_arr, tran, proj = read_slc_gdal(get_burst_path(burst_files[0]))
-#     num_az_samples, num_rng_samples = first_burst_arr.shape
-#     output_path = 'swath_iw' + str(swath) + '.slc'
-
-#     if num_bursts == 1:
-#         write_slc_gdal(first_burst_arr, output_path, tran, proj, num_rng_samples, num_az_samples)
-#         return num_az_samples, num_rng_samples
-
-#     last_burst_sensing_start = bursts[-1].sensing_start
-#     burst_length = timedelta(seconds=(num_az_samples - 1.0) * az_time_interval)
-
-#     sensing_start = bursts[0].sensing_start
-#     sensing_end = last_burst_sensing_start + burst_length
-
-#     num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
-
-#     az_reference_offsets, merge_start_index = get_azimuth_reference_offsets(bursts)
-
-#     merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=complex)
-#     for index in range(num_bursts):
-#         burst = bursts[index]
-#         burst_limit = az_reference_offsets[index]
-#         burst_arr, tran, proj = read_slc_gdal(get_burst_path(burst_files[index]))
-
-#         # If middle burst
-#         if index > 0:
-#             prev_burst = bursts[index - 1]
-#             prev_burst_arr, _, _ = read_slc_gdal(get_burst_path(burst_files[index - 1]))
-#             prev_burst_limit = az_reference_offsets[index - 1]
-
-#             burst_overlap = prev_burst_limit[1] - burst_limit[0]
-#             burst_start_index = burst_overlap
-#             if burst_overlap <= 0:
-#                 raise ValueError(f'No overlap between bursts {index} and {index - 1} in swath {swath}')
-#             print(f'Burst Overlap: {burst_overlap}')
-
-#             burst_subset = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][:burst_overlap, :]
-#             prev_burst_subset = prev_burst_arr[prev_burst.first_valid_line : prev_burst.last_valid_line + 1, :][
-#                 -burst_overlap:, :
-#             ]
-
-#             match method:
-#                 case 'avg':
-#                     data = 0.5 * (burst_subset + prev_burst_subset)
-#                 case 'top':
-#                     data = prev_burst_subset
-#                 case 'bot':
-#                     data = burst_subset
-#                 case _:
-#                     raise ValueError(f'Method should one of "top", "bot", or "avg", but got {method}.')
-
-#             merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = data
-#         else:
-#             burst_start_index = 0
-
-#         merge_start_index += burst_start_index
-
-#         if index != (num_bursts - 1):
-#             next_burst_limit = az_reference_offsets[index + 1]
-#             burst_overlap = burst_limit[1] - next_burst_limit[0]
-#             if burst_overlap < 0:
-#                 raise ValueError(f'No overlap between bursts {index} and {index + 1} in swath {swath}')
-#             burst_end_index = next_burst_limit[0] - burst_limit[0]
-#         else:
-#             burst_end_index = burst.last_valid_line - burst.first_valid_line + 1
-
-#         burst_length = burst_end_index - burst_start_index
-#         burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][
-#             burst_start_index:burst_end_index, :
-#         ]
-#         merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr
-
-#         merge_start_index += burst_length
-
-#     write_slc_gdal(merged_arr, output_path, tran, proj, num_rng_samples, num_az_lines)
-
-#     return num_az_samples, num_rng_samples
 
 
 def get_topsinsar_config():
