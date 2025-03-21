@@ -225,7 +225,7 @@ def loadMetadataSlc(safe,orbit_path,buffer=0,swaths=None):
     info.numberOfSamples = int( np.round( (info.farRange - info.startingRange)/info.rangePixelSize)) + 1  + 2 * buffer
     print('SIZE',info.numberOfLines,info.numberOfSamples)
     
-    info.orbit = getMergedOrbit(safe,orbit_path,2)
+    info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
 
     return info
 
