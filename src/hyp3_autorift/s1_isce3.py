@@ -28,6 +28,16 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 def process_sentinel1_burst_isce3(reference, secondary):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
+    # TODO: Temporary fix for burst2safe issue #137
+    # https://github.com/ASFHyP3/burst2safe/issues/137
+    if 'HV' in reference or 'HV' in reference[0]:
+        print('Renaming Cross-Pol Safe')
+        ref_name = str(safe_ref).replace('1SSV', '1SHV')
+        sec_name = str(safe_sec).replace('1SSV', '1SHV')
+        safe_ref.replace(ref_name)
+        safe_sec.replace(sec_name)
+        safe_ref = Path(ref_name)
+        safe_sec = Path(sec_name)
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
 
@@ -560,7 +570,8 @@ def convert2isce(burst_id, ref=True):
 
 def download_burst(burst_granule, all_anns=True):
     if isinstance(burst_granule, list):
-        return burst2safe(burst_granule, all_anns=all_anns)
+        pol = burst_granule[0].split('_')[4]
+        return burst2safe(burst_granule, polarizations=[pol], all_anns=all_anns)
     return burst2safe([burst_granule], all_anns=all_anns)
 
 
@@ -661,9 +672,11 @@ def write_yaml(safe, orbit_file, burst_id=None):
         scratch_folder = './product_sec'
         output_folder = './output_sec'
 
+    pol = getPol(safe, orbit_file)
+
     with open('s1_cslc.yaml', 'w') as yaml:
-        newstring = ''
         for line in lines:
+            newstring = ''
             if 's1_image' in line:
                 newstring += line.replace('s1_image', abspath)
             elif 's1_orbit_file' in line:
@@ -675,6 +688,8 @@ def write_yaml(safe, orbit_file, burst_id=None):
                 newstring += line.replace('bool_reference', bool_reference)
             elif 's1_ref_file' in line:
                 newstring += line.replace('s1_ref_file', s1_ref_file)
+            elif 'polarization' in line and pol == 'hv':
+                newstring += line.replace('co-pol', 'cross-pol')
             elif 'product_folder' in line:
                 newstring += line.replace('product_folder', product_folder)
             elif 'scratch_folder' in line:
