@@ -40,6 +40,7 @@ def process_sentinel1_burst_isce3(reference, secondary):
         safe_sec.replace(sec_name)
         safe_ref = Path(ref_name)
         safe_sec = Path(sec_name)
+
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
 
@@ -166,12 +167,10 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
 def read_slc_gdal(slc_path):
     ds = gdal.Open(slc_path)
-    tran = ds.GetGeoTransform()
-    proj = ds.GetProjection()
     band = ds.GetRasterBand(1)
     slc_arr = band.ReadAsArray()
     del band, ds
-    return slc_arr, tran, proj
+    return slc_arr
 
 
 def write_slc_gdal(data, out_path, num_rng_samples, num_az_samples):
@@ -265,7 +264,6 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
-
     conds = []
     for slc in ['ref', 'sec']:
         swath_index = 0
@@ -277,15 +275,12 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
             print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
 
             slc_path = slc + '_swath_iw' + str(swath) + '.slc'
-            slc_array, tran_temp, proj_temp = read_slc_gdal(slc_path)
+            slc_array = read_slc_gdal(slc_path)
 
             az_end_index = az_offset + slc_array.shape[0]
             rng_end_index = rng_offset + slc_array.shape[1]
 
             if slc == 'ref':
-                if swath == min(swaths):
-                    tran = tran_temp
-                    proj = proj_temp
                 cond = np.logical_and(np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0, np.logical_not(np.abs(slc_array) == 0))
                 conds.append(cond)
             else:
@@ -349,7 +344,7 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
     """
     num_bursts = len(ref_bursts)
     az_time_interval = ref_bursts[0].azimuth_time_interval
-    burst_arr, tran, proj = read_slc_gdal(get_burst_path(ref_burst_files[0]))
+    burst_arr = read_slc_gdal(get_burst_path(ref_burst_files[0]))
     num_az_samples, num_rng_samples = burst_arr.shape
 
     ref_output_path = 'ref_swath_iw' + str(swath) + '.slc'
@@ -358,7 +353,7 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
     if num_bursts == 1:
         # TODO: Return array
         write_slc_gdal(burst_arr, ref_output_path, num_rng_samples, num_az_samples)
-        burst_arr, tran, proj = read_slc_gdal(get_burst_path(sec_burst_files[0]))
+        burst_arr = read_slc_gdal(get_burst_path(sec_burst_files[0]))
         write_slc_gdal(burst_arr, sec_output_path, num_rng_samples, num_az_samples)
         return num_az_samples, num_rng_samples
 
@@ -374,14 +369,14 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
     for index in range(num_bursts):
         burst = ref_bursts[index]
         burst_limit = az_reference_offsets[index]
-        burst_arr_ref, tran, proj = read_slc_gdal(get_burst_path(ref_burst_files[index]))
-        burst_arr_sec, _, _ = read_slc_gdal(get_burst_path(sec_burst_files[index]))
+        burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index]))
+        burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index]))
 
         # If middle burst
         if index > 0:
             prev_burst = ref_bursts[index - 1]
-            prev_burst_arr_ref, _, _ = read_slc_gdal(get_burst_path(ref_burst_files[index - 1]))
-            prev_burst_arr_sec, _, _ = read_slc_gdal(get_burst_path(sec_burst_files[index - 1]))
+            prev_burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index - 1]))
+            prev_burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index - 1]))
             prev_burst_limit = az_reference_offsets[index - 1]
 
             burst_overlap = prev_burst_limit[1] - burst_limit[0]
@@ -392,10 +387,10 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
 
             def merge(burst_arr, prev_burst_arr):
                 if top_burst_overlap:
-                    current_slice = slice(burst.first_valid_line, burst.last_valid_line + 1)
+                    current_slice = slice(burst.first_valid_line + 2, burst.last_valid_line - 1)
                     return burst_arr[current_slice, :][:burst_overlap, :]
                 else:
-                    previous_slice = slice(prev_burst.first_valid_line, prev_burst.last_valid_line + 1)
+                    previous_slice = slice(prev_burst.first_valid_line + 2, prev_burst.last_valid_line - 1)
                     return prev_burst_arr[previous_slice, :][-burst_overlap:, :]
 
             ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(
@@ -416,13 +411,13 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
                 raise ValueError(f'No overlap between bursts {index} and {index + 1} in swath {swath}')
             burst_end_index = next_burst_limit[0] - burst_limit[0]
         else:
-            burst_end_index = burst.last_valid_line - burst.first_valid_line
+            burst_end_index = burst.last_valid_line - burst.first_valid_line - 3
 
         burst_length = burst_end_index - burst_start_index
-        burst_arr_ref = burst_arr_ref[burst.first_valid_line : burst.last_valid_line + 1, :][
+        burst_arr_ref = burst_arr_ref[burst.first_valid_line + 2 : burst.last_valid_line - 1, :][
             burst_start_index:burst_end_index, :
         ]
-        burst_arr_sec = burst_arr_sec[burst.first_valid_line : burst.last_valid_line + 1, :][
+        burst_arr_sec = burst_arr_sec[burst.first_valid_line + 2 : burst.last_valid_line - 1, :][
             burst_start_index:burst_end_index, :
         ]
         ref_merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr_ref
