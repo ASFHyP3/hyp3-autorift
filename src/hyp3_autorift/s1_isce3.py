@@ -6,6 +6,8 @@ import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import time
+
 import numpy as np
 import rasterio
 import s1reader
@@ -176,8 +178,8 @@ def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_a
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_CFloat32)
-    out_raster.SetGeoTransform(transform)
-    out_raster.SetProjection(projection)
+    # out_raster.SetGeoTransform(transform)
+    # out_raster.SetProjection(projection)
     out_band = out_raster.GetRasterBand(1)
     out_band.SetNoDataValue(nodata)
     out_band.WriteArray(data)
@@ -267,6 +269,9 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=[1, 2, 3]) -> None:
 
     print(f'Output Shape: {total_az_samples}  |  {total_rng_samples}')
 
+    final_az_index = 0
+    final_rng_index = 0
+
     conds = []
     for slc in ['ref', 'sec']:
         swath_index = 0
@@ -287,17 +292,17 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=[1, 2, 3]) -> None:
                 if swath == min(swaths):
                     tran = tran_temp
                     proj = proj_temp
-                temp = merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]
-                cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(slc_array) == 0))
+                cond = np.logical_and(np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0, np.logical_not(np.abs(slc_array) == 0))
                 conds.append(cond)
-                temp = np.array([])
+                final_az_index = az_end_index
+                final_rng_index = rng_end_index
             else:
                 cond = conds[swath_index]
             merged_arr[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
 
             swath_index += 1
         output_path = 'reference.slc' if slc == 'ref' else 'secondary.slc'
-        write_slc_gdal(merged_arr, output_path, tran, proj, total_rng_samples, total_az_samples)
+        write_slc_gdal(merged_arr[:final_az_index, :final_rng_index], output_path, tran, proj, final_rng_index, final_az_index)
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
@@ -391,7 +396,7 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
             burst_start_index = burst_overlap
             if burst_overlap <= 0:
                 raise ValueError(f'No overlap between bursts {index} and {index - 1} in swath {swath}')
-            print(f'Burst Overlap: {burst_overlap}')
+            print(f'IW{swath} Burst {index} and {index - 1} Overlap: {burst_overlap}')
 
             def merge(burst_arr, prev_burst_arr):
                 if top_burst_overlap:
