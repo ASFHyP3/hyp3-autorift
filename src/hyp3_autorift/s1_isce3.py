@@ -6,8 +6,6 @@ import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import time
-
 import numpy as np
 import rasterio
 import s1reader
@@ -281,7 +279,10 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
             rng_end_index = rng_offset + slc_array.shape[1]
 
             if slc == 'ref':
-                cond = np.logical_and(np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0, np.logical_not(np.abs(slc_array) == 0))
+                cond = np.logical_and(
+                    np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0,
+                    np.logical_not(np.abs(slc_array) == 0),
+                )
                 conds.append(cond)
             else:
                 cond = conds[swath_index]
