@@ -65,7 +65,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swaths=[swath])
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
 
     download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
@@ -117,7 +117,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
 
 def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=[1, 2, 3]):
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swaths=swaths)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
 
     download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
@@ -497,7 +497,7 @@ def get_topsinsar_config():
     return config_data
 
 
-def bounding_box(safe, orbit_file, swaths=[1, 2, 3], epsg=4326):
+def bounding_box(safe, orbit_file, is_slc, swaths=[1, 2, 3], epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
@@ -512,7 +512,7 @@ def bounding_box(safe, orbit_file, swaths=[1, 2, 3], epsg=4326):
     """
     from geogrid import GeogridRadar
 
-    if len(swaths) == 1:
+    if not is_slc:
         info = loadMetadata(safe, orbit_file, swath=swaths[0])
     else:
         info = loadMetadataSlc(safe, orbit_file, swaths=swaths)
