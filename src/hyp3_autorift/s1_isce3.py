@@ -131,13 +131,13 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
-
     meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
+
+    merge_swaths(safe_ref, orbit_ref, meta_r.numberOfLines, meta_r.numberOfSamples, swaths=swaths)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
@@ -174,12 +174,10 @@ def read_slc_gdal(slc_path):
     return slc_arr, tran, proj
 
 
-def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_az_samples):
+def write_slc_gdal(data, out_path, num_rng_samples, num_az_samples):
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_CFloat32)
-    # out_raster.SetGeoTransform(transform)
-    # out_raster.SetProjection(projection)
     out_band = out_raster.GetRasterBand(1)
     out_band.SetNoDataValue(nodata)
     out_band.WriteArray(data)
@@ -187,7 +185,7 @@ def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_a
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, swaths=[1, 2, 3]) -> None:
+def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=[1, 2, 3]) -> None:
     """Merges the bursts within the provided swath(s) and then merges the swaths.
        The secondary image is merged according to the reference image's metadata.
 
@@ -267,10 +265,6 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=[1, 2, 3]) -> None:
     total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
-    print(f'Output Shape: {total_az_samples}  |  {total_rng_samples}')
-
-    final_az_index = 0
-    final_rng_index = 0
 
     conds = []
     for slc in ['ref', 'sec']:
@@ -294,15 +288,13 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=[1, 2, 3]) -> None:
                     proj = proj_temp
                 cond = np.logical_and(np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0, np.logical_not(np.abs(slc_array) == 0))
                 conds.append(cond)
-                final_az_index = az_end_index
-                final_rng_index = rng_end_index
             else:
                 cond = conds[swath_index]
             merged_arr[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
 
             swath_index += 1
         output_path = 'reference.slc' if slc == 'ref' else 'secondary.slc'
-        write_slc_gdal(merged_arr[:final_az_index, :final_rng_index], output_path, tran, proj, final_rng_index, final_az_index)
+        write_slc_gdal(merged_arr[:num_lines, :num_samples], output_path, num_samples, num_lines)
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
@@ -365,9 +357,9 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
 
     if num_bursts == 1:
         # TODO: Return array
-        write_slc_gdal(burst_arr, ref_output_path, tran, proj, num_rng_samples, num_az_samples)
+        write_slc_gdal(burst_arr, ref_output_path, num_rng_samples, num_az_samples)
         burst_arr, tran, proj = read_slc_gdal(get_burst_path(sec_burst_files[0]))
-        write_slc_gdal(burst_arr, sec_output_path, tran, proj, num_rng_samples, num_az_samples)
+        write_slc_gdal(burst_arr, sec_output_path, num_rng_samples, num_az_samples)
         return num_az_samples, num_rng_samples
 
     last_burst_sensing_start = ref_bursts[-1].sensing_start
@@ -438,8 +430,8 @@ def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, t
 
         merge_start_index += burst_length
 
-    write_slc_gdal(ref_merged_arr, ref_output_path, tran, proj, num_rng_samples, num_az_lines)
-    write_slc_gdal(sec_merged_arr, sec_output_path, tran, proj, num_rng_samples, num_az_lines)
+    write_slc_gdal(ref_merged_arr, ref_output_path, num_rng_samples, num_az_lines)
+    write_slc_gdal(sec_merged_arr, sec_output_path, num_rng_samples, num_az_lines)
 
     return num_az_lines, num_rng_samples
 
