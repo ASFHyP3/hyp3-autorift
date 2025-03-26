@@ -331,9 +331,7 @@ def get_burst_path(burst_filename: str):
     return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
 
 
-def merge_bursts_in_swath(
-    ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int, top_burst_overlap: bool = True
-):
+def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
     """Merges the bursts within the provided swath.
        The secondary bursts are merged according to the reference bursts's metadata.
 
@@ -379,9 +377,6 @@ def merge_bursts_in_swath(
 
         # If middle burst
         if index > 0:
-            prev_burst = ref_bursts[index - 1]
-            prev_burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index - 1]))
-            prev_burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index - 1]))
             prev_burst_limit = az_reference_offsets[index - 1]
 
             burst_overlap = prev_burst_limit[1] - burst_limit[0]
@@ -390,20 +385,12 @@ def merge_bursts_in_swath(
                 raise ValueError(f'No overlap between bursts {index} and {index - 1} in swath {swath}')
             print(f'IW{swath} Burst {index} and {index - 1} Overlap: {burst_overlap}')
 
-            def merge(burst_arr, prev_burst_arr):
-                if top_burst_overlap:
-                    current_slice = slice(burst.first_valid_line + 2, burst.last_valid_line - 1)
-                    return burst_arr[current_slice, :][:burst_overlap, :]
-                else:
-                    previous_slice = slice(prev_burst.first_valid_line + 2, prev_burst.last_valid_line - 1)
-                    return prev_burst_arr[previous_slice, :][-burst_overlap:, :]
+            def merge(burst_arr):
+                current_slice = slice(burst.first_valid_line + 2, burst.last_valid_line - 1)
+                return burst_arr[current_slice, :][:burst_overlap, :]
 
-            ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(
-                burst_arr_ref, prev_burst_arr_ref
-            )
-            sec_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(
-                burst_arr_sec, prev_burst_arr_sec
-            )
+            ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_ref)
+            sec_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_sec)
         else:
             burst_start_index = 0
 
