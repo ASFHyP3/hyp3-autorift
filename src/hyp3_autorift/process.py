@@ -205,7 +205,7 @@ def get_datetime(scene_name):
     raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
-def get_platform(scene: str) -> str:
+def get_platform(scene: str | list[str]) -> str:
     if 'BURST' in scene or isinstance(scene, list):
         return 'S1-BURST'
     if scene.startswith('S1'):
@@ -372,12 +372,16 @@ def process(
     if platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
+        assert isinstance(reference, str) and isinstance(secondary, str)
+
         netcdf_file = process_sentinel1_slc_isce3(reference, secondary)
     elif platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
         netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
     else:
+        assert isinstance(reference, str) and isinstance(secondary, str)
+
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
