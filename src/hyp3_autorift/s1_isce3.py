@@ -28,6 +28,7 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 def process_sentinel1_burst_isce3(reference, secondary):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
+
     # TODO: Temporary fix for burst2safe issue #137
     # https://github.com/ASFHyP3/burst2safe/issues/137
     if 'HV' in reference or 'HV' in reference[0]:
@@ -46,8 +47,7 @@ def process_sentinel1_burst_isce3(reference, secondary):
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
         burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
 
-        swaths = set([int(g.split('_')[2][2]) for g in reference])
-        swaths = sorted(list(swaths))
+        swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
 
         return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
 
@@ -163,7 +163,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     return netcdf_file
 
 
-def read_slc_gdal(slc_path):
+def read_slc_gdal(slc_path: str):
     ds = gdal.Open(slc_path)
     band = ds.GetRasterBand(1)
     slc_arr = band.ReadAsArray()
@@ -171,7 +171,7 @@ def read_slc_gdal(slc_path):
     return slc_arr
 
 
-def write_slc_gdal(data, out_path, num_rng_samples, num_az_samples):
+def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az_samples: int):
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_CFloat32)
@@ -189,6 +189,8 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
     Args:
         safe_ref: The filename of the reference safe. The secondary must be coregistered to this.
         orbit_ref: The filename of the orbit file for the reference image.
+        num_lines: Number of lines in the azimuth direction
+        num_samples: Number of samples in the range direction
         swaths: Ascending sorted list containing the desired swath(s) to merge. Swaths must be adjacent.
     """
     safe_path_ref = os.path.abspath(safe_ref)
@@ -295,7 +297,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
 
-def get_azimuth_reference_offsets(bursts):
+def get_azimuth_reference_offsets(bursts: list):
     """Calculate the azimuth offsets and valid burst indexes
 
     Args:
@@ -325,11 +327,13 @@ def get_azimuth_reference_offsets(bursts):
     return az_reference_offsets, start_index
 
 
-def get_burst_path(burst_filename):
+def get_burst_path(burst_filename: str):
     return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
 
 
-def merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath, top_burst_overlap=True):
+def merge_bursts_in_swath(
+    ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int, top_burst_overlap: bool = True
+):
     """Merges the bursts within the provided swath.
        The secondary bursts are merged according to the reference bursts's metadata.
 
@@ -463,9 +467,9 @@ def get_topsinsar_config():
     else:
         swath = None
 
+    safe: str
     pol = getPol(safe_ref, orbit_path_ref)
     burst = None
-    safe = None
 
     config_data = {}
     for name in ['reference', 'secondary']:
@@ -483,6 +487,7 @@ def get_topsinsar_config():
                 continue
             break
 
+        assert burst
         sensing_start = burst.sensing_start
         length, width = burst.shape
         prf = 1 / burst.azimuth_time_interval
