@@ -528,10 +528,10 @@ def main():
     )
     parser.add_argument('granules', type=nullable_granule_list, nargs='*', help='Granule pair to process')
     parser.add_argument(
-        '--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference scenes"'
+        '--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference S1-BURST scenes"'
     )
     parser.add_argument(
-        '--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary scenes"'
+        '--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary S1-BURST scenes"'
     )
     args = parser.parse_args()
 
@@ -544,15 +544,17 @@ def main():
 
     if not (has_granules or has_ref_sec):
         parser.error('Must provide either `granules` or `--reference` and `--secondary`.')
-
     if has_granules and has_ref_sec:
         parser.error('Must provide granules OR --reference and --secondary, not both.')
-
     if has_granules and len(granules) != 2:
         parser.error('Must provide exactly two granules')
-
     if len(reference) != len(secondary):
         parser.error('Must provide the same number of reference and secondary scenes.')
+    if has_ref_sec:
+        check_ref = ['BURST' not in scene for scene in reference]
+        check_sec = ['BURST' not in scene for scene in secondary]
+        if sum(check_ref) or sum(check_sec):
+            parser.error('Reference and Secondary lists are only supported for Sentinel-1 Bursts.')
 
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
