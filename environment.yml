@@ -19,7 +19,6 @@ dependencies:
   - ruff
   - setuptools>=61
   - setuptools_scm>=6.2
-  - ruff
   # For running
   - eigen
   - gdal>=3
