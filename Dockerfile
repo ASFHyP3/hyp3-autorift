@@ -46,7 +46,8 @@ RUN mamba env create -f /hyp3-autorift/environment.yml && \
 # FIXME: hackily apply patches from upstream which haven't been released yet
 RUN export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
     wget https://github.com/nasa-jpl/autoRIFT/pull/79.diff && \
-    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 79.diff && \
+    # NOTE: Applied upstream and in Mario's fork already! Won't be needed next release
+    # patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 79.diff && \
     wget https://github.com/nasa-jpl/autoRIFT/pull/107.diff && \
     patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 107.diff && \
     rm 79.diff 107.diff
