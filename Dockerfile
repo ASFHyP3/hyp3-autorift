@@ -41,10 +41,7 @@ RUN mamba env create -f /hyp3-autorift/environment.yml && \
     conda clean -afy && \
     conda activate hyp3-autorift && \
     sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
-    # FIXME: These commands are temporary to facilitate testing.
-    python -m pip install --no-cache-dir /hyp3-autorift && \
-    python -m pip install --no-cache-dir git+https://github.com/opera-adt/COMPASS && \
-    python -m pip install --no-cache-dir git+https://github.com/mfangaritav/autoRIFT
+    python -m pip install --no-cache-dir /hyp3-autorift
 
 # FIXME: hackily apply patches from upstream which haven't been released yet
 RUN export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \

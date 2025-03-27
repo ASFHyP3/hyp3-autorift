@@ -52,3 +52,6 @@ dependencies:
   - progressbar
   - rasterio
   - s1_orbits
+  - pip:
+      - git+https://github.com/opera-adt/COMPASS
+      - git+https://github.com/mfangaritav/autoRIFT
