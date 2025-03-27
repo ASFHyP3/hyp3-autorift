@@ -1,13 +1,10 @@
 import copy
 import glob
 import math
-import netrc
 import os
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from platform import system
-from typing import Tuple
 
 import numpy as np
 import rasterio
@@ -18,8 +15,8 @@ from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
-from s1reader import s1_info
 from s1_orbits import fetch_for_scene
+from s1reader import s1_info
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
@@ -28,17 +25,36 @@ from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetada
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(burst_granule_ref, burst_granule_sec, is_opera=False):
-    safe_ref = download_burst(burst_granule_ref)
-    safe_sec = download_burst(burst_granule_sec)
-    safe_granule_ref = os.path.basename(safe_ref).split('.')[0]
-    safe_granule_sec = os.path.basename(safe_sec).split('.')[0]
+def process_sentinel1_burst_isce3(reference, secondary):
+    safe_ref = download_burst(reference)
+    safe_sec = download_burst(secondary)
+
+    # TODO: Temporary fix for burst2safe issue #137
+    # https://github.com/ASFHyP3/burst2safe/issues/137
+    if 'HV' in reference or 'HV' in reference[0]:
+        print('Renaming Cross-Pol Safe')
+        ref_name = str(safe_ref).replace('1SSV', '1SHV')
+        sec_name = str(safe_sec).replace('1SSV', '1SHV')
+        safe_ref.replace(ref_name)
+        safe_sec.replace(sec_name)
+        safe_ref = Path(ref_name)
+        safe_sec = Path(sec_name)
+
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
-    burst_id_ref = get_burst_id(safe_ref, burst_granule_ref, orbit_ref)
-    burst_id_sec = get_burst_id(safe_sec, burst_granule_sec, orbit_sec)
 
-    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_granule_ref, burst_id_ref, burst_id_sec)
+    if isinstance(reference, list):
+        burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
+        burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
+
+        swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
+
+        return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
+
+    burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
+    burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
+
+    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec)
 
 
 def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec):
@@ -49,7 +65,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, swath=swath)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
 
     download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
@@ -61,13 +77,12 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     s1_cslc.run('s1_cslc.yaml', 'radar')
     sec = convert2isce(burst_id_sec, ref=False)
 
-    scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-    from osgeo import gdal
-
+    # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
@@ -91,8 +106,8 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
-    orbit_ref = str(fetch_for_scene(slc_ref.stem))
-    orbit_sec = str(fetch_for_scene(slc_sec.stem))
+    orbit_ref = str(fetch_for_scene(slc_ref.split('.')[0]))
+    orbit_sec = str(fetch_for_scene(slc_sec.split('.')[0]))
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
@@ -101,36 +116,34 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec)
 
 
-def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec):
+def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=[1, 2, 3]):
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
+
+    download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
-    print(f'Reference Burst IDs: {burst_ids_ref}')
-    print(f'Secondary burst IDs: {burst_ids_sec}')
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
-        write_yaml(safe_sec, orbit_sec, burst_id_sec)
+        write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    merge_swaths(safe_ref, orbit_ref)
-    merge_swaths(safe_sec, orbit_sec, is_ref=False)
-
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_sec)
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
+    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref)
+    merge_swaths(safe_ref, orbit_ref, meta_r.numberOfLines, meta_r.numberOfSamples, swaths=swaths)
 
-    scene_poly = geometry.polygon_from_bbox(x_limits=np.array(lat_limits), y_limits=np.array(lon_limits))
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
     geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
-    from osgeo import gdal
-
+    # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
     ref = 'reference.slc'
@@ -150,22 +163,18 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     return netcdf_file
 
 
-def read_slc_gdal(slc_path):
+def read_slc_gdal(slc_path: str):
     ds = gdal.Open(slc_path)
-    tran = ds.GetGeoTransform()
-    proj = ds.GetProjection()
     band = ds.GetRasterBand(1)
     slc_arr = band.ReadAsArray()
     del band, ds
-    return slc_arr, tran, proj
+    return slc_arr
 
 
-def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_az_samples):
+def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az_samples: int):
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_CFloat32)
-    out_raster.SetGeoTransform(transform)
-    out_raster.SetProjection(projection)
     out_band = out_raster.GetRasterBand(1)
     out_band.SetNoDataValue(nodata)
     out_band.WriteArray(data)
@@ -173,42 +182,56 @@ def write_slc_gdal(data, out_path, transform, projection, num_rng_samples, num_a
     del out_raster
 
 
-def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
-    safe_path = os.path.abspath(safe)
-    orbit_path = os.path.abspath(orbit)
-    burst_ids = get_burst_ids(safe_path, orbit_path)
-    product_path = './product/*' if is_ref else './product_sec/*'
-    output_path = 'reference.slc' if is_ref else 'secondary.slc'
-    burst_files = sorted(glob.glob(product_path))
+def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=[1, 2, 3]) -> None:
+    """Merges the bursts within the provided swath(s) and then merges the swaths.
+       The secondary image is merged according to the reference image's metadata.
+
+    Args:
+        safe_ref: The filename of the reference safe. The secondary must be coregistered to this.
+        orbit_ref: The filename of the orbit file for the reference image.
+        num_lines: Number of lines in the azimuth direction
+        num_samples: Number of samples in the range direction
+        swaths: Ascending sorted list containing the desired swath(s) to merge. Swaths must be adjacent.
+    """
+    safe_path_ref = os.path.abspath(safe_ref)
+    orbit_path_ref = os.path.abspath(orbit_ref)
+
+    burst_ids_ref = get_burst_ids(safe_path_ref, orbit_path_ref)
+
+    product_path_ref = './product/*'
+    product_path_sec = './product_sec/*'
+
+    burst_files_ref = sorted(glob.glob(product_path_ref))
+    burst_files_sec = sorted(glob.glob(product_path_sec))
 
     # Check against metadata
-    if len(burst_ids) != len(burst_files):
+    if len(burst_ids_ref) != len(burst_files_ref):
         print('Warning : Not all the bursts were processed')
 
+    total_az_samples = 0
+    total_rng_samples = 0
     bursts = []
     sensing_starts = []
-    total_rng_samples = 0
     rng_offsets = [0]
     sensing_start = None
     sensing_stop = None
     az_time_interval = None
-    pol = getPol(safe, orbit)
+    pol = getPol(safe_ref, orbit_ref)
 
     for swath in swaths:
-        merge_bursts_in_swath(swath, is_ref)
+        ref_bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
+        ref_burst_files = [b for b in burst_files_ref if f'iw{swath}' in b]
+        sec_burst_files = [b for b in burst_files_sec if f'iw{swath}' in b]
 
-        bursts_from_swath = s1reader.load_bursts(safe, orbit, swath, pol)
+        burst_az_samples, num_rng_samples = merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath)
 
-        num_az_samples, num_rng_samples = bursts_from_swath.shape
-        total_rng_samples += num_rng_samples
+        az_time_interval = ref_bursts[0].azimuth_time_interval
+        burst_length = timedelta(seconds=az_time_interval * (burst_az_samples - 1))
+        burst_sensing_start = ref_bursts[0].sensing_start
+        burst_sensing_stop = ref_bursts[-1].sensing_start + burst_length
+        burst_start_rng = ref_bursts[0].starting_range
 
-        az_time_interval = bursts_from_swath[0].azimuth_time_interval
-        burst_length = timedelta(seconds=az_time_interval * (num_az_samples - 1))
-        burst_sensing_start = bursts_from_swath[0].sensing_start
-        burst_sensing_stop = sensing_start + burst_length
-        burst_start_rng = bursts_from_swath[0].starting_range
-
-        bursts.extend(bursts_from_swath)
+        bursts.extend(ref_bursts)
         sensing_starts.append(burst_sensing_start)
 
         # TODO: min(swaths) was previously 1
@@ -217,6 +240,7 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
             sensing_start = burst_sensing_start
             az_time_interval = bursts[-1].azimuth_time_interval
             sensing_stop = burst_sensing_stop
+            last_rng_samples = num_rng_samples
 
         if sensing_start > burst_sensing_start:
             sensing_start = burst_sensing_start
@@ -229,44 +253,60 @@ def merge_swaths(safe, orbit, is_ref=True, swaths=[1, 2, 3]):
         if swath > min(swaths):
             rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
+            last_rng_samples = num_rng_samples
 
     first_start_rng = bursts[0].starting_range
     last_start_rng = bursts[-1].starting_range
-    last_rng_samples = bursts[-1].shape[1]
     rng_pixel_spacing = bursts[0].range_pixel_spacing
 
-    total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
+    assert sensing_start and sensing_stop and rng_pixel_spacing
 
+    total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
-    merged_array = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
-    for swath in swaths:
-        az_offset = int(np.round((sensing_starts[swath - 1] - sensing_start).total_seconds() / az_time_interval))
-        rng_offset = rng_offsets[swath - 1]
+    conds = []
+    for slc in ['ref', 'sec']:
+        swath_index = 0
+        merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
+        for swath in swaths:
+            az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
+            rng_offset = rng_offsets[swath_index]
 
-        print('Offsets', rng_offset, az_offset)
+            print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
 
-        slc = 'swath_iw' + str(swath) + '.slc'
-        slc_array, tran_temp, proj_temp = read_slc_gdal(slc)
+            slc_path = slc + '_swath_iw' + str(swath) + '.slc'
+            slc_array = read_slc_gdal(slc_path)
 
-        az_end_index = az_offset + slc_array.shape[0]
-        rng_end_index = rng_offset + slc_array.shape[1]
-        if swath == 1:
-            tran = tran_temp
-            proj = proj_temp
-            merged_array[az_offset:az_end_index, rng_offset:rng_end_index] = slc_array
-        else:
-            temp = merged_array[az_offset:az_end_index, rng_offset:rng_end_index]
-            cond = np.logical_and(np.abs(temp) == 0, np.logical_not(np.abs(slc_array) == 0))
-            merged_array[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
-            temp = None
+            az_end_index = az_offset + slc_array.shape[0]
+            rng_end_index = rng_offset + slc_array.shape[1]
 
-    write_slc_gdal(merged_array, output_path, tran, proj, total_rng_samples, total_az_samples)
+            if slc == 'ref':
+                cond = np.logical_and(
+                    np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0,
+                    np.logical_not(np.abs(slc_array) == 0),
+                )
+                conds.append(cond)
+            else:
+                cond = conds[swath_index]
+            merged_arr[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
 
-    subprocess.call('rm -rf swath_*iw*', shell=True)
+            swath_index += 1
+        output_path = 'reference.slc' if slc == 'ref' else 'secondary.slc'
+        write_slc_gdal(merged_arr[:num_lines, :num_samples], output_path, num_samples, num_lines)
+
+    subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
 
-def get_azimuth_reference_offsets(bursts):
+def get_azimuth_reference_offsets(bursts: list):
+    """Calculate the azimuth offsets and valid burst indexes
+
+    Args:
+        bursts: List of burst objects
+
+    Returns:
+        az_reference_offsets: The azimuth offsets
+        start_index: The starting index for merging
+    """
     sensing_start = bursts[0].sensing_start
     az_time_interval = bursts[0].azimuth_time_interval
     az_reference_offsets = []
@@ -287,62 +327,70 @@ def get_azimuth_reference_offsets(bursts):
     return az_reference_offsets, start_index
 
 
-def merge_bursts_in_swath(bursts, burst_files, swath, pol, is_ref=True, outfile='output.slc', method='top'):
-    """
-    Merge burst products into single file.
-    Simple numpy based stitching
-    """
-    num_bursts = len(bursts)
-    az_time_interval = bursts[0].azimuth_time_interval
-    num_az_samples, num_rng_samples = bursts[-1].shape
+def get_burst_path(burst_filename: str):
+    return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
 
-    last_burst_sensing_start = bursts[-1].sensing_start
+
+def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
+    """Merges the bursts within the provided swath.
+       The secondary bursts are merged according to the reference bursts's metadata.
+
+    Args:
+        ref_bursts: List of the reference burst objects
+        ref_burst_files: List of the filenames of the reference burst slcs
+        sec_burst_files: List of the filenames of the secondary burst slcs
+        swath: The swath containing the bursts to merge.
+
+    Returns:
+        num_az_samples: Merged image size in the azimuth direction
+        num_rng_samples: Merged image size in the range direction
+    """
+    num_bursts = len(ref_bursts)
+    az_time_interval = ref_bursts[0].azimuth_time_interval
+    burst_arr = read_slc_gdal(get_burst_path(ref_burst_files[0]))
+    num_az_samples, num_rng_samples = burst_arr.shape
+
+    ref_output_path = 'ref_swath_iw' + str(swath) + '.slc'
+    sec_output_path = 'sec_swath_iw' + str(swath) + '.slc'
+
+    if num_bursts == 1:
+        # TODO: Return array
+        write_slc_gdal(burst_arr, ref_output_path, num_rng_samples, num_az_samples)
+        burst_arr = read_slc_gdal(get_burst_path(sec_burst_files[0]))
+        write_slc_gdal(burst_arr, sec_output_path, num_rng_samples, num_az_samples)
+        return num_az_samples, num_rng_samples
+
+    last_burst_sensing_start = ref_bursts[-1].sensing_start
     burst_length = timedelta(seconds=(num_az_samples - 1.0) * az_time_interval)
-
-    sensing_start = bursts[0].sensing_start
+    sensing_start = ref_bursts[0].sensing_start
     sensing_end = last_burst_sensing_start + burst_length
-
     num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
-    print(f'Expected Number of Azimuth Lines: {num_az_lines}')
+    az_reference_offsets, merge_start_index = get_azimuth_reference_offsets(ref_bursts)
 
-    az_reference_offsets, merge_start_index = get_azimuth_reference_offsets(bursts)
-
-    merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=complex)
+    ref_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=complex)
+    sec_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=complex)
     for index in range(num_bursts):
-        burst = bursts[index]
+        burst = ref_bursts[index]
         burst_limit = az_reference_offsets[index]
-        burst_slc = glob.glob(glob.glob(burst_files[index] + '/*')[0] + '/*.slc')[0]
-        burst_arr, tran, proj = read_slc_gdal(burst_slc)
+        burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index]))
+        burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index]))
 
         # If middle burst
         if index > 0:
-            prev_burst = bursts[index - 1]
-            prev_burst_slc = glob.glob(glob.glob(burst_files[index - 1] + '/*')[0] + '/*.slc')[0]
-            prev_burst_arr, _, _ = read_slc_gdal(prev_burst_slc)
             prev_burst_limit = az_reference_offsets[index - 1]
 
             burst_overlap = prev_burst_limit[1] - burst_limit[0]
             burst_start_index = burst_overlap
             if burst_overlap <= 0:
                 raise ValueError(f'No overlap between bursts {index} and {index - 1} in swath {swath}')
-            print(f'Burst Overlap: {burst_overlap}')
+            print(f'IW{swath} Burst {index} and {index - 1} Overlap: {burst_overlap}')
 
-            burst_subset = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][:burst_overlap, :]
-            prev_burst_subset = prev_burst_arr[prev_burst.first_valid_line : prev_burst.last_valid_line + 1, :][
-                -burst_overlap:, :
-            ]
+            def merge(burst_arr):
+                current_slice = slice(burst.first_valid_line + 2, burst.last_valid_line - 1)
+                return burst_arr[current_slice, :][:burst_overlap, :]
 
-            match method:
-                case 'avg':
-                    data = 0.5 * (burst_subset + prev_burst_subset)
-                case 'top':
-                    data = prev_burst_subset
-                case 'bot':
-                    data = burst_subset
-                case _:
-                    raise ValueError(f'Method should one of "top", "bot", or "avg", but got {method}.')
-
-            merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = data
+            ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_ref)
+            sec_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_sec)
         else:
             burst_start_index = 0
 
@@ -355,18 +403,24 @@ def merge_bursts_in_swath(bursts, burst_files, swath, pol, is_ref=True, outfile=
                 raise ValueError(f'No overlap between bursts {index} and {index + 1} in swath {swath}')
             burst_end_index = next_burst_limit[0] - burst_limit[0]
         else:
-            burst_end_index = burst.last_valid_line - burst.first_valid_line + 1
+            burst_end_index = burst.last_valid_line - burst.first_valid_line - 3
 
         burst_length = burst_end_index - burst_start_index
-
-        burst_arr = burst_arr[burst.first_valid_line : burst.last_valid_line + 1, :][burst_start_index:burst_end_index]
-        merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr
+        burst_arr_ref = burst_arr_ref[burst.first_valid_line + 2 : burst.last_valid_line - 1, :][
+            burst_start_index:burst_end_index, :
+        ]
+        burst_arr_sec = burst_arr_sec[burst.first_valid_line + 2 : burst.last_valid_line - 1, :][
+            burst_start_index:burst_end_index, :
+        ]
+        ref_merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr_ref
+        sec_merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr_sec
 
         merge_start_index += burst_length
 
-    output_path = 'swath_iw' + str(swath) + '.slc'
+    write_slc_gdal(ref_merged_arr, ref_output_path, num_rng_samples, num_az_lines)
+    write_slc_gdal(sec_merged_arr, sec_output_path, num_rng_samples, num_az_lines)
 
-    write_slc_gdal(merged_arr, output_path, tran, proj, num_rng_samples, num_az_lines)
+    return num_az_lines, num_rng_samples
 
 
 def get_topsinsar_config():
@@ -389,28 +443,38 @@ def get_topsinsar_config():
         safes = glob.glob('*.zip')
         fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
 
-    safe_ref = safes[np.argmin(fechas_safes)]
-    orbit_path_ref = orbits[np.argmin(fechas_orbits)]
+    safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type]
+    orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
 
-    safe_sec = safes[np.argmax(fechas_safes)]
-    orbit_path_sec = orbits[np.argmax(fechas_orbits)]
+    safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
+    orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
 
     if len(glob.glob('*_ref*.slc')) > 0:
         swath = int(os.path.basename(glob.glob('*_ref*.slc')[0]).split('_')[2][2])
     else:
-        swath = 1
+        swath = None
 
+    safe: str
     pol = getPol(safe_ref, orbit_path_ref)
+    burst = None
 
     config_data = {}
     for name in ['reference', 'secondary']:
-        if name == 'reference':
-            burst = load_bursts(safe_ref, orbit_path_ref, swath, pol)[0]
-            safe = safe_ref
-        else:
-            burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
-            safe = safe_sec
+        # Find the first swath with data in it
+        swath_range = [swath] if swath else [1, 2, 3]
+        for swath in swath_range:
+            try:
+                if name == 'reference':
+                    burst = load_bursts(safe_ref, orbit_path_ref, swath, pol)[0]
+                    safe = safe_ref
+                else:
+                    burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
+                    safe = safe_sec
+            except IndexError:
+                continue
+            break
 
+        assert burst
         sensing_start = burst.sensing_start
         length, width = burst.shape
         prf = 1 / burst.azimuth_time_interval
@@ -425,7 +489,7 @@ def get_topsinsar_config():
     return config_data
 
 
-def bounding_box(safe, orbit_file, swath=0, epsg=4326):
+def bounding_box(safe, orbit_file, is_slc, swaths=[1, 2, 3], epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
@@ -440,10 +504,10 @@ def bounding_box(safe, orbit_file, swath=0, epsg=4326):
     """
     from geogrid import GeogridRadar
 
-    if swath > 0:
-        info = loadMetadata(safe, orbit_file, swath=swath)
+    if not is_slc:
+        info = loadMetadata(safe, orbit_file, swath=swaths[0])
     else:
-        info = loadMetadataSlc(safe, orbit_file)
+        info = loadMetadataSlc(safe, orbit_file, swaths=swaths)
 
     obj = GeogridRadar()
 
@@ -490,6 +554,9 @@ def convert2isce(burst_id, ref=True):
 
 
 def download_burst(burst_granule, all_anns=True):
+    if isinstance(burst_granule, list):
+        pol = burst_granule[0].split('_')[4]
+        return burst2safe(burst_granule, polarizations=[pol], all_anns=all_anns)
     return burst2safe([burst_granule], all_anns=all_anns)
 
 
@@ -571,58 +638,52 @@ def download_dem(bounds):
 def write_yaml(safe, orbit_file, burst_id=None):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
-    yaml = open(f'{yaml_folder}/s1_cslc_template.yaml', 'r')
-    lines = yaml.readlines()
-    yaml.close()
+
+    with open(f'{yaml_folder}/s1_cslc_template.yaml', 'r') as yaml:
+        lines = yaml.readlines()
 
     if burst_id is None:
-        ref = ''
+        s1_ref_file = ''
+        burst_id_str = ''
+        bool_reference = 'True'
+        product_folder = './product'
+        scratch_folder = './scratch'
+        output_folder = './output'
     else:
-        ref = glob.glob('./product/' + burst_id + '/*')[0]
-        ref = os.path.abspath(ref)
+        s1_ref_file = os.path.abspath(glob.glob('./product/' + burst_id + '/*')[0])
+        burst_id_str = '[' + burst_id + ']'
+        bool_reference = 'False'
+        product_folder = './product_sec'
+        scratch_folder = './product_sec'
+        output_folder = './output_sec'
 
-    yaml = open('s1_cslc.yaml', 'w')
-    newstring = ''
-    for line in lines:
-        if 's1_image' in line:
-            newstring += line.replace('s1_image', abspath)
-        elif 's1_orbit_file' in line:
-            orbit = os.path.abspath(orbit_file)
-            newstring += line.replace('s1_orbit_file', orbit)
-        elif 'burst_ids' in line:
-            if burst_id is None:
-                newstring += line.replace('burst_ids', '')
+    pol = getPol(safe, orbit_file)
+
+    with open('s1_cslc.yaml', 'w') as yaml:
+        for line in lines:
+            newstring = ''
+            if 's1_image' in line:
+                newstring += line.replace('s1_image', abspath)
+            elif 's1_orbit_file' in line:
+                orbit = os.path.abspath(orbit_file)
+                newstring += line.replace('s1_orbit_file', orbit)
+            elif 'burst_ids' in line:
+                newstring += line.replace('burst_ids', burst_id_str)
+            elif 'bool_reference' in line:
+                newstring += line.replace('bool_reference', bool_reference)
+            elif 's1_ref_file' in line:
+                newstring += line.replace('s1_ref_file', s1_ref_file)
+            elif 'polarization' in line and pol == 'hv':
+                newstring += line.replace('co-pol', 'cross-pol')
+            elif 'product_folder' in line:
+                newstring += line.replace('product_folder', product_folder)
+            elif 'scratch_folder' in line:
+                newstring += line.replace('scratch_folder', scratch_folder)
+            elif 'output_folder' in line:
+                newstring += line.replace('output_folder', output_folder)
             else:
-                newstring += line.replace('burst_ids', "['" + burst_id + "']")
-        elif 'bool_reference' in line:
-            if burst_id is None:
-                newstring += line.replace('bool_reference', 'True')
-            else:
-                newstring += line.replace('bool_reference', 'False')
-        elif 's1_ref_file' in line:
-            if burst_id is None:
-                newstring += line.replace('s1_ref_file', '')
-            else:
-                newstring += line.replace('s1_ref_file', ref)
-        elif 'product_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('product_folder', './product')
-            else:
-                newstring += line.replace('product_folder', './product_sec')
-        elif 'scratch_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('scratch_folder', './scratch')
-            else:
-                newstring += line.replace('scratch_folder', './product_sec')
-        elif 'output_folder' in line:
-            if burst_id is None:
-                newstring += line.replace('output_folder', './output')
-            else:
-                newstring += line.replace('output_folder', './output_sec')
-        else:
-            newstring = line
-        yaml.write(newstring)
-    yaml.close()
+                newstring = line
+            yaml.write(newstring)
 
 
 def remove_temp_files(only_rtc=False):

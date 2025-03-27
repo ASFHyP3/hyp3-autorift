@@ -5,9 +5,10 @@ channels:
 dependencies:
   - boto3
   - botocore
-  - python>=3.9
+  - python>=3.10
   - pip
   # For packaging, and testing
+  - mypy
   - pillow>=7.0
   - pluggy
   - pytest
@@ -15,8 +16,10 @@ dependencies:
   - pytest-cov
   - pytest-order
   - responses
+  - ruff
   - setuptools>=61
   - setuptools_scm>=6.2
+  - ruff
   # For running
   - eigen
   - gdal>=3

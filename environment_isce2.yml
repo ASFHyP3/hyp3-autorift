@@ -14,11 +14,13 @@ dependencies:
   - flake8-import-order
   - flake8-blind-except
   - flake8-builtins
+  - mypy
   - pillow
   - pytest
   - pytest-console-scripts
   - pytest-cov
   - responses
+  - ruff
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running

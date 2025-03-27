@@ -199,7 +199,7 @@ def loadMetadataSlc(safe,orbit_path,buffer=0,swaths=None):
         dt = bursts[0].azimuth_time_interval
         sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[-1].shape[0]-1) * dt)
         sensingStartt = burstst[0].sensing_start
-        if swath==1:
+        if swath==min(swaths):
             info.prf = 1 / burstst[0].azimuth_time_interval
             info.sensingStart = sensingStartt
             info.startingRange = burstst[0].starting_range
@@ -225,7 +225,7 @@ def loadMetadataSlc(safe,orbit_path,buffer=0,swaths=None):
     info.numberOfSamples = int( np.round( (info.farRange - info.startingRange)/info.rangePixelSize)) + 1  + 2 * buffer
     print('SIZE',info.numberOfLines,info.numberOfSamples)
     
-    info.orbit = getMergedOrbit(safe,orbit_path,2)
+    info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
 
     return info
 

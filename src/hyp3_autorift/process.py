@@ -205,8 +205,8 @@ def get_datetime(scene_name):
     raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
-def get_platform(scene: str) -> str:
-    if 'BURST' in scene:
+def get_platform(scene: str | list[str]) -> str:
+    if 'BURST' in scene or isinstance(scene, list):
         return 'S1-BURST'
     if scene.startswith('S1'):
         return 'S1-SLC'
@@ -344,16 +344,16 @@ def get_opendata_prefix(file: Path):
 
 
 def process(
-    reference: str,
-    secondary: str,
+    reference: str | list[str],
+    secondary: str | list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
-        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
-        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
+        reference: Name of the reference Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
+        secondary: Name of the secondary Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
 
@@ -372,12 +372,16 @@ def process(
     if platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
+        assert isinstance(reference, str) and isinstance(secondary, str)
+
         netcdf_file = process_sentinel1_slc_isce3(reference, secondary)
     elif platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
         netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
     else:
+        assert isinstance(reference, str) and isinstance(secondary, str)
+
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
@@ -488,6 +492,18 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
+def nullable_granule_list(granule_string: str) -> list[str]:
+    granule_string = granule_string.replace('None', '').strip()
+    granule_list = [granule for granule in granule_string.split(' ') if granule]
+    return granule_list
+
+
+def sort_ref_sec(reference, secondary):
+    if get_datetime(reference[0]) < get_datetime(secondary[0]):
+        return secondary, reference
+    return reference, secondary
+
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
@@ -510,22 +526,54 @@ def main():
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
         help='Naming scheme to use for product files',
     )
-    parser.add_argument('granules', type=str.split, nargs='+', help='Granule pair to process')
+    parser.add_argument('granules', type=nullable_granule_list, nargs='*', help='Granule pair to process')
+    parser.add_argument(
+        '--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference S1-BURST scenes"'
+    )
+    parser.add_argument(
+        '--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary S1-BURST scenes"'
+    )
     args = parser.parse_args()
 
-    args.granules = [item for sublist in args.granules for item in sublist]
-    if len(args.granules) != 2:
+    granules = [item for sublist in args.granules for item in sublist]
+    reference = [item for sublist in args.reference for item in sublist]
+    secondary = [item for sublist in args.secondary for item in sublist]
+
+    has_granules = len(granules) > 0
+    has_ref_sec = len(reference) > 0 and len(secondary) > 0
+
+    if not (has_granules or has_ref_sec):
+        parser.error('Must provide either `granules` or `--reference` and `--secondary`.')
+    if has_granules and has_ref_sec:
+        parser.error('Must provide granules OR --reference and --secondary, not both.')
+    if has_granules and len(granules) != 2:
         parser.error('Must provide exactly two granules')
+    if len(reference) != len(secondary):
+        parser.error('Must provide the same number of reference and secondary scenes.')
+    if has_ref_sec:
+        check_ref = ['BURST' not in scene for scene in reference]
+        check_sec = ['BURST' not in scene for scene in secondary]
+        if sum(check_ref) or sum(check_sec):
+            parser.error('Reference and Secondary lists are only supported for Sentinel-1 Bursts.')
 
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    g1, g2 = sorted(args.granules, key=get_datetime)
+    if has_granules:
+        g1, g2 = sorted(granules, key=get_datetime)
 
-    product_file, browse_file, thumbnail_file = process(
-        g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
-    )
+        product_file, browse_file, thumbnail_file = process(
+            g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        )
+
+    else:
+        if get_datetime(reference[0]) > get_datetime(secondary[0]):
+            reference, secondary = secondary, reference
+
+        product_file, browse_file, thumbnail_file = process(
+            reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
