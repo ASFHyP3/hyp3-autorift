@@ -208,7 +208,10 @@ def get_datetime(scene_name):
 
 def get_platform(scene: str) -> str:
     if scene.startswith('S1') or scene.startswith('S2'):
-        return scene[0:2]
+        platform = scene[0:2]
+        if scene.endswith('-BURST'):
+            return f'{platform}-BURST'
+        return platform
     elif scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
         return scene[0] + scene[3]
     else:
@@ -334,7 +337,7 @@ def get_opendata_prefix(file: Path):
     # filenames have form GRANULE1_X_GRANULE2
     scene = file.name.split('_X_')[0]
 
-    platform_shortname = get_platform(scene)
+    platform_shortname = get_platform(scene)[:2]
     lat, lon = get_lat_lon_from_ncfile(file)
     region = point_to_region(lat, lon)
 
@@ -342,8 +345,8 @@ def get_opendata_prefix(file: Path):
 
 
 def process(
-    reference: str,
-    secondary: str,
+    reference: list,
+    secondary: list,
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
 ) -> Tuple[Path, Path, Path]:
@@ -365,9 +368,9 @@ def process(
     reference_zero_path = None
     secondary_zero_path = None
 
-    platform = get_platform(reference)
+    platform = get_platform(reference[0])
 
-    if platform == 'S1':
+    if platform in ('S1', 'S1-BURST'):
         from hyp3_autorift.s1_isce2 import process_sentinel1_with_isce2
 
         netcdf_file = process_sentinel1_with_isce2(reference, secondary, parameter_file)
@@ -379,6 +382,9 @@ def process(
 
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
         os.environ['AWS_REGION'] = 'us-west-2'
+
+        reference: str = reference[0]
+        secondary: str = secondary[0]
 
         if platform == 'S2':
             reference_metadata = get_s2_metadata(reference)
@@ -483,6 +489,18 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
+def nullable_granule_list(granule_string: str) -> list[str]:
+    granule_string = granule_string.replace('None', '').strip()
+    granule_list = [granule for granule in granule_string.split(' ') if granule]
+    return granule_list
+
+
+def sort_ref_sec(reference, secondary):
+    if get_datetime(reference[0]) < get_datetime(secondary[0]):
+        return secondary, reference
+    return reference, secondary
+
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
@@ -507,24 +525,66 @@ def main():
     )
     parser.add_argument(
         'granules',
-        type=str.split,
-        nargs='+',
+        type=nullable_granule_list,
+        nargs='*',
         help='Pair of Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to process'
+    )
+    parser.add_argument(
+        '--reference',
+        type=nullable_granule_list,
+        default=[],
+        nargs='+',
+        help='List of reference Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to process'
+    )
+    parser.add_argument(
+        '--secondary',
+        type=nullable_granule_list,
+        default=[],
+        nargs='+',
+        help='List of secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to process'
     )
     args = parser.parse_args()
 
-    args.granules = [item for sublist in args.granules for item in sublist]
-    if len(args.granules) != 2:
+    granules = [item for sublist in args.granules for item in sublist]
+    reference = [item for sublist in args.reference for item in sublist]
+    secondary = [item for sublist in args.secondary for item in sublist]
+
+    has_granules = len(granules) > 0
+    has_ref_sec = len(reference) > 0 and len(secondary) > 0
+
+    if not (has_granules or has_ref_sec):
+        parser.error('Must provide either `granules` or `--reference` and `--secondary`.')
+    if has_granules and has_ref_sec:
+        parser.error('Must provide granules OR --reference and --secondary, not both.')
+    if has_granules and len(granules) != 2:
         parser.error('Must provide exactly two granules')
+    if len(reference) != len(secondary):
+        parser.error('Must provide the same number of reference and secondary scenes.')
+    if has_ref_sec:
+        try:
+            ref_platforms = {get_platform(scene) for scene in reference}
+            sec_platforms = {get_platform(scene) for scene in secondary}
+        except NotImplementedError:
+            parser.error(str(NotImplementedError))
+
+        if ref_platforms != sec_platforms:
+            parser.error('all scenes must be of the same type.')
+
+        if len(reference) > 1 and ref_platforms != {'S1-BURST'}:
+            parser.error('Only Sentinel-1 bursts support multiple reference scenes.')
+
+    if has_granules:
+        reference = [granules[0]]
+        secondary = [granules[1]]
 
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    g1, g2 = sorted(args.granules, key=get_datetime)
+    reference, secondary = sort_ref_sec(reference, secondary)
 
     product_file, browse_file, thumbnail_file = process(
-        g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
     )
 
     if args.bucket:

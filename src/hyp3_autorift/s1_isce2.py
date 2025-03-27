@@ -18,16 +18,18 @@ from hyp3_autorift.s1 import get_s1_primary_polarization
 log = logging.getLogger(__name__)
 
 
-def _get_safe(scene: str) -> Path:
-    if scene.endswith('-BURST'):
-        log.info(f'Creating SAFE for {scene}')
-        return burst2safe([scene])
+def _get_safe(scenes: list) -> Path:
+    if scenes[0].endswith('-BURST'):
+        log.info(f'Creating SAFE for {scenes}')
+        return burst2safe(scenes)
+
+    assert len(scenes) == 1
 
     # Local uncompressed SAFE's from external burst2safe usage
-    if scene.endswith('.SAFE'):
-        return Path(scene)
+    if scenes[0].endswith('.SAFE'):
+        return Path(scenes[0])
 
-    scene_url = get_download_url(scene)
+    scene_url = get_download_url(scenes[0])
     safe_path = download_file(scene_url, chunk_size=5242880)
 
     log.info(f'Downloaded {safe_path}')
@@ -48,12 +50,12 @@ def _get_swaths(safe: Path) -> list[int]:
     return list(swaths)
 
 
-def process_sentinel1_with_isce2(reference: str, secondary: str, parameter_file: str) -> str:
+def process_sentinel1_with_isce2(reference: list, secondary: list, parameter_file: str) -> str:
     """Process a Sentinel-1 image pair with ISCE2
 
     Args:
-        reference: Name of the reference Sentinel-1 or Sentinel-1 Burst scene
-        secondary: Name of the secondary Sentinel-1 or Sentinel-1 Burst scene
+        reference: List of the reference Sentinel-1 or Sentinel-1 Burst scenes
+        secondary: List of the secondary Sentinel-1 or Sentinel-1 Burst scenes
         parameter_file: Shapefile for determining the correct search parameters by geographic location
 
     Returns:
