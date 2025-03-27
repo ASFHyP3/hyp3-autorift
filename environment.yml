@@ -1,4 +1,4 @@
-name: hyp3-autorift-radar
+name: hyp3-autorift
 channels:
   - conda-forge
   - nodefaults

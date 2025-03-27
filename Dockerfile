@@ -39,8 +39,8 @@ COPY --chown=${CONDA_UID}:${CONDA_GID} . /hyp3-autorift/
 
 RUN mamba env create -f /hyp3-autorift/environment.yml && \
     conda clean -afy && \
-    conda activate hyp3-autorift-radar && \
-    sed -i 's/conda activate base/conda activate hyp3-autorift-radar/g' /home/conda/.profile && \
+    conda activate hyp3-autorift && \
+    sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
     # FIXME: These commands are temporary to facilitate testing.
     python -m pip install --no-cache-dir /hyp3-autorift && \
     python -m pip install --no-cache-dir git+https://github.com/opera-adt/COMPASS && \
