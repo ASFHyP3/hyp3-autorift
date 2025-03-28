@@ -496,7 +496,7 @@ def nullable_granule_list(granule_string: str) -> list[str]:
 
 
 def sort_ref_sec(reference, secondary):
-    if get_datetime(reference[0]) < get_datetime(secondary[0]):
+    if get_datetime(reference[0]) > get_datetime(secondary[0]):
         return secondary, reference
     return reference, secondary
 
