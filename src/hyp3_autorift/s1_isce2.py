@@ -21,7 +21,16 @@ log = logging.getLogger(__name__)
 def _get_safe(scenes: list) -> Path:
     if scenes[0].endswith('-BURST'):
         log.info(f'Creating SAFE for {scenes}')
-        return burst2safe(scenes)
+        safe_path = burst2safe(scenes)
+
+        # TODO: Temporary fix for burst2safe issue #137
+        # https://github.com/ASFHyP3/burst2safe/issues/137
+        if 'HV' in scenes or 'HV' in scenes[0]:
+            print('Renaming Cross-Pol Safe')
+            fixed_safe_path = str(safe_path).replace('1SSV', '1SHV')
+            safe_path = safe_path.replace(fixed_safe_path)
+
+        return safe_path
 
     assert len(scenes) == 1
 
