@@ -53,5 +53,5 @@ dependencies:
   - xarray
   - yamale>=4.0
   - pip:
-      - git+https://github.com/opera-adt/COMPASS
+      - git+https://github.com/opera-adt/COMPASS.git@ad3929cb88b841eab04a4844a518e536ec97aafe
       - git+https://github.com/mfangaritav/autoRIFT
