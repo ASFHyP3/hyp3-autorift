@@ -498,12 +498,6 @@ def nullable_granule_list(granule_string: str) -> list[str]:
     return granule_list
 
 
-def sort_ref_sec(reference, secondary):
-    if get_datetime(reference[0]) < get_datetime(secondary[0]):
-        return secondary, reference
-    return reference, secondary
-
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
@@ -526,12 +520,25 @@ def main():
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
         help='Naming scheme to use for product files',
     )
-    parser.add_argument('granules', type=nullable_granule_list, nargs='*', help='Granule pair to process')
     parser.add_argument(
-        '--reference', type=nullable_granule_list, default=[], nargs='+', help='List of reference S1-BURST scenes"'
+        'granules',
+        type=nullable_granule_list,
+        nargs='*',
+        help='Granule pair to process. Cannot be used with the `--reference` or `--secondary` arguments.'
     )
     parser.add_argument(
-        '--secondary', type=nullable_granule_list, default=[], nargs='+', help='List of secondary S1-BURST scenes"'
+        '--reference',
+        type=nullable_granule_list,
+        default=[],
+        nargs='+',
+        help='List of reference S1-BURST scenes. Cannot be used with the `granules` argument.'
+    )
+    parser.add_argument(
+        '--secondary',
+        type=nullable_granule_list,
+        default=[],
+        nargs='+',
+        help='List of secondary S1-BURST scenes. Cannot be used with the `granules` argument.'
     )
     args = parser.parse_args()
 
@@ -547,7 +554,7 @@ def main():
     if has_granules and has_ref_sec:
         parser.error('Must provide granules OR --reference and --secondary, not both.')
     if has_granules and len(granules) != 2:
-        parser.error('Must provide exactly two granules')
+        parser.error('Must provide exactly two granules.')
     if len(reference) != len(secondary):
         parser.error('Must provide the same number of reference and secondary scenes.')
     if has_ref_sec:

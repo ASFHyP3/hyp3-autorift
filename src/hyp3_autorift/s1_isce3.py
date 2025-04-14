@@ -14,7 +14,7 @@ from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
 from s1_orbits import fetch_for_scene
-from s1reader import s1_info
+from s1reader import load_bursts, s1_info
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
@@ -112,7 +112,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec)
 
 
-def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=[1, 2, 3]):
+def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=(1, 2, 3)):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
 
     meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
@@ -178,7 +178,7 @@ def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=[1, 2, 3]) -> None:
+def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=(1, 2, 3)) -> None:
     """Merges the bursts within the provided swath(s) and then merges the swaths.
        The secondary image is merged according to the reference image's metadata.
 
@@ -204,8 +204,6 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
     if len(burst_ids_ref) != len(burst_files_ref):
         print('Warning : Not all the bursts were processed')
 
-    total_az_samples = 0
-    total_rng_samples = 0
     bursts = []
     sensing_starts = []
     rng_offsets = [0]
@@ -231,7 +229,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
         sensing_starts.append(burst_sensing_start)
 
         # TODO: min(swaths) was previously 1
-        #       Does this intentially not support passing something like swaths=[2, 3]?
+        #       Does this intentionally not support passing something like swaths=[2, 3]?
         if swath == min(swaths):
             sensing_start = burst_sensing_start
             az_time_interval = bursts[-1].azimuth_time_interval
@@ -245,7 +243,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
             sensing_stop = burst_sensing_stop
 
         # TODO: min(swaths) was previously 1
-        #       Does this intentially not support passing something like swaths=[2, 3]?
+        #       Does this intentionally not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
             rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
@@ -314,6 +312,7 @@ def get_azimuth_reference_offsets(bursts: list):
         burst_start_index = int(np.round((az_offset - sensing_start).total_seconds() / az_time_interval))
         burst_end_index = burst_start_index + (burst.last_valid_line - burst.first_valid_line) + 1
 
+        # FIXME: if index != 0?
         if index == 0:
             start_index = burst_start_index
 
@@ -329,7 +328,7 @@ def get_burst_path(burst_filename: str):
 
 def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
     """Merges the bursts within the provided swath.
-       The secondary bursts are merged according to the reference bursts's metadata.
+       The secondary bursts are merged according to the reference bursts' metadata.
 
     Args:
         ref_bursts: List of the reference burst objects
@@ -423,13 +422,6 @@ def get_topsinsar_config():
     """
     Input file.
     """
-    import glob
-    import os
-    from datetime import timedelta
-
-    import numpy as np
-    from s1reader import load_bursts
-
     orbits = glob.glob('*.EOF')
     fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
     safes = glob.glob('*.SAFE')
@@ -485,7 +477,8 @@ def get_topsinsar_config():
     return config_data
 
 
-def bounding_box(safe, orbit_file, is_slc, swaths=[1, 2, 3], epsg=4326):
+# FIXME: Docstring; is_slc could be handled by swaths?
+def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
@@ -538,14 +531,14 @@ def convert2isce(burst_id, ref=True):
         slc = glob.glob(fol + '/*.slc')[0]
         ds = gdal.Open(slc)
         ds = gdal.Translate('burst_ref_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
-        ds = None
+        del ds
         return 'burst_ref_' + str(burst_id.split('_')[2]) + '.slc'
     else:
         fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
         slc = glob.glob(fol + '/*.slc')[0]
         ds = gdal.Open(slc)
         ds = gdal.Translate('burst_sec_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
-        ds = None
+        del ds
         return 'burst_sec_' + str(burst_id.split('_')[2]) + '.slc'
 
 
@@ -622,7 +615,7 @@ def write_yaml(safe, orbit_file, burst_id=None):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
 
-    with open(f'{yaml_folder}/s1_cslc_template.yaml', 'r') as yaml:
+    with open(f'{yaml_folder}/s1_cslc_template.yaml') as yaml:
         lines = yaml.readlines()
 
     if burst_id is None:
