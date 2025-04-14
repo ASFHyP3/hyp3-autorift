@@ -18,7 +18,7 @@ def main():
         '++process',
         choices=['hyp3_autorift'],
         default='hyp3_autorift',
-        help='Select the console_script entrypoint to use',  # console_script entrypoints are specified in `setup.py`
+        help='Select the console_script entrypoint to use',  # console_script entrypoints are specified in `pyproject.toml`
     )
     parser.add_argument('++omp-num-threads', type=int, help='The number of OpenMP threads to use for parallel regions')
 
