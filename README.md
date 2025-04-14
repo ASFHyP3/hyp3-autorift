@@ -7,7 +7,7 @@ The HyP3-autoRIFT plugin provides a set of workflows for feature tracking proces
 
 ## Installation
 
-1. Ensure that conda is installed on your system (we recommend using [mambaforge](https://github.com/conda-forge/miniforge#mambaforge) to reduce setup times).
+1. Ensure that conda/mamba is installed on your system (we recommend using [Miniforge](https://conda-forge.org/download/)).
 2. Clone the `hyp3-autorift` repository and navigate to the root directory of this project
    ```bash
    git clone https://github.com/mfangaritav/hyp3-autorift.git
@@ -22,21 +22,6 @@ The HyP3-autoRIFT plugin provides a set of workflows for feature tracking proces
 4. Install a development version of HyP3 autoRIFT
    ```bash
    python -m pip install -e .
-   cd ..
-   ```
-5. Clone the `COMPASS` repository and navigate to the root directory of this project and install it.
-   ```bash
-   git clone https://github.com/mfangaritav/COMPASS.git
-   cd COMPASS
-   python -m pip install -e .
-   cd ..
-   ```
-6. Clone the `autoRIFT` repository and navigate to the root directory of this project and install it.
-   ```bash
-   git clone https://github.com/mfangaritav/autoRIFT.git
-   cd autoRIFT
-   python setup.py install
-   cd ..
    ```
 
 ## Usage
@@ -140,7 +125,7 @@ docker run -it --rm \
 
 #### Docker Outputs
 
-To retain hyp3_autorift output files running via Docker there are two recommended approaches:
+To retain hyp3-autorift output files running via Docker there are two recommended approaches:
 
 1. Use a volume mount
 
@@ -177,7 +162,7 @@ The HyP3-autoRIFT plugin is licensed under the BSD 3-Clause license. See the LIC
 ## Code of conduct
 We strive to create a welcoming and inclusive community for all contributors to HyP3-autoRIFT. As such, all contributors to this project are expected to adhere to our code of conduct.
 
-Please see `CODE_OF_CONDUCT.md` for the full code of conduct text.
+Please see our [`CODE_OF_CONDUCT.md`](https://github.com/ASFHyP3/.github/blob/main/CODE_OF_CONDUCT.md) for the full code of conduct text.
 
 ## Contributing
 Contributions to the HyP3-autoRIFT plugin are welcome! If you would like to contribute, please submit a pull request on the GitHub repository.
@@ -189,4 +174,4 @@ Found a bug? Want to request a feature?
 [open an issue](https://github.com/ASFHyP3/asf_tools/issues/new)
 
 General questions? Suggestions? Or just want to talk to the team?
-[chat with us on gitter](https://gitter.im/ASFHyP3/community)
+[Open a discussion](https://github.com/ASFHyP3/hyp3-autorift/discussions)
