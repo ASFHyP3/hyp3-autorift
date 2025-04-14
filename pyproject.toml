@@ -19,6 +19,7 @@ classifiers=[
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
 ]
+# FIXME:
 dependencies = [
     'boto3',
     'botocore',
@@ -48,7 +49,6 @@ develop = [
 
 [project.scripts]
 hyp3_autorift = "hyp3_autorift.process:main"
-s1_correction = "hyp3_autorift.s1_correction:main"
 
 [project.urls]
 Homepage = "https://github.com/ASFHyP3/hyp3-autorift"

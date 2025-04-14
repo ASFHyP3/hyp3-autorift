@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '++process',
-        choices=['hyp3_autorift', 's1_correction'],
+        choices=['hyp3_autorift'],
         default='hyp3_autorift',
         help='Select the console_script entrypoint to use',  # console_script entrypoints are specified in `setup.py`
     )

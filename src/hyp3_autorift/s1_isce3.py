@@ -19,7 +19,7 @@ from s1reader import s1_info
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetadataSlc, runGeogrid
+from hyp3_autorift.vend.testGeogridOptical import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
