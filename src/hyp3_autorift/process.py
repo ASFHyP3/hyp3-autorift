@@ -524,21 +524,21 @@ def main():
         'granules',
         type=nullable_granule_list,
         nargs='*',
-        help='Granule pair to process. Cannot be used with the `--reference` or `--secondary` arguments.'
+        help='Granule pair to process. Cannot be used with the `--reference` or `--secondary` arguments.',
     )
     parser.add_argument(
         '--reference',
         type=nullable_granule_list,
         default=[],
         nargs='+',
-        help='List of reference S1-BURST scenes. Cannot be used with the `granules` argument.'
+        help='List of reference S1-BURST scenes. Cannot be used with the `granules` argument.',
     )
     parser.add_argument(
         '--secondary',
         type=nullable_granule_list,
         default=[],
         nargs='+',
-        help='List of secondary S1-BURST scenes. Cannot be used with the `granules` argument.'
+        help='List of secondary S1-BURST scenes. Cannot be used with the `granules` argument.',
     )
     args = parser.parse_args()
 
