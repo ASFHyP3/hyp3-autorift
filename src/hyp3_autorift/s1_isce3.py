@@ -7,11 +7,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
-import rasterio
 import s1reader
 from burst2safe.burst2safe import burst2safe
 from compass import s1_cslc
-from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
@@ -597,15 +595,6 @@ def get_burst_ids(safe, orbit_file):
         bursts += s1reader.load_bursts(abspath, orbit_file, swath_number, pol)
 
     return [get_isce3_burst_id(x) for x in bursts]
-
-
-def get_dem_for_safes(safe_ref, safe_sec, dem):
-    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
-    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
-    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
-    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
-    bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
 
 
 def get_bounds_dem(safe):
