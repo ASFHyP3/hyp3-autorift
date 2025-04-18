@@ -50,7 +50,9 @@ RUN export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; pr
     # patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 79.diff && \
     wget https://github.com/nasa-jpl/autoRIFT/pull/107.diff && \
     patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 107.diff && \
-    rm 79.diff 107.diff
+    wget https://github.com/nasa-jpl/autoRIFT/pull/111.diff && \
+    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 111.diff && \
+    rm 79.diff 107.diff 111.diff
 
 ENTRYPOINT ["/hyp3-autorift/src/hyp3_autorift/etc/entrypoint.sh"]
 CMD ["-h"]
