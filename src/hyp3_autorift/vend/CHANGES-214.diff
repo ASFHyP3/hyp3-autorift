@@ -20,27 +20,3 @@ diff --git testautoRIFT.py testautoRIFT.py
 +                    noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
  
      ######### mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
- 
-diff --git testautoRIFT_ISCE.py testautoRIFT_ISCE.py
---- testautoRIFT_ISCE.py
-+++ testautoRIFT_ISCE.py
-@@ -198,6 +198,7 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
-     #        We should not mask based on zero values in the L7 images as this percolates into SearchLimit{X,Y}
-     #        and prevents autoRIFT from looking at large parts of the images, but untangling the logic here
-     #        has proved too difficult, so lets just turn it off if `wallis_fill` preprocessing is going to be used.
-+    #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
-     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
-     if 'wallis_fill' not in preprocessing_methods:
-         for ii in range(obj.xGrid.shape[0]):
-@@ -205,6 +206,11 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
-                 if (obj.yGrid[ii,jj] != nodata)&(obj.xGrid[ii,jj] != nodata):
-                     if (I1[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0)|(I2[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]==0):
-                         noDataMask[ii,jj] = True
-+    elif zero_mask is not None:
-+        for ii in range(obj.xGrid.shape[0]):
-+            for jj in range(obj.xGrid.shape[1]):
-+                if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
-+                    noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
- 
-     ######### mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
- 
