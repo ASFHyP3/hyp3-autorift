@@ -1353,6 +1353,7 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     else:
         flight_direction_s = 'N/A'
 
+    # FIXME: This will need to be adjusted for Sentinel-1C support!
     if burst.platform_id == burst_s.platform_id:
         print('subswath offset bias correction not performed for non-S1A/B combination')
         return DX, DY, flight_direction, flight_direction_s
