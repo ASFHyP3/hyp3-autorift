@@ -381,8 +381,6 @@ def process(
         netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0])
 
     else:
-        reference, secondary = reference[0], secondary[0]
-
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
         os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
@@ -391,10 +389,10 @@ def process(
         os.environ['AWS_REGION'] = 'us-west-2'
 
         if platform == 'S2':
-            reference_metadata = get_s2_metadata(reference)
+            reference_metadata = get_s2_metadata(reference[0])
             reference_path = reference_metadata['path']
 
-            secondary_metadata = get_s2_metadata(secondary)
+            secondary_metadata = get_s2_metadata(secondary[0])
             secondary_path = secondary_metadata['path']
 
         elif 'L' in platform:
@@ -402,13 +400,13 @@ def process(
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
             os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-            reference_metadata = get_lc2_metadata(reference)
+            reference_metadata = get_lc2_metadata(reference[0])
             reference_path = get_lc2_path(reference_metadata)
 
-            secondary_metadata = get_lc2_metadata(secondary)
+            secondary_metadata = get_lc2_metadata(secondary[0])
             secondary_path = get_lc2_path(secondary_metadata)
 
-            filter_platform = min([platform, get_platform(secondary)])
+            filter_platform = min([platform, get_platform(secondary[0])])
             if filter_platform in ('L4', 'L5', 'L7'):
                 # Log path here before we transform it
                 log.info(f'Reference scene path: {reference_path}')
@@ -583,6 +581,7 @@ def main():
     except NotImplementedError as e:
         parser.error(str(e))
 
+    # FIXME: This won't work for LX LY pairs!
     if ref_platforms != sec_platforms:
         parser.error('all scenes must be of the same type.')
 
