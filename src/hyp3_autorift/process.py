@@ -372,10 +372,12 @@ def process(
 
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
+
         netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
+
         netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0])
 
     else:
@@ -530,7 +532,7 @@ def main():
         type=nullable_granule_list,
         nargs='*',
         help='Pair of Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to '
-             'process. Cannot be used with the `--reference` or `--secondary` arguments.',
+        'process. Cannot be used with the `--reference` or `--secondary` arguments.',
     )
     parser.add_argument(
         '--reference',
@@ -538,7 +540,7 @@ def main():
         default=[],
         nargs='+',
         help='List of reference Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
-             'to process. Cannot be used with the `granules` arguments.'
+        'to process. Cannot be used with the `granules` arguments.',
     )
     parser.add_argument(
         '--secondary',
@@ -546,7 +548,7 @@ def main():
         default=[],
         nargs='+',
         help='List of secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
-             'to process. Cannot be used with the `granules` arguments.'
+        'to process. Cannot be used with the `granules` arguments.',
     )
     args = parser.parse_args()
 
