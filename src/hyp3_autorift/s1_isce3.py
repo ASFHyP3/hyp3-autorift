@@ -7,21 +7,19 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
-import rasterio
 import s1reader
 from burst2safe.burst2safe import burst2safe
 from compass import s1_cslc
-from dem_stitcher import stitch_dem
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
 from s1_orbits import fetch_for_scene
-from s1reader import s1_info
+from s1reader import load_bursts, s1_info
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogrid_ISCE import getPol, loadMetadata, loadMetadataSlc, runGeogrid
+from hyp3_autorift.vend.testGeogridOptical import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
@@ -67,7 +65,10 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
 
-    download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
+
+    download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
@@ -77,10 +78,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     s1_cslc.run('s1_cslc.yaml', 'radar')
     sec = convert2isce(burst_id_sec, ref=False)
 
-    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-
-    geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+    geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
@@ -111,15 +109,22 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
-    get_dem_for_safes(safe_ref, safe_sec)
-
     return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec)
 
 
-def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=[1, 2, 3]):
+def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=(1, 2, 3)):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
 
-    download_dem([lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
+    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
+    meta_s = copy.copy(meta_r)
+    meta_s.sensingStart = meta_temp.sensingStart
+    meta_s.sensingStop = meta_temp.sensingStop
+
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
+
+    download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
@@ -130,18 +135,9 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
-
     merge_swaths(safe_ref, orbit_ref, meta_r.numberOfLines, meta_r.numberOfSamples, swaths=swaths)
 
-    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-
-    geogrid_info = runGeogrid(meta_r, meta_s, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+    geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
@@ -166,7 +162,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 def read_slc_gdal(slc_path: str):
     ds = gdal.Open(slc_path)
     band = ds.GetRasterBand(1)
-    slc_arr = band.ReadAsArray()
+    slc_arr = np.abs(band.ReadAsArray()).astype(np.float32)
     del band, ds
     return slc_arr
 
@@ -174,7 +170,7 @@ def read_slc_gdal(slc_path: str):
 def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az_samples: int):
     nodata = 0
     driver = gdal.GetDriverByName('ENVI')
-    out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_CFloat32)
+    out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_Float32)
     out_band = out_raster.GetRasterBand(1)
     out_band.SetNoDataValue(nodata)
     out_band.WriteArray(data)
@@ -182,7 +178,7 @@ def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=[1, 2, 3]) -> None:
+def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=(1, 2, 3)) -> None:
     """Merges the bursts within the provided swath(s) and then merges the swaths.
        The secondary image is merged according to the reference image's metadata.
 
@@ -208,8 +204,6 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
     if len(burst_ids_ref) != len(burst_files_ref):
         print('Warning : Not all the bursts were processed')
 
-    total_az_samples = 0
-    total_rng_samples = 0
     bursts = []
     sensing_starts = []
     rng_offsets = [0]
@@ -235,7 +229,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
         sensing_starts.append(burst_sensing_start)
 
         # TODO: min(swaths) was previously 1
-        #       Does this intentially not support passing something like swaths=[2, 3]?
+        #       Does this intentionally not support passing something like swaths=[2, 3]?
         if swath == min(swaths):
             sensing_start = burst_sensing_start
             az_time_interval = bursts[-1].azimuth_time_interval
@@ -249,7 +243,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
             sensing_stop = burst_sensing_stop
 
         # TODO: min(swaths) was previously 1
-        #       Does this intentially not support passing something like swaths=[2, 3]?
+        #       Does this intentionally not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
             rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
             rng_offsets.append(int(np.round(rng_offset)))
@@ -267,7 +261,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
     conds = []
     for slc in ['ref', 'sec']:
         swath_index = 0
-        merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=complex)
+        merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=np.float32)
         for swath in swaths:
             az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
             rng_offset = rng_offsets[swath_index]
@@ -318,6 +312,7 @@ def get_azimuth_reference_offsets(bursts: list):
         burst_start_index = int(np.round((az_offset - sensing_start).total_seconds() / az_time_interval))
         burst_end_index = burst_start_index + (burst.last_valid_line - burst.first_valid_line) + 1
 
+        # FIXME: if index != 0?
         if index == 0:
             start_index = burst_start_index
 
@@ -333,7 +328,7 @@ def get_burst_path(burst_filename: str):
 
 def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
     """Merges the bursts within the provided swath.
-       The secondary bursts are merged according to the reference bursts's metadata.
+       The secondary bursts are merged according to the reference bursts' metadata.
 
     Args:
         ref_bursts: List of the reference burst objects
@@ -367,8 +362,8 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
     az_reference_offsets, merge_start_index = get_azimuth_reference_offsets(ref_bursts)
 
-    ref_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=complex)
-    sec_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=complex)
+    ref_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
+    sec_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
     for index in range(num_bursts):
         burst = ref_bursts[index]
         burst_limit = az_reference_offsets[index]
@@ -427,13 +422,6 @@ def get_topsinsar_config():
     """
     Input file.
     """
-    import glob
-    import os
-    from datetime import timedelta
-
-    import numpy as np
-    from s1reader import load_bursts
-
     orbits = glob.glob('*.EOF')
     fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
     safes = glob.glob('*.SAFE')
@@ -489,7 +477,8 @@ def get_topsinsar_config():
     return config_data
 
 
-def bounding_box(safe, orbit_file, is_slc, swaths=[1, 2, 3], epsg=4326):
+# FIXME: Docstring; is_slc could be handled by swaths?
+def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     :param safe: Path to the Sentinel-1 SAFE zip archive
@@ -542,14 +531,14 @@ def convert2isce(burst_id, ref=True):
         slc = glob.glob(fol + '/*.slc')[0]
         ds = gdal.Open(slc)
         ds = gdal.Translate('burst_ref_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
-        ds = None
+        del ds
         return 'burst_ref_' + str(burst_id.split('_')[2]) + '.slc'
     else:
         fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
         slc = glob.glob(fol + '/*.slc')[0]
         ds = gdal.Open(slc)
         ds = gdal.Translate('burst_sec_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
-        ds = None
+        del ds
         return 'burst_sec_' + str(burst_id.split('_')[2]) + '.slc'
 
 
@@ -601,45 +590,32 @@ def get_burst_ids(safe, orbit_file):
     return [get_isce3_burst_id(x) for x in bursts]
 
 
-def get_dem_for_safes(safe_ref, safe_sec):
-    lon1min, lat1min, lon1max, lat1max = get_bounds_dem(safe_ref)
-    lon2min, lat2min, lon2max, lat2max = get_bounds_dem(safe_sec)
-    lon_min, lat_min = np.min([lon1min, lon2min]), np.min([lat1min, lat2min])
-    lon_max, lat_max = np.max([lon1max, lon2max]), np.max([lat1max, lat2max])
-    bounds = [lon_min, lat_min, lon_max, lat_max]
-    download_dem(bounds)
-
-
 def get_bounds_dem(safe):
     bounds = s1_info.get_frame_bounds(os.path.basename(safe))
     bounds = [int(bounds[0]) - 1, int(bounds[1]), math.ceil(bounds[2]) + 1, math.ceil(bounds[3])]
     return bounds
 
 
-def download_dem(bounds):
-    X, p = stitch_dem(
-        bounds,
-        dem_name='glo_30',  # Global Copernicus 30 meter resolution DEM
-        dst_ellipsoidal_height=False,
-        dst_area_or_point='Point',
-        dst_resolution=(0.001, 0.001),
+def download_dem(dem, bounds):
+    in_ds = gdal.OpenShared(dem, gdal.GA_ReadOnly)
+    warp_options = gdal.WarpOptions(
+        format='GTIFF',
+        outputType=gdal.GDT_Int16,
+        resampleAlg='cubic',
+        xRes=0.001,
+        yRes=0.001,
+        dstSRS='EPSG:4326',
+        dstNodata=0,
+        outputBounds=bounds,
     )
-
-    with rasterio.open('dem_temp.tif', 'w', **p) as ds:
-        ds.write(X, 1)
-        ds.update_tags(AREA_OR_POINT='Point')
-    ds = None
-    ds = gdal.Open('dem_temp.tif')
-    ds = gdal.Translate('dem.tif', ds, options='-ot Int16')
-    ds = None
-    subprocess.call('rm -rf dem_temp.tif', shell=True)
+    gdal.Warp('dem.tif', in_ds, options=warp_options)
 
 
 def write_yaml(safe, orbit_file, burst_id=None):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
 
-    with open(f'{yaml_folder}/s1_cslc_template.yaml', 'r') as yaml:
+    with open(f'{yaml_folder}/s1_cslc_template.yaml') as yaml:
         lines = yaml.readlines()
 
     if burst_id is None:

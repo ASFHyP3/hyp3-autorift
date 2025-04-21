@@ -1,10 +1,8 @@
-name: hyp3-autorift-radar
+name: hyp3-autorift
 channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - boto3
-  - botocore
   - python>=3.10
   - pip
   # For packaging, and testing
@@ -19,37 +17,42 @@ dependencies:
   - ruff
   - setuptools>=61
   - setuptools_scm>=6.2
-  - ruff
   # For running
+  - asf_search
+  - boto3
+  - botocore
+  - burst2safe #get the develop version so it doesn't look for iw2
+  - dateparser!=1.1.0
+  - dem_stitcher
   - eigen
   - gdal>=3
   - h5netcdf
   - h5py>=3.5
   - hyp3lib>=3,<4
   - isce3>=0.14
-  - opencv
-  - boto3
+  - libgdal-jp2openjpeg
+  - lxml>=4.8
   - matplotlib-base
   - netCDF4
   - numpy>=1.20,<2.0
-  - pyproj>=3.3
-  - pysolid>=0.3
-  - ruamel.yaml>=0.15
-  - scipy>=1.0,<1.13
-  - yamale>=4.0
-  - requests>=2.0
-  - s1reader=0.2.2
-  - shapely>=2
-  - scikit-image
-  - xarray
+  - numba
+  - opencv
   - packaging>=21.0
-  - lxml>=4.8
-  - tifffile>=2024.0.0
-  - asf_search
-  - dateparser!=1.1.0
-  - dem_stitcher
-  - burst2safe #get the develop version so it doesn't look for iw2
   - pandas>=1.4
   - progressbar
+  - pyproj>=3.3
+  - pysolid>=0.3
   - rasterio
+  - requests>=2.0
+  - ruamel.yaml>=0.15
   - s1_orbits
+  - s1reader=0.2.2
+  - scikit-image
+  - scipy>=1.0,<1.13
+  - shapely>=2
+  - tifffile>=2024.0.0
+  - xarray
+  - yamale>=4.0
+  - pip:
+      - git+https://github.com/opera-adt/COMPASS.git@ad3929cb88b841eab04a4844a518e536ec97aafe
+      - git+https://github.com/AndrewPlayer3/autoRIFT

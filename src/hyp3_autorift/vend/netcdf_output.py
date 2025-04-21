@@ -4,7 +4,6 @@
 
 import datetime
 import os
-import subprocess
 
 import netCDF4
 import numpy as np
@@ -349,8 +348,8 @@ def netCDF_packaging(VX, VY, DX, DY, INTERPMASK, CHIPSIZEX, CHIPSIZEY, SSM, SSM1
              f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
              f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
     if pair_type == 'radar':
-        isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-        source += f' built with ISCE version {isce_version.strip()}'
+        import isce3
+        source += f' using ISCE3 version {isce3.__version__}'
     if IMG_INFO_DICT['mission_img1'].startswith('S'):
         source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
     if IMG_INFO_DICT['mission_img1'].startswith('L'):
@@ -1273,23 +1272,9 @@ def rotate_vel2radar(rngind, azmind, vel_x, vel_y, swath_border, swath_border_fu
     return output_vel_x1, output_vel_y1
 
 
-def loadProduct(xmlname):
-    """
-    Load the product using Product Manager.
-    """
-    from iscesys.Component.ProductManager import ProductManager as PM
-
-    pm = PM()
-    pm.configure()
-
-    obj = pm.loadProduct(xmlname)
-
-    return obj
-
-
 def getPol(safe, orbit_path):
     from s1reader import load_bursts
-    
+
     pols = ['vv', 'vh', 'hh', 'hv']
     for pol in pols:
         try:
@@ -1306,9 +1291,8 @@ def loadMetadata(indir):
     """
     import os
     import numpy as np
-    from datetime import datetime, timedelta
+    from datetime import datetime
     from s1reader import load_bursts
-    import isce3
     import glob
     orbits = glob.glob('*.EOF')
     fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
@@ -1316,7 +1300,7 @@ def loadMetadata(indir):
     if len(safes)==0:
         safes = glob.glob('*.zip')
     fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
-    
+
     if 'ref' in indir:
         safe = safes[np.argmin(fechas_safes)]
         orbit_path = orbits[np.argmin(fechas_orbits)]
@@ -1328,15 +1312,15 @@ def loadMetadata(indir):
 
     if '_' in indir:
         swath = int(indir.split('_')[2][2])
-        bursts = load_bursts(safe, orbit_path, swath, pol) 
+        bursts = load_bursts(safe, orbit_path, swath, pol)
         for bur in bursts:
             if int(bur.burst_id.subswath[2])==swath:
                 burst = bur
     else:
         # Find the first swath containing data
         for swath in [1, 2, 3]:
-            try: 
-                bursts = load_bursts(safe, orbit_path, swath, pol) 
+            try:
+                bursts = load_bursts(safe, orbit_path, swath, pol)
                 burst = bursts[0]
             except:
                 continue
@@ -1369,6 +1353,7 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     else:
         flight_direction_s = 'N/A'
 
+    # FIXME: This will need to be adjusted for Sentinel-1C support!
     if burst.platform_id == burst_s.platform_id:
         print('subswath offset bias correction not performed for non-S1A/B combination')
         return DX, DY, flight_direction, flight_direction_s
@@ -1386,7 +1371,7 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     azmind = azmind.astype(np.float32)
     rngind[rngind == nodata] = np.nan
     azmind[azmind == nodata] = np.nan
-    
+
     length, width = burst.shape
     farRange = burst.starting_range + (width-1.0)*burst.range_pixel_spacing
 
@@ -1394,7 +1379,7 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     ncols = int(np.round((farRange - burst.starting_range)/burst.range_pixel_spacing))
 
     ind2 = ncols
-    
+
     ind1 = 0
 
     #ind1 = int(np.round((frames[1].startingRange - frames[0].startingRange)/frames[0].bursts[0].rangePixelSize))
