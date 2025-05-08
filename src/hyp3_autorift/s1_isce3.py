@@ -127,13 +127,13 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
     write_yaml(safe_ref, orbit_ref)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
+    # s1_cslc.run('s1_cslc.yaml', 'radar')
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
-        s1_cslc.run('s1_cslc.yaml', 'radar')
+        # s1_cslc.run('s1_cslc.yaml', 'radar')
 
     merge_swaths(safe_ref, orbit_ref, meta_r.numberOfLines, meta_r.numberOfSamples, swaths=swaths)
 
@@ -142,8 +142,8 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
-    ref = 'reference.slc'
-    sec = 'secondary.slc'
+    ref = 'reference.tif'
+    sec = 'secondary.tif'
 
     netcdf_file = generateAutoriftProduct(
         ref,
@@ -169,7 +169,7 @@ def read_slc_gdal(slc_path: str):
 
 def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az_samples: int):
     nodata = 0
-    driver = gdal.GetDriverByName('ENVI')
+    driver = gdal.GetDriverByName('GTIFF')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_Float32)
     out_band = out_raster.GetRasterBand(1)
     out_band.SetNoDataValue(nodata)
@@ -258,7 +258,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
         swath_index = 0
         merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=np.float32)
         for swath in swaths:
-            slc_path = slc + '_swath_iw' + str(swath) + '.slc'
+            slc_path = slc + '_swath_iw' + str(swath) + '.tif'
             slc_array = read_slc_gdal(slc_path)
             bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
 
@@ -282,7 +282,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
 
             swath_index += 1
 
-        output_path = 'reference.slc' if slc == 'ref' else 'secondary.slc'
+        output_path = 'reference.tif' if slc == 'ref' else 'secondary.tif'
         write_slc_gdal(merged_arr[:num_lines, :num_samples], output_path, num_samples, num_lines)
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
@@ -319,7 +319,7 @@ def get_burst_path(burst_filename: str):
     return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
 
 
-def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int, crop_amount=16):
+def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
     """Merges the bursts within the provided swath.
        The secondary bursts are merged according to the reference bursts' metadata.
 
@@ -328,9 +328,6 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
         ref_burst_files: List of the filenames of the reference burst slcs
         sec_burst_files: List of the filenames of the secondary burst slcs
         swath: The swath containing the bursts to merge.
-        crop_amount: Amount to crop burst edges. ISCE3 introduces garbage 
-                     pixels around the edges of the secondary burst after 
-                     interpolation that must be cropped out. 
 
     Returns:
         num_az_samples: Merged image size in the azimuth direction
@@ -341,8 +338,8 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     burst_arr = read_slc_gdal(get_burst_path(ref_burst_files[0]))
     num_az_samples, num_rng_samples = burst_arr.shape
 
-    ref_output_path = 'ref_swath_iw' + str(swath) + '.slc'
-    sec_output_path = 'sec_swath_iw' + str(swath) + '.slc'
+    ref_output_path = 'ref_swath_iw' + str(swath) + '.tif'
+    sec_output_path = 'sec_swath_iw' + str(swath) + '.tif'
 
     if num_bursts == 1:
         # TODO: Return array
@@ -426,8 +423,8 @@ def get_topsinsar_config():
     safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
     orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
 
-    if len(glob.glob('*_ref*.slc')) > 0:
-        swath = int(os.path.basename(glob.glob('*_ref*.slc')[0]).split('_')[2][2])
+    if len(glob.glob('*_ref*.tif')) > 0:
+        swath = int(os.path.basename(glob.glob('*_ref*.tif')[0]).split('_')[2][2])
     else:
         swath = None
 
@@ -517,18 +514,18 @@ def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
 def convert2isce(burst_id, ref=True):
     if ref:
         fol = glob.glob('./product/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.slc')[0]
+        slc = glob.glob(fol + '/*.tif')[0]
         ds = gdal.Open(slc)
-        ds = gdal.Translate('reference.slc', ds, options='-of ISCE')
+        ds = gdal.Translate('reference.tif', ds, options='-of GTIFF')
         del ds
-        return 'reference.slc'
+        return 'reference.tif'
     else:
         fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.slc')[0]
+        slc = glob.glob(fol + '/*.tif')[0]
         ds = gdal.Open(slc)
-        ds = gdal.Translate('secondary.slc', ds, options='-of ISCE')
+        ds = gdal.Translate('secondary.tif', ds, options='-of GTIFF')
         del ds
-        return 'secondary.slc'
+        return 'secondary.tif'
 
 
 def download_burst(burst_granule, all_anns=True):

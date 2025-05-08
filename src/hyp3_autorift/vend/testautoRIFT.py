@@ -157,8 +157,8 @@ def runAutorift(I1, I2, xGrid, yGrid, Dx0, Dy0, SRx0, SRy0, CSMINx0, CSMINy0, CS
 
     # take the amplitude only for the radar images
     if optflag == 0:
-        I1 = loadProduct('reference.slc')
-        I2 = loadProduct('secondary.slc')
+        I1 = loadProduct('reference.tif')
+        I2 = loadProduct('secondary.tif')
 
     obj.I1 = I1
     obj.I2 = I2
