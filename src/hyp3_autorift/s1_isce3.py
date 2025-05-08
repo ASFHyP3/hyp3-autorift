@@ -315,7 +315,7 @@ def get_azimuth_reference_offsets(bursts: list):
 
 
 def get_burst_path(burst_filename: str):
-    return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
+    return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.tif')[0]
 
 
 def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
