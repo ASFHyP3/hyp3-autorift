@@ -127,13 +127,13 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
     write_yaml(safe_ref, orbit_ref)
-    # s1_cslc.run('s1_cslc.yaml', 'radar')
+    s1_cslc.run('s1_cslc.yaml', 'radar')
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
-        # s1_cslc.run('s1_cslc.yaml', 'radar')
+        s1_cslc.run('s1_cslc.yaml', 'radar')
 
     merge_swaths(safe_ref, orbit_ref, meta_r.numberOfLines, meta_r.numberOfSamples, swaths=swaths)
 
