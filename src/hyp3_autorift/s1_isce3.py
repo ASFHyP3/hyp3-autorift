@@ -274,8 +274,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
             slc_rng_slice = slice(bursts[0].first_valid_sample, bursts[0].last_valid_sample - invalid_pixel_buffer)
 
             cond = np.logical_and(
-                merged_arr[merged_az_slice, merged_rng_slice] == 0,
-                slc_array[slc_az_slice, slc_rng_slice] != 0
+                merged_arr[merged_az_slice, merged_rng_slice] == 0, slc_array[slc_az_slice, slc_rng_slice] != 0
             )
 
             merged_arr[merged_az_slice, merged_rng_slice][cond] = slc_array[slc_az_slice, slc_rng_slice][cond]
@@ -368,20 +367,20 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
         # with the previous burst. This avoids any invalid
         # pixels from resampling in ISCE3.
         if index == 0:
-            next_burst_limit = az_reference_offsets[index+1]
+            next_burst_limit = az_reference_offsets[index + 1]
             burst_start_index = burst.first_valid_line
             burst_end_index = 1 + burst.last_valid_line - (burst_limit[1] - next_burst_limit[0]) // 2
             merge_start_index = burst_limit[0]
             merge_end_index = burst_limit[1] - (burst_limit[1] - next_burst_limit[0]) // 2
         elif index != num_bursts - 1:
-            prev_burst_limit = az_reference_offsets[index-1]
-            next_burst_limit = az_reference_offsets[index+1]
+            prev_burst_limit = az_reference_offsets[index - 1]
+            next_burst_limit = az_reference_offsets[index + 1]
             burst_start_index = burst.first_valid_line + (prev_burst_limit[1] - burst_limit[0]) // 2
             burst_end_index = 1 + burst.last_valid_line - (burst_limit[1] - next_burst_limit[0]) // 2
             merge_start_index = burst_limit[0] + (prev_burst_limit[1] - burst_limit[0]) // 2
             merge_end_index = burst_limit[1] - (burst_limit[1] - next_burst_limit[0]) // 2
         else:
-            prev_burst_limit = az_reference_offsets[index-1]
+            prev_burst_limit = az_reference_offsets[index - 1]
             burst_start_index = burst.first_valid_line + (prev_burst_limit[1] - burst_limit[0]) // 2
             burst_end_index = 1 + burst.last_valid_line
             merge_start_index = burst_limit[0] + (prev_burst_limit[1] - burst_limit[0]) // 2
@@ -397,7 +396,7 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
 
         ref_merged_arr[merge_az_slice, rng_slice] = burst_arr_ref
         sec_merged_arr[merge_az_slice, rng_slice] = burst_arr_sec
-     
+
     write_slc_gdal(ref_merged_arr, ref_output_path, num_rng_samples, num_az_lines)
     write_slc_gdal(sec_merged_arr, sec_output_path, num_rng_samples, num_az_lines)
 
