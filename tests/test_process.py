@@ -14,12 +14,6 @@ from hyp3_autorift import process
 
 def test_get_platform():
     assert process.get_platform('S1_191569_IW1_20170703T204652_HV_1093-BURST') == 'S1-BURST'
-    assert (
-        process.get_platform(
-            ['S1_191569_IW1_20170703T204652_HV_1093-BURST', 'S1_191569_IW2_20170703T204652_HV_1093-BURST']
-        )
-        == 'S1-BURST'
-    )
     assert process.get_platform('S1A_IW_SLC__1SDV_20180605T233148_20180605T233215_022228_0267AD_48B2') == 'S1-SLC'
     assert process.get_platform('S2A_1UCR_20210124_0_L1C') == 'S2'
     assert process.get_platform('S2B_22WEB_20200913_0_L2A') == 'S2'

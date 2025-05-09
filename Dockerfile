@@ -43,14 +43,5 @@ RUN mamba env create -f /hyp3-autorift/environment.yml && \
     sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
     python -m pip install --no-cache-dir /hyp3-autorift
 
-# FIXME: hackily apply patches from upstream which haven't been released yet
-RUN export PYTHON_SITE_PACKAGES=$(python -c "from sysconfig import get_paths; print(get_paths()['purelib'])") && \
-    wget https://github.com/nasa-jpl/autoRIFT/pull/79.diff && \
-    # NOTE: Applied upstream and in Mario's fork already! Won't be needed next release
-    # patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 79.diff && \
-    wget https://github.com/nasa-jpl/autoRIFT/pull/107.diff && \
-    patch -d ${PYTHON_SITE_PACKAGES}/autoRIFT < 107.diff && \
-    rm 79.diff 107.diff
-
 ENTRYPOINT ["/hyp3-autorift/src/hyp3_autorift/etc/entrypoint.sh"]
 CMD ["-h"]
