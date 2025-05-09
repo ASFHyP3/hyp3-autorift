@@ -22,6 +22,7 @@ dependencies:
   - boto3
   - botocore
   - burst2safe #get the develop version so it doesn't look for iw2
+  - compass>=0.5.6
   - dateparser!=1.1.0
   - dem_stitcher
   - eigen
@@ -54,5 +55,4 @@ dependencies:
   - xarray
   - yamale>=4.0
   - pip:
-      - git+https://github.com/opera-adt/COMPASS.git
       - git+https://github.com/andrewplayer3/autoRIFT
