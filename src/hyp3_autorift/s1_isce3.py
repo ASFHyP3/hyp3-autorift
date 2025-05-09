@@ -518,14 +518,14 @@ def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
 def convert2isce(burst_id, ref=True):
     if ref:
         fol = glob.glob('./product/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.tif')[0]
+        slc = glob.glob(fol + '/*.slc.tif')[0]
         ds = gdal.Open(slc)
         ds = gdal.Translate('reference.tif', ds, options='-of GTIFF')
         del ds
         return 'reference.tif'
     else:
         fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.tif')[0]
+        slc = glob.glob(fol + '/*.slc.tif')[0]
         ds = gdal.Open(slc)
         ds = gdal.Translate('secondary.tif', ds, options='-of GTIFF')
         del ds
