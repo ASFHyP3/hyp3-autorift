@@ -115,12 +115,6 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=(1, 2, 3)):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
 
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
-
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
@@ -135,15 +129,21 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-    merge_swaths(safe_ref, orbit_ref, meta_r.numberOfLines, meta_r.numberOfSamples, swaths=swaths)
+    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
+
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
+    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
+    meta_s = copy.copy(meta_r)
+    meta_s.sensingStart = meta_temp.sensingStart
+    meta_s.sensingStop = meta_temp.sensingStop
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
-    ref = 'reference.slc'
-    sec = 'secondary.slc'
+    ref = 'reference.tif'
+    sec = 'secondary.tif'
 
     netcdf_file = generateAutoriftProduct(
         ref,
@@ -167,9 +167,10 @@ def read_slc_gdal(slc_path: str):
     return slc_arr
 
 
-def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az_samples: int):
+def write_slc_gdal(data: np.ndarray, out_path: str):
+    num_az_samples, num_rng_samples = data.shape
     nodata = 0
-    driver = gdal.GetDriverByName('ENVI')
+    driver = gdal.GetDriverByName('GTIFF')
     out_raster = driver.Create(out_path, num_rng_samples, num_az_samples, 1, gdal.GDT_Float32)
     out_band = out_raster.GetRasterBand(1)
     out_band.SetNoDataValue(nodata)
@@ -178,15 +179,13 @@ def write_slc_gdal(data: np.ndarray, out_path: str, num_rng_samples: int, num_az
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int, swaths=(1, 2, 3)) -> None:
+def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
     """Merges the bursts within the provided swath(s) and then merges the swaths.
        The secondary image is merged according to the reference image's metadata.
 
     Args:
         safe_ref: The filename of the reference safe. The secondary must be coregistered to this.
         orbit_ref: The filename of the orbit file for the reference image.
-        num_lines: Number of lines in the azimuth direction
-        num_samples: Number of samples in the range direction
         swaths: Ascending sorted list containing the desired swath(s) to merge. Swaths must be adjacent.
     """
     safe_path_ref = os.path.abspath(safe_ref)
@@ -228,8 +227,6 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
         bursts.extend(ref_bursts)
         sensing_starts.append(burst_sensing_start)
 
-        # TODO: min(swaths) was previously 1
-        #       Does this intentionally not support passing something like swaths=[2, 3]?
         if swath == min(swaths):
             sensing_start = burst_sensing_start
             az_time_interval = bursts[-1].azimuth_time_interval
@@ -242,11 +239,9 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
         if sensing_stop < burst_sensing_stop:
             sensing_stop = burst_sensing_stop
 
-        # TODO: min(swaths) was previously 1
-        #       Does this intentionally not support passing something like swaths=[2, 3]?
         if swath > min(swaths):
             rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
-            rng_offsets.append(int(np.round(rng_offset)))
+            rng_offsets.append(int(np.floor(rng_offset)))
             last_rng_samples = num_rng_samples
 
     first_start_rng = bursts[0].starting_range
@@ -255,38 +250,42 @@ def merge_swaths(safe_ref: str, orbit_ref: str, num_lines: int, num_samples: int
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
 
-    total_rng_samples = last_rng_samples + int(np.round((last_start_rng - first_start_rng) / rng_pixel_spacing))
+    total_rng_samples = last_rng_samples + int(np.floor((last_start_rng - first_start_rng) / rng_pixel_spacing))
     total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
 
-    conds = []
     for slc in ['ref', 'sec']:
         swath_index = 0
         merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=np.float32)
+
         for swath in swaths:
-            az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
-            rng_offset = rng_offsets[swath_index]
+            print(f'Merging Swath {swath}')
 
-            print(f'IW{swath} Range and Azimuth Offsets: {rng_offset} {az_offset}')
-
-            slc_path = slc + '_swath_iw' + str(swath) + '.slc'
+            slc_path = slc + '_swath_iw' + str(swath) + '.tif'
             slc_array = read_slc_gdal(slc_path)
 
-            az_end_index = az_offset + slc_array.shape[0]
-            rng_end_index = rng_offset + slc_array.shape[1]
+            bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
 
-            if slc == 'ref':
-                cond = np.logical_and(
-                    np.abs(merged_arr[az_offset:az_end_index, rng_offset:rng_end_index]) == 0,
-                    np.logical_not(np.abs(slc_array) == 0),
-                )
-                conds.append(cond)
-            else:
-                cond = conds[swath_index]
-            merged_arr[az_offset:az_end_index, rng_offset:rng_end_index][cond] = slc_array[cond]
+            az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
+            rng_offset = rng_offsets[swath_index] + bursts[0].first_valid_sample
+            az_end_index = az_offset + slc_array.shape[0] - bursts[-1].last_valid_line - bursts[0].first_valid_line
+            rng_end_index = rng_offset + (bursts[0].last_valid_sample - bursts[0].first_valid_sample)
+
+            invalid_pixel_buffer = 64 if swath != max(swaths) else 0
+
+            merged_az_slice = slice(az_offset, az_end_index)
+            merged_rng_slice = slice(rng_offset, rng_end_index - invalid_pixel_buffer)
+            slc_az_slice = slice(bursts[0].first_valid_line, -bursts[-1].last_valid_line)
+            slc_rng_slice = slice(bursts[0].first_valid_sample, bursts[0].last_valid_sample - invalid_pixel_buffer)
+
+            cond = np.logical_and(
+                merged_arr[merged_az_slice, merged_rng_slice] == 0, slc_array[slc_az_slice, slc_rng_slice] != 0
+            )
+
+            merged_arr[merged_az_slice, merged_rng_slice][cond] = slc_array[slc_az_slice, slc_rng_slice][cond]
 
             swath_index += 1
-        output_path = 'reference.slc' if slc == 'ref' else 'secondary.slc'
-        write_slc_gdal(merged_arr[:num_lines, :num_samples], output_path, num_samples, num_lines)
+
+        write_slc_gdal(merged_arr, 'reference.tif' if slc == 'ref' else 'secondary.tif')
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
 
@@ -301,29 +300,22 @@ def get_azimuth_reference_offsets(bursts: list):
         az_reference_offsets: The azimuth offsets
         start_index: The starting index for merging
     """
+    az_reference_offsets = []
     sensing_start = bursts[0].sensing_start
     az_time_interval = bursts[0].azimuth_time_interval
-    az_reference_offsets = []
 
     for index in range(len(bursts)):
         burst = bursts[index]
         az_offset = burst.sensing_start + timedelta(seconds=(burst.first_valid_line * az_time_interval))
-
         burst_start_index = int(np.round((az_offset - sensing_start).total_seconds() / az_time_interval))
         burst_end_index = burst_start_index + (burst.last_valid_line - burst.first_valid_line) + 1
-
-        # FIXME: if index != 0?
-        if index == 0:
-            start_index = burst_start_index
-
         az_reference_offsets.append([burst_start_index, burst_end_index])
-        print(f'Burst {index}: {(burst_start_index, burst_end_index)}')
 
-    return az_reference_offsets, start_index
+    return az_reference_offsets
 
 
 def get_burst_path(burst_filename: str):
-    return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc')[0]
+    return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc.tif')[0]
 
 
 def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
@@ -340,19 +332,20 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
         num_az_samples: Merged image size in the azimuth direction
         num_rng_samples: Merged image size in the range direction
     """
+    print(f'Merging Bursts in Swath {swath}')
+
     num_bursts = len(ref_bursts)
     az_time_interval = ref_bursts[0].azimuth_time_interval
     burst_arr = read_slc_gdal(get_burst_path(ref_burst_files[0]))
     num_az_samples, num_rng_samples = burst_arr.shape
 
-    ref_output_path = 'ref_swath_iw' + str(swath) + '.slc'
-    sec_output_path = 'sec_swath_iw' + str(swath) + '.slc'
+    ref_output_path = 'ref_swath_iw' + str(swath) + '.tif'
+    sec_output_path = 'sec_swath_iw' + str(swath) + '.tif'
 
     if num_bursts == 1:
-        # TODO: Return array
-        write_slc_gdal(burst_arr, ref_output_path, num_rng_samples, num_az_samples)
+        write_slc_gdal(burst_arr, ref_output_path)
         burst_arr = read_slc_gdal(get_burst_path(sec_burst_files[0]))
-        write_slc_gdal(burst_arr, sec_output_path, num_rng_samples, num_az_samples)
+        write_slc_gdal(burst_arr, sec_output_path)
         return num_az_samples, num_rng_samples
 
     last_burst_sensing_start = ref_bursts[-1].sensing_start
@@ -360,7 +353,7 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     sensing_start = ref_bursts[0].sensing_start
     sensing_end = last_burst_sensing_start + burst_length
     num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
-    az_reference_offsets, merge_start_index = get_azimuth_reference_offsets(ref_bursts)
+    az_reference_offsets = get_azimuth_reference_offsets(ref_bursts)
 
     ref_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
     sec_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
@@ -370,50 +363,47 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
         burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index]))
         burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index]))
 
-        # If middle burst
-        if index > 0:
-            prev_burst_limit = az_reference_offsets[index - 1]
-
-            burst_overlap = prev_burst_limit[1] - burst_limit[0]
-            burst_start_index = burst_overlap
-            if burst_overlap <= 0:
-                raise ValueError(f'No overlap between bursts {index} and {index - 1} in swath {swath}')
-            print(f'IW{swath} Burst {index} and {index - 1} Overlap: {burst_overlap}')
-
-            def merge(burst_arr):
-                current_slice = slice(burst.first_valid_line + 2, burst.last_valid_line - 1)
-                return burst_arr[current_slice, :][:burst_overlap, :]
-
-            ref_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_ref)
-            sec_merged_arr[merge_start_index : merge_start_index + burst_overlap, :] = merge(burst_arr_sec)
-        else:
-            burst_start_index = 0
-
-        merge_start_index += burst_start_index
-
-        if index != (num_bursts - 1):
+        # Merge the bursts in the azimuth direction such that the beginning of 1 burst is halfway
+        # through the overlap with the previous burst. This avoids any invalid pixels from resampling in ISCE3.
+        if index == 0:
             next_burst_limit = az_reference_offsets[index + 1]
-            burst_overlap = burst_limit[1] - next_burst_limit[0]
-            if burst_overlap < 0:
-                raise ValueError(f'No overlap between bursts {index} and {index + 1} in swath {swath}')
-            burst_end_index = next_burst_limit[0] - burst_limit[0]
+            burst_start_index = burst.first_valid_line
+            burst_end_index = 1 + burst.last_valid_line - (burst_limit[1] - next_burst_limit[0]) // 2
+            merge_start_index = burst_limit[0]
+            merge_end_index = burst_limit[1] - (burst_limit[1] - next_burst_limit[0]) // 2
+
+        elif index != num_bursts - 1:
+            prev_burst_limit = az_reference_offsets[index - 1]
+            next_burst_limit = az_reference_offsets[index + 1]
+            burst_start_index = burst.first_valid_line + (prev_burst_limit[1] - burst_limit[0]) // 2
+            burst_end_index = 1 + burst.last_valid_line - (burst_limit[1] - next_burst_limit[0]) // 2
+            merge_start_index = burst_limit[0] + (prev_burst_limit[1] - burst_limit[0]) // 2
+            merge_end_index = burst_limit[1] - (burst_limit[1] - next_burst_limit[0]) // 2
+
         else:
-            burst_end_index = burst.last_valid_line - burst.first_valid_line - 3
+            prev_burst_limit = az_reference_offsets[index - 1]
+            burst_start_index = burst.first_valid_line + (prev_burst_limit[1] - burst_limit[0]) // 2
+            burst_end_index = 1 + burst.last_valid_line
+            merge_start_index = burst_limit[0] + (prev_burst_limit[1] - burst_limit[0]) // 2
+            merge_end_index = burst_limit[1]
 
-        burst_length = burst_end_index - burst_start_index
-        burst_arr_ref = burst_arr_ref[burst.first_valid_line + 2 : burst.last_valid_line - 1, :][
-            burst_start_index:burst_end_index, :
-        ]
-        burst_arr_sec = burst_arr_sec[burst.first_valid_line + 2 : burst.last_valid_line - 1, :][
-            burst_start_index:burst_end_index, :
-        ]
-        ref_merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr_ref
-        sec_merged_arr[merge_start_index : merge_start_index + burst_length, :] = burst_arr_sec
+        rng_slice = slice(burst.first_valid_sample, burst.last_valid_sample)
 
-        merge_start_index += burst_length
+        merge_az_slice = slice(merge_start_index, merge_end_index)
+        burst_az_slice = slice(burst_start_index, burst_end_index)
 
-    write_slc_gdal(ref_merged_arr, ref_output_path, num_rng_samples, num_az_lines)
-    write_slc_gdal(sec_merged_arr, sec_output_path, num_rng_samples, num_az_lines)
+        print(
+            f'IW{swath}[{merge_start_index}:{merge_end_index}] = burst_{index}[{burst_start_index}:{burst_end_index}]'
+        )
+
+        burst_arr_ref = burst_arr_ref[burst_az_slice, rng_slice]
+        burst_arr_sec = burst_arr_sec[burst_az_slice, rng_slice]
+
+        ref_merged_arr[merge_az_slice, rng_slice] = burst_arr_ref
+        sec_merged_arr[merge_az_slice, rng_slice] = burst_arr_sec
+
+    write_slc_gdal(ref_merged_arr, ref_output_path)
+    write_slc_gdal(sec_merged_arr, sec_output_path)
 
     return num_az_lines, num_rng_samples
 
@@ -437,8 +427,8 @@ def get_topsinsar_config():
     safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
     orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
 
-    if len(glob.glob('*_ref*.slc')) > 0:
-        swath = int(os.path.basename(glob.glob('*_ref*.slc')[0]).split('_')[2][2])
+    if len(glob.glob('*_ref*.tif')) > 0:
+        swath = int(os.path.basename(glob.glob('*_ref*.tif')[0]).split('_')[2][2])
     else:
         swath = None
 
@@ -528,18 +518,18 @@ def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
 def convert2isce(burst_id, ref=True):
     if ref:
         fol = glob.glob('./product/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.slc')[0]
+        slc = glob.glob(fol + '/*.slc.tif')[0]
         ds = gdal.Open(slc)
-        ds = gdal.Translate('burst_ref_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
+        ds = gdal.Translate('reference.tif', ds, options='-of GTIFF')
         del ds
-        return 'burst_ref_' + str(burst_id.split('_')[2]) + '.slc'
+        return 'reference.tif'
     else:
         fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.slc')[0]
+        slc = glob.glob(fol + '/*.slc.tif')[0]
         ds = gdal.Open(slc)
-        ds = gdal.Translate('burst_sec_' + str(burst_id.split('_')[2]) + '.slc', ds, options='-of ISCE')
+        ds = gdal.Translate('secondary.tif', ds, options='-of GTIFF')
         del ds
-        return 'burst_sec_' + str(burst_id.split('_')[2]) + '.slc'
+        return 'secondary.tif'
 
 
 def download_burst(burst_granule, all_anns=True):
