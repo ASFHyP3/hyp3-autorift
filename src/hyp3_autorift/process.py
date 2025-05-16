@@ -569,8 +569,11 @@ def main():
         parser.error('Must provide exactly two granules.')
 
     if has_granules:
-        reference = [granules[0]]
-        secondary = [granules[1]]
+        granules_sorted = sort_ref_sec([granules[0]], [granules[1]])
+        reference = granules_sorted[0]
+        secondary = granules_sorted[1]
+    else:
+        reference, secondary = sort_ref_sec(reference, secondary)
 
     if len(reference) != len(secondary):
         parser.error('Must provide the same number of reference and secondary scenes.')

@@ -54,5 +54,6 @@ dependencies:
   - tifffile>=2024.0.0
   - xarray
   - yamale>=4.0
+  - cxx-compiler
   - pip:
       - git+https://github.com/andrewplayer3/autoRIFT
