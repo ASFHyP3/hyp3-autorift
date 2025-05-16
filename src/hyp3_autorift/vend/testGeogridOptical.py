@@ -91,6 +91,7 @@ def getPol(safe, orbit_path):
             return pol
         except:
             pass
+    raise ValueError(f"No polarization information found for {safe}.")
 
 
 def getMergedOrbit(safe,orbit_path,swath):
