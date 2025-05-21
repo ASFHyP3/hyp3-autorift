@@ -79,6 +79,7 @@ quote-style = "single"
 
 [tool.ruff.lint]
 extend-select = [
+    "NPY", # numpy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
     "I",   # isort: https://docs.astral.sh/ruff/rules/#isort-i
     # TODO: Uncomment the following extensions and address their warnings:
     # "UP",  # pyupgrade: https://docs.astral.sh/ruff/rules/#pyupgrade-up
