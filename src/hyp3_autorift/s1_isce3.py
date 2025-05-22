@@ -4,7 +4,6 @@ import math
 import os
 import subprocess
 from datetime import timedelta
-from pathlib import Path
 
 import numpy as np
 import s1reader
@@ -26,17 +25,6 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 def process_sentinel1_burst_isce3(reference, secondary):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
-
-    # TODO: Temporary fix for burst2safe issue #137
-    # https://github.com/ASFHyP3/burst2safe/issues/137
-    if 'HV' in reference or 'HV' in reference[0]:
-        print('Renaming Cross-Pol Safe')
-        ref_name = str(safe_ref).replace('1SSV', '1SHV')
-        sec_name = str(safe_sec).replace('1SSV', '1SHV')
-        safe_ref.replace(ref_name)
-        safe_sec.replace(sec_name)
-        safe_ref = Path(ref_name)
-        safe_sec = Path(sec_name)
 
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
