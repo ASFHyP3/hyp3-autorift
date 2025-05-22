@@ -28,7 +28,7 @@ dependencies = [
     'gdal>=3',
     'h5netcdf',  # for increased performance of crop.py
     'hyp3lib>=4,<5',
-    'matplotlib-base',
+    'matplotlib',
     'netCDF4',
     'numpy>=1.20',
     'pandas>=1.4',
