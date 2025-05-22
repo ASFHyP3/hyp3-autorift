@@ -435,7 +435,7 @@ def process(
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
-        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogrid import coregisterLoadMetadata, runGeogrid
 
         meta_r, meta_s = coregisterLoadMetadata(
             reference_path,

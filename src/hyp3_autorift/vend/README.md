@@ -7,7 +7,7 @@ be easily incorporated from a package manager or installed appropriately.
 
 These modules are required for the expected autoRIFT workflow:
 * `testautoRIFT.py`
-* `testGeogridOptical.py`
+* `testGeogrid.py`
 * `netcdf_output.py`
 
 and are included in the [autoRIFT source code](https://github.com/nasa-jpl/autoRIFT),
