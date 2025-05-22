@@ -21,31 +21,37 @@ classifiers=[
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-# FIXME:
 dependencies = [
     'boto3',
     'botocore',
-    'gdal',
-    'h5netcdf',
-    'matplotlib',
-    'netCDF4',
-    'numpy',
-    'pyproj',
-    'requests',
-    'scipy',
-    'xarray',
+    'burst2safe>=1.4.3',
+    'gdal>=3',
+    'h5netcdf',  # for increased performance of crop.py
     'hyp3lib>=4,<5',
+    'matplotlib-base',
+    'netCDF4',
+    'numpy>=1.20',
+    'pandas>=1.4',
+    'pyproj>=3.3',
+    'requests>=2.0',
     's1_orbits',
+    'scipy>=1.0',
+    'xarray',
+    # Conda-Forge only deps:
+    # 'compass>=0.5.6',
+    # 'isce3>=0.14',
+    # 'libgdal-jp2openjpeg',  # not sure if this plugin comes with the PyPI distribution
+    # 'opencv',  # technically could be opencv-python on PyPI but there's subtle differences with the conda package
+    # 's1reader>=0.2.2',
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 develop = [
-    'ruff',
-    'pillow',
+    'pillow>=7.0',
     'pytest',
-    'pytest-cov',
     'pytest-console-scripts',
+    'pytest-cov',
     'responses',
 ]
 

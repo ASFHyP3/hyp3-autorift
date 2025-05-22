@@ -14,28 +14,24 @@ dependencies:
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
-  - asf_search
   - boto3
   - botocore
   - burst2safe>=1.4.3
   - compass>=0.5.6
   - gdal>=3
-  #- h5netcdf
-  #- h5py>=3.5
+  - h5netcdf  # for increased performance of crop.py
   - hyp3lib>=4,<5
   - isce3>=0.14
   - libgdal-jp2openjpeg
-  - lxml>=4.8
   - matplotlib-base
   - netCDF4
   - numpy>=1.20
   - opencv
   - pandas>=1.4
   - pyproj>=3.3
-  - pysolid>=0.3
   - requests>=2.0
   - s1_orbits
-  - s1reader=0.2.2
+  - s1reader>=0.2.2
   - scipy>=1.0
   - xarray
   # for compiling nasa-jpl/autoRIFT
