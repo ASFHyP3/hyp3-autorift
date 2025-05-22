@@ -34,7 +34,7 @@ dependencies = [
     'requests',
     'scipy',
     'xarray',
-    'hyp3lib>=3,<5',
+    'hyp3lib>=4,<5',
     's1_orbits',
 ]
 dynamic = ["version"]
