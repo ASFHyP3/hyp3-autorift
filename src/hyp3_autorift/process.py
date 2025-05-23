@@ -589,7 +589,7 @@ def main():
 
     landsat_missions = {'L4', 'L5', 'L7', 'L8', 'L9'}
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
-            parser.error('all scenes must be of the same type.')
+        parser.error('all scenes must be of the same type.')
 
     product_file, browse_file, thumbnail_file = process(
         reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
