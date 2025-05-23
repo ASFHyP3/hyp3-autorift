@@ -29,13 +29,16 @@ def process_sentinel1_burst_isce3(reference, secondary):
     orbit_ref = str(fetch_for_scene(safe_ref.stem))
     orbit_sec = str(fetch_for_scene(safe_sec.stem))
 
-    if isinstance(reference, list):
+    if isinstance(reference, list) and len(reference) > 1:
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
         burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
 
         swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
 
         return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
+
+    reference = reference[0]
+    secondary = secondary[0]
 
     burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
@@ -60,11 +63,11 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     write_yaml(safe_ref, orbit_ref)
     s1_cslc.run('s1_cslc.yaml', 'radar')
-    ref = convert2isce(burst_id_ref)
+    convert2isce(burst_id_ref)
 
     write_yaml(safe_sec, orbit_sec, burst_id_sec)
     s1_cslc.run('s1_cslc.yaml', 'radar')
-    sec = convert2isce(burst_id_sec, ref=False)
+    convert2isce(burst_id_sec, ref=False)
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
@@ -72,8 +75,8 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
-        ref,
-        sec,
+        'reference.tif',
+        'secondary.tif',
         nc_sensor='S1',
         optical_flag=False,
         ncname=None,
@@ -445,20 +448,15 @@ def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
 
 
 def convert2isce(burst_id, ref=True):
-    if ref:
-        fol = glob.glob('./product/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.slc.tif')[0]
-        ds = gdal.Open(slc)
-        ds = gdal.Translate('reference.tif', ds, options='-of GTIFF')
-        del ds
-        return 'reference.tif'
-    else:
-        fol = glob.glob('./product_sec/' + burst_id + '/*')[0]
-        slc = glob.glob(fol + '/*.slc.tif')[0]
-        ds = gdal.Open(slc)
-        ds = gdal.Translate('secondary.tif', ds, options='-of GTIFF')
-        del ds
-        return 'secondary.tif'
+    product_path = './product/' if ref else './product_sec/'
+    output_path = 'reference.tif' if ref else 'secondary.tif'
+
+    fol = glob.glob(product_path + burst_id + '/*')[0]
+    slc = glob.glob(fol + '/*.slc.tif')[0]
+    ds = gdal.Open(slc)
+    band = ds.GetRasterBand(1)
+    arr = np.abs(band.ReadAsArray()).astype(np.float32)
+    write_slc_gdal(arr, output_path)
 
 
 def download_burst(burst_granule, all_anns=True):
