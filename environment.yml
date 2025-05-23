@@ -29,7 +29,7 @@ dependencies:
   - gdal>=3
   - h5netcdf
   - h5py>=3.5
-  - hyp3lib>=3,<4
+  - hyp3lib>=4,<5
   - isce3>=0.14
   - libgdal-jp2openjpeg
   - lxml>=4.8
