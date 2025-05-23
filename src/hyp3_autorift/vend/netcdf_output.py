@@ -1343,6 +1343,9 @@ def cal_swath_offset_bias(indir_m, rngind, azmind, VX, VY, DX, DY, nodata,
     if swaths[0].platform_id == swaths_s[0].platform_id:
         print('subswath offset bias correction not performed for non-S1A/B combination')
         return DX, DY, flight_direction, flight_direction_s
+    elif len(swaths) < 3:
+        print('subswath offset bias correction not performed for non-SLC product')
+        return DX, DY, flight_direction, flight_direction_s
     else:
         if swaths[0].platform_id[2] == 'B':
             output_ref = [-output_ref[0], -output_ref[1], -output_ref[2], -output_ref[3]]
