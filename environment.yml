@@ -16,7 +16,7 @@ dependencies:
   # For running
   - boto3
   - botocore
-  - burst2safe>=1.4.3
+  - burst2safe>=1.4.4
   - compass>=0.5.6
   - gdal>=3
   - h5netcdf  # for increased performance of crop.py
