@@ -579,10 +579,3 @@ def write_yaml(safe, orbit_file, burst_id=None):
             else:
                 newstring = line
             yaml.write(newstring)
-
-
-def remove_temp_files(only_rtc=False):
-    if only_rtc:
-        subprocess.call('rm -rf output_dir scratch_dir rtc.log rtc_s1.yaml', shell=True)
-    else:
-        subprocess.call('rm -rf output_dir *SAFE *EOF scratch_dir dem.tif rtc.log rtc_s1.yaml', shell=True)
