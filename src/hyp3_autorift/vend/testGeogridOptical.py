@@ -85,12 +85,13 @@ def getPol(safe, orbit_path):
 
     pols = ['vv', 'vh', 'hh', 'hv']
     for pol in pols:
-        try:
-            bursts = load_bursts(safe,orbit_path,1,pol)
-            print('Polarization '+pol)
-            return pol
-        except:
-            pass
+        for swath in [1, 2, 3]:
+            try:
+                bursts = load_bursts(safe,orbit_path,swath,pol)
+                print('Polarization '+pol)
+                return pol
+            except:
+                pass
     raise ValueError(f"No polarization information found for {safe}.")
 
 
