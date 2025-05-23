@@ -28,24 +28,32 @@
 # Author: Yang Lei
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import datetime
+import argparse
 import glob
 import os
 import re
+import subprocess
+import time
 import warnings
-
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 
+import cv2
+import numpy as np
+from autoRIFT import __version__ as version
+from autoRIFT import autoRIFT
+from geogrid import GeogridOptical
 from osgeo import gdal
 from s1reader import load_bursts
+
+import hyp3_autorift.vend.netcdf_output as no
 
 
 def getPol(safe, orbit_path):
     pols = ['vv', 'vh', 'hh', 'hv']
     for pol in pols:
         try:
-            bursts = load_bursts(safe, orbit_path, 1, pol)
+            _ = load_bursts(safe, orbit_path, 1, pol)
             print('Polarization ' + pol)
             return pol
         except:
@@ -113,8 +121,6 @@ def get_topsinsar_config():
 
 
 def runCmd(cmd):
-    import subprocess
-
     out = subprocess.getoutput(cmd)
     return out
 
@@ -123,8 +129,6 @@ def cmdLineParse():
     """
     Command line parser.
     """
-    import argparse
-
     SUPPORTED_MISSIONS = ['S1', 'S2', 'L4', 'L5', 'L7', 'L8', 'L9']
 
     parser = argparse.ArgumentParser(description='Output geo grid')
@@ -242,8 +246,6 @@ class Dummy(object):
 
 
 def loadProduct(filename):
-    import numpy as np
-
     ds = gdal.Open(filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
     img = band.ReadAsArray().astype(np.float32)
@@ -254,13 +256,9 @@ def loadProduct(filename):
 
 
 def loadProductOptical(file_m, file_s):
-    import numpy as np
-
     """
     Load the product using Product Manager.
     """
-    from geogrid import GeogridOptical
-
     obj = GeogridOptical()
 
     x1a, y1a, xsize1, ysize1, x2a, y2a, xsize2, ysize2, trans = obj.coregister(file_m, file_s)
@@ -305,10 +303,6 @@ def runAutorift(
     """
     Wire and run geogrid.
     """
-    from autoRIFT import autoRIFT
-    import numpy as np
-    import time
-
     obj = autoRIFT()
 
     obj.WallisFilterWidth = preprocessing_filter_width
@@ -502,8 +496,6 @@ def runAutorift(
     print('AutoRIFT Done!!!')
     print(time.time() - t1)
 
-    import cv2
-
     kernel = np.ones((3, 3), np.uint8)
     noDataMask = cv2.dilate(noDataMask.astype(np.uint8), kernel, iterations=1)
     noDataMask = noDataMask.astype(bool)
@@ -566,12 +558,6 @@ def generateAutoriftProduct(
     geogrid_run_info=None,
     **kwargs,
 ):
-    import numpy as np
-    import time
-    import os
-
-    from autoRIFT import __version__ as version
-
     if optical_flag == 1:
         data_m, data_s = loadProductOptical(indir_m, indir_s)
     else:
@@ -653,8 +639,6 @@ def generateAutoriftProduct(
     intermediate_nc_file = 'autoRIFT_intermediate.nc'
 
     if os.path.exists(intermediate_nc_file):
-        import hyp3_autorift.vend.netcdf_output as no
-
         (
             Dx,
             Dy,
@@ -732,8 +716,6 @@ def generateAutoriftProduct(
             zero_mask=zero_mask,
         )
         if nc_sensor is not None:
-            import hyp3_autorift.vend.netcdf_output as no
-
             no.netCDF_packaging_intermediate(
                 Dx,
                 Dy,
@@ -876,7 +858,6 @@ def generateAutoriftProduct(
             if nc_sensor is not None:
                 if nc_sensor == 'S1':
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
-                    import hyp3_autorift.vend.netcdf_output as no
 
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(
                         indir_m,
@@ -1043,8 +1024,6 @@ def generateAutoriftProduct(
                     master_split = str.split(master_filename, '_')
                     slave_split = str.split(slave_filename, '_')
 
-                    import hyp3_autorift.vend.netcdf_output as no
-
                     pair_type = 'radar'
                     detection_method = 'feature'
                     coordinates = 'radar, map'
@@ -1187,8 +1166,6 @@ def generateAutoriftProduct(
                     master_split = str.split(master_filename, '_')
                     slave_split = str.split(slave_filename, '_')
 
-                    import hyp3_autorift.vend.netcdf_output as no
-
                     pair_type = 'optical'
                     detection_method = 'feature'
                     coordinates = 'map'
@@ -1324,8 +1301,6 @@ def generateAutoriftProduct(
 
                     master_split = master_id.split('_')
                     slave_split = slave_id.split('_')
-
-                    import hyp3_autorift.vend.netcdf_output as no
 
                     pair_type = 'optical'
                     detection_method = 'feature'

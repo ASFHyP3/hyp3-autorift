@@ -27,14 +27,22 @@
 #
 # Authors: Piyush Agram, Yang Lei
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import argparse
+import os
+import re
+from datetime import date, timedelta
+
+import isce3
+import numpy as np
+from geogrid import GeogridOptical, GeogridRadar
+from osgeo import gdal
+from s1reader import load_bursts
 
 
 def cmdLineParse():
     """
     Command line parser.
     """
-    import argparse
-
     parser = argparse.ArgumentParser(description='Output geo grid')
     parser.add_argument(
         '-m',
@@ -100,12 +108,10 @@ class Dummy(object):
 
 
 def getPol(safe, orbit_path):
-    from s1reader import load_bursts
-
     pols = ['vv', 'vh', 'hh', 'hv']
     for pol in pols:
         try:
-            bursts = load_bursts(safe, orbit_path, 1, pol)
+            _ = load_bursts(safe, orbit_path, 1, pol)
             print('Polarization ' + pol)
             return pol
         except:
@@ -114,8 +120,6 @@ def getPol(safe, orbit_path):
 
 
 def getMergedOrbit(safe, orbit_path, swath):
-    from s1reader import load_bursts
-
     pol = getPol(safe, orbit_path)
 
     bursts = load_bursts(safe, orbit_path, swath, pol)
@@ -128,11 +132,6 @@ def loadMetadata(safe, orbit_path, swath, buffer=0):
     """
     Input file.
     """
-    import numpy as np
-    from datetime import timedelta
-    from s1reader import load_bursts
-    import isce3
-
     pol = getPol(safe, orbit_path)
     bursts = load_bursts(safe, orbit_path, swath, pol)
 
@@ -170,11 +169,6 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None):
     """
     Input file.
     """
-    import numpy as np
-    from datetime import timedelta
-    from s1reader import load_bursts
-    import isce3
-
     if swaths is None:
         swaths = [1, 2, 3]
 
@@ -229,12 +223,6 @@ def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
     """
     Input file.
     """
-    import os
-
-    from osgeo import gdal
-    import re
-
-    from geogrid import GeogridOptical
 
     obj = GeogridOptical()
 
@@ -302,9 +290,6 @@ def runGeogrid(
     """
 
     if optical_flag:
-        from geogrid import GeogridOptical
-        from osgeo import gdal
-
         dem_info = gdal.Info(dem, format='json')
 
         obj = GeogridOptical()
@@ -313,8 +298,6 @@ def runGeogrid(
         obj.startingY = info.startingY
         obj.XSize = info.XSize
         obj.YSize = info.YSize
-        from datetime import date
-        import numpy as np
 
         d0 = date(int(info.time[0:4]), int(info.time[4:6]), int(info.time[6:8]))
         d1 = date(int(info1.time[0:4]), int(info1.time[4:6]), int(info1.time[6:8]))
@@ -377,9 +360,6 @@ def runGeogrid(
         }
 
     else:
-        from geogrid import GeogridRadar
-        from osgeo import gdal
-
         dem_info = gdal.Info(dem, format='json')
 
         obj = GeogridRadar()
