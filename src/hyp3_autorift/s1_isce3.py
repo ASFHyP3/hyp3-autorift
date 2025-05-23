@@ -87,8 +87,8 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
-        "reference.tif",
-        "secondary.tif",
+        'reference.tif',
+        'secondary.tif',
         nc_sensor='S1',
         optical_flag=False,
         ncname=None,
@@ -528,7 +528,6 @@ def convert2isce(burst_id, ref=True):
     band = ds.GetRasterBand(1)
     arr = np.abs(band.ReadAsArray()).astype(np.float32)
     write_slc_gdal(arr, output_path)
-
 
 
 def download_burst(burst_granule, all_anns=True):
