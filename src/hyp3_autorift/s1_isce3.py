@@ -12,8 +12,8 @@ from compass import s1_cslc
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
-from s1_orbits import fetch_for_scene
 from s1reader import s1_info
+from s1reader.s1_orbit import retrieve_orbit_file
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
@@ -26,8 +26,8 @@ def process_sentinel1_burst_isce3(reference, secondary):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
-    orbit_ref = str(fetch_for_scene(safe_ref.stem))
-    orbit_sec = str(fetch_for_scene(safe_sec.stem))
+    orbit_ref = retrieve_orbit_file(safe_ref, orbit_dir='.', concatenate=True)
+    orbit_sec = retrieve_orbit_file(safe_sec, orbit_dir='.', concatenate=True)
 
     if isinstance(reference, list) and len(reference) > 1:
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
@@ -95,8 +95,8 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
 
     safe_ref = sorted(glob.glob('./*.zip'))[0]
     safe_sec = sorted(glob.glob('./*.zip'))[1]
-    orbit_ref = str(fetch_for_scene(slc_ref.split('.')[0]))
-    orbit_sec = str(fetch_for_scene(slc_sec.split('.')[0]))
+    orbit_ref = retrieve_orbit_file(safe_ref, orbit_dir='.', concatenate=True)
+    orbit_sec = retrieve_orbit_file(safe_sec, orbit_dir='.', concatenate=True)
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 

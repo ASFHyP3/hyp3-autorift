@@ -34,7 +34,6 @@ dependencies = [
     'pandas>=1.4',
     'pyproj>=3.3',
     'requests>=2.0',
-    's1_orbits',
     'scipy>=1.0',
     'xarray',
     # Conda-Forge only deps:
