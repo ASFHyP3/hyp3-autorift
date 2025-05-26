@@ -6,7 +6,8 @@ from hyp3_autorift import image
 
 def test_make_browse(tmp_path):
     image_file = tmp_path / 'test.png'
-    data = np.random.rand(10, 10) * 700
+    rng = np.random.default_rng(42)
+    data = rng.uniform(0, 700, size=(10, 10))
 
     out_file = image.make_browse(image_file, data)
     assert out_file == image_file

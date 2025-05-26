@@ -6,54 +6,38 @@ dependencies:
   - python>=3.10
   - pip
   # For packaging, and testing
-  - mypy
   - pillow>=7.0
-  - pluggy
   - pytest
   - pytest-console-scripts
   - pytest-cov
-  - pytest-order
   - responses
-  - ruff
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
-  - asf_search
   - boto3
   - botocore
-  - burst2safe #get the develop version so it doesn't look for iw2
+  - burst2safe>=1.4.4
   - compass>=0.5.6
-  - dateparser!=1.1.0
-  - dem_stitcher
-  - eigen
   - gdal>=3
-  - h5netcdf
-  - h5py>=3.5
+  - h5netcdf  # for increased performance of crop.py
   - hyp3lib>=4,<5
   - isce3>=0.14
   - libgdal-jp2openjpeg
-  - lxml>=4.8
   - matplotlib-base
   - netCDF4
-  - numpy>=1.20,<2.0
-  - numba
+  - numpy>=1.20
   - opencv
-  - packaging>=21.0
   - pandas>=1.4
-  - progressbar
   - pyproj>=3.3
-  - pysolid>=0.3
-  - rasterio
   - requests>=2.0
-  - ruamel.yaml>=0.15
-  - s1_orbits
-  - s1reader=0.2.2
-  - scikit-image
-  - scipy>=1.0,<1.13
-  - shapely>=2
-  - tifffile>=2024.0.0
+  - s1reader>=0.2.2
+  - scipy>=1.0
   - xarray
-  - yamale>=4.0
+  # for compiling nasa-jpl/autoRIFT
   - cxx-compiler
+  - eigen
+  - numba
+  - scikit-image
   - pip:
-      - git+https://github.com/andrewplayer3/autoRIFT
+      - -r requirements-static.txt
+      - git+https://github.com/nasa-jpl/autoRIFT.git

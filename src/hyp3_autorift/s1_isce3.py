@@ -3,8 +3,7 @@ import glob
 import math
 import os
 import subprocess
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import timedelta
 
 import numpy as np
 import s1reader
@@ -13,13 +12,13 @@ from compass import s1_cslc
 from hyp3lib.fetch import download_file
 from hyp3lib.scene import get_download_url
 from osgeo import gdal
-from s1_orbits import fetch_for_scene
-from s1reader import load_bursts, s1_info
+from s1reader import s1_info
+from s1reader.s1_orbit import retrieve_orbit_file
 
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogridOptical import getPol, loadMetadata, loadMetadataSlc, runGeogrid
+from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
@@ -27,19 +26,8 @@ def process_sentinel1_burst_isce3(reference, secondary):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
-    # TODO: Temporary fix for burst2safe issue #137
-    # https://github.com/ASFHyP3/burst2safe/issues/137
-    if 'HV' in reference or 'HV' in reference[0]:
-        print('Renaming Cross-Pol Safe')
-        ref_name = str(safe_ref).replace('1SSV', '1SHV')
-        sec_name = str(safe_sec).replace('1SSV', '1SHV')
-        safe_ref.replace(ref_name)
-        safe_sec.replace(sec_name)
-        safe_ref = Path(ref_name)
-        safe_sec = Path(sec_name)
-
-    orbit_ref = str(fetch_for_scene(safe_ref.stem))
-    orbit_sec = str(fetch_for_scene(safe_sec.stem))
+    orbit_ref = retrieve_orbit_file(str(safe_ref), orbit_dir='.', concatenate=True)
+    orbit_sec = retrieve_orbit_file(str(safe_sec), orbit_dir='.', concatenate=True)
 
     if isinstance(reference, list) and len(reference) > 1:
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
@@ -101,14 +89,12 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
 
 def process_sentinel1_slc_isce3(slc_ref, slc_sec):
-    for scene in [slc_ref, slc_sec]:
-        scene_url = get_download_url(scene)
-        download_file(scene_url, chunk_size=5242880)
+    safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
+    safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
 
-    safe_ref = sorted(glob.glob('./*.zip'))[0]
-    safe_sec = sorted(glob.glob('./*.zip'))[1]
-    orbit_ref = str(fetch_for_scene(slc_ref.split('.')[0]))
-    orbit_sec = str(fetch_for_scene(slc_sec.split('.')[0]))
+    orbit_ref = retrieve_orbit_file(safe_ref, orbit_dir='.', concatenate=True)
+    orbit_sec = retrieve_orbit_file(safe_sec, orbit_dir='.', concatenate=True)
+
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
@@ -411,65 +397,6 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     return num_az_lines, num_rng_samples
 
 
-def get_topsinsar_config():
-    """
-    Input file.
-    """
-    orbits = glob.glob('*.EOF')
-    fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
-    safes = glob.glob('*.SAFE')
-    if not len(safes) == 0:
-        fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
-    else:
-        safes = glob.glob('*.zip')
-        fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
-
-    safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type]
-    orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
-
-    safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
-    orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
-
-    if len(glob.glob('*_ref*.tif')) > 0:
-        swath = int(os.path.basename(glob.glob('*_ref*.tif')[0]).split('_')[2][2])
-    else:
-        swath = None
-
-    safe: str
-    pol = getPol(safe_ref, orbit_path_ref)
-    burst = None
-
-    config_data = {}
-    for name in ['reference', 'secondary']:
-        # Find the first swath with data in it
-        swath_range = [swath] if swath else [1, 2, 3]
-        for swath in swath_range:
-            try:
-                if name == 'reference':
-                    burst = load_bursts(safe_ref, orbit_path_ref, swath, pol)[0]
-                    safe = safe_ref
-                else:
-                    burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
-                    safe = safe_sec
-            except IndexError:
-                continue
-            break
-
-        assert burst
-        sensing_start = burst.sensing_start
-        length, width = burst.shape
-        prf = 1 / burst.azimuth_time_interval
-
-        sensing_stop = sensing_start + timedelta(seconds=(length - 1.0) / prf)
-
-        sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
-
-        config_data[f'{name}_filename'] = Path(safe).name
-        config_data[f'{name}_dt'] = sensing_dt.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
-
-    return config_data
-
-
 # FIXME: Docstring; is_slc could be handled by swaths?
 def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
@@ -648,10 +575,3 @@ def write_yaml(safe, orbit_file, burst_id=None):
             else:
                 newstring = line
             yaml.write(newstring)
-
-
-def remove_temp_files(only_rtc=False):
-    if only_rtc:
-        subprocess.call('rm -rf output_dir scratch_dir rtc.log rtc_s1.yaml', shell=True)
-    else:
-        subprocess.call('rm -rf output_dir *SAFE *EOF scratch_dir dem.tif rtc.log rtc_s1.yaml', shell=True)

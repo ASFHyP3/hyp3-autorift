@@ -21,31 +21,36 @@ classifiers=[
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-# FIXME:
 dependencies = [
     'boto3',
     'botocore',
-    'gdal',
-    'h5netcdf',
+    'burst2safe>=1.4.4',
+    'gdal>=3',
+    'h5netcdf',  # for increased performance of crop.py
+    'hyp3lib>=4,<5',
     'matplotlib',
     'netCDF4',
-    'numpy',
-    'pyproj',
-    'requests',
-    'scipy',
+    'numpy>=1.20',
+    'pandas>=1.4',
+    'pyproj>=3.3',
+    'requests>=2.0',
+    'scipy>=1.0',
     'xarray',
-    'hyp3lib>=4,<5',
-    's1_orbits',
+    # Conda-Forge only deps:
+    # 'compass>=0.5.6',
+    # 'isce3>=0.14',
+    # 'libgdal-jp2openjpeg',  # not sure if this plugin comes with the PyPI distribution
+    # 'opencv',  # technically could be opencv-python on PyPI but there's subtle differences with the conda package
+    # 's1reader>=0.2.2',
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 develop = [
-    'ruff',
-    'pillow',
+    'pillow>=7.0',
     'pytest',
-    'pytest-cov',
     'pytest-console-scripts',
+    'pytest-cov',
     'responses',
 ]
 
@@ -79,6 +84,7 @@ quote-style = "single"
 
 [tool.ruff.lint]
 extend-select = [
+    "NPY", # numpy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
     "I",   # isort: https://docs.astral.sh/ruff/rules/#isort-i
     # TODO: Uncomment the following extensions and address their warnings:
     # "UP",  # pyupgrade: https://docs.astral.sh/ruff/rules/#pyupgrade-up

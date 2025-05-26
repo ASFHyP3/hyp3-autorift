@@ -435,7 +435,7 @@ def process(
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
-        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogrid import coregisterLoadMetadata, runGeogrid
 
         meta_r, meta_s = coregisterLoadMetadata(
             reference_path,
@@ -584,12 +584,12 @@ def main():
     except NotImplementedError as e:
         parser.error(str(e))
 
-    # FIXME: This won't work for LX LY pairs!
-    if ref_platforms != sec_platforms:
-        parser.error('all scenes must be of the same type.')
-
     if len(reference) > 1 and ref_platforms != {'S1-BURST'}:
         parser.error('Only Sentinel-1 bursts support multiple reference scenes.')
+
+    landsat_missions = {'L4', 'L5', 'L7', 'L8', 'L9'}
+    if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
+        parser.error('all scenes must be of the same type.')
 
     product_file, browse_file, thumbnail_file = process(
         reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
