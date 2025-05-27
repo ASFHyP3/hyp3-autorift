@@ -47,18 +47,7 @@ from osgeo import gdal
 from s1reader import load_bursts
 
 import hyp3_autorift.vend.netcdf_output as no
-
-
-def getPol(safe, orbit_path):
-    pols = ['vv', 'vh', 'hh', 'hv']
-    for pol in pols:
-        try:
-            _ = load_bursts(safe, orbit_path, 1, pol)
-            print('Polarization ' + pol)
-            return pol
-        except:
-            pass
-    raise ValueError(f'No polarization information found for {safe}.')
+from hyp3_autorift.vend.testGeogrid import getPol
 
 
 def get_topsinsar_config():
@@ -657,7 +646,7 @@ def generateAutoriftProduct(
 
         # FIXME: Filter width is a magic variable here and not exposed well.
         preprocessing_filter_width = 5
-        if nc_sensor == 'S1' or nc_sensor == 'GS1':  # GS1?
+        if nc_sensor == 'S1':
             preprocessing_filter_width = 21
 
         print(f'Preprocessing filter width {preprocessing_filter_width}')
@@ -762,10 +751,6 @@ def generateAutoriftProduct(
     CHIPSIZEX[SEARCHLIMITX == 0] = 0
     if SSM is not None:
         SSM[SEARCHLIMITX == 0] = False
-
-    # import scipy.io as sio
-    #
-    # sio.savemat('offset.mat', {'Dx': DX, 'Dy': DY, 'InterpMask': INTERPMASK, 'ChipSizeX': CHIPSIZEX})
 
     netcdf_file = None
     if grid_location is not None:
