@@ -42,7 +42,7 @@ LANDSAT_SENSOR_MAPPING = {
 }
 
 DEFAULT_PARAMETER_FILE = (
-    '/vsicurl/http://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
+    '/vsicurl/https://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
 )
 
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
