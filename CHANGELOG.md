@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0]
+### Added
+- `--reference` and `--secondary` arguments to `hyp3_autorift` to specify the scenes to process, which should be preferred over the now deprecated `granules` arguments.
+- hyp3-autorift now supports Sentinel-1 burst processing when provided a list of `--reference` and `--secondary` burst scene ids. We recommend processing at least 2 bursts along track, with 3-5 bursts seeing improvements in data quality.
+- Numpy specific `ruff` rules (NPY) for linting
+
+### Changed
+- `hyp3-autorift` now supports Python 3.10 or greater and is tested on Python 3.10--3.12.
+- nasa-jpl/autoRIFT has been updated to [v2.0.0](https://github.com/nasa-jpl/autoRIFT/releases/tag/v2.0.0) (a major upstream release; please read the release notes). This includes:
+  - major updates to the `environment.yml` and dependencies listed in the `pyproject.toml, including:
+    - updating ISCE3 from ISCE2
+    - adding `burst2safe`, `compass`, `s1reader`
+  - the upstream scripts vendored in `src/hyp3_autorift/vend` were significantly changed upstream and been updated accordingly. See the [vendored README](src/hyp3_autorift/vend/README.md).
+- All ISCE2 based workflows retained have been converted to ISCE3 based workflows
+- `hyp3-autorift` now supports Numpy 2.0+ versions
+
+### Deprecated
+- the positional `granules` argument to `hyp3_autorift` has been deprecated in favor of the `--reference` and `--secondary` arguments and will be removed in a future release.
+
+### Removed
+- The geocode-only workflow has been removed with the switch to ISCE3. A similar workflow is currently being developed for a forthcoming release.
+
 ## [0.21.2]
 ### Added
 - Add `mypy` to [`static-analysis`](.github/workflows/static-analysis.yml)
