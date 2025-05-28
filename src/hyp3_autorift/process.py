@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -569,6 +570,13 @@ def main():
         parser.error('Must provide exactly two granules.')
 
     if has_granules:
+        # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
+        warnings.warn(
+            'The positional argument for granules is deprecated and will be removed in a futre release. '
+            'Please use --reference and --secondary.',
+            DeprecationWarning,
+        )
+
         granules_sorted = sort_ref_sec([granules[0]], [granules[1]])
         reference = granules_sorted[0]
         secondary = granules_sorted[1]
