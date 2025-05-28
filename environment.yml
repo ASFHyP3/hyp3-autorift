@@ -14,6 +14,7 @@ dependencies:
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
+  - autoRIFT>=2.0.0
   - boto3
   - botocore
   - burst2safe>=1.4.4
@@ -34,10 +35,9 @@ dependencies:
   - scipy>=1.0
   - xarray
   # for compiling nasa-jpl/autoRIFT
-  - cxx-compiler
-  - eigen
-  - numba
-  - scikit-image
+  # - cxx-compiler
+  # - eigen
+  # - numba
+  # - scikit-image
   - pip:
       - -r requirements-static.txt
-      - git+https://github.com/nasa-jpl/autoRIFT.git
