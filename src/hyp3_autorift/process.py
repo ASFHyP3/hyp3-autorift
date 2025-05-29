@@ -118,7 +118,7 @@ def get_s2_path(scene_name: str) -> str:
     try:
         if s3_object_is_accessible(bucket, key):
             return f'/vsis3/{bucket}/{key}'
-    except botocore.exceptions.NoCredentialsError as e:
+    except botocore.exceptions.NoCredentialsError:
         log.info('No credentials found')
 
     manifest_text = get_s2_manifest(scene_name)
