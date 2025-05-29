@@ -170,13 +170,13 @@ def get_s2_metadata(scene_name):
 def s3_object_is_accessible(bucket, key):
     try:
         S3_CLIENT.head_object(Bucket=bucket, Key=key)
-    except botocore.exceptions.NoCredentialsError:
-        log.info('No credentials found')
-        return False
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] in ['403', '404']:
             return False
         raise
+    except botocore.exceptions.NoCredentialsError:
+        log.info('No AWS credentials found')
+        return False
     return True
 
 
