@@ -115,8 +115,11 @@ def get_s2_manifest(scene_name):
 def get_s2_path(scene_name: str) -> str:
     bucket = 'its-live-project'
     key = f's2-cache/{scene_name}_B08.jp2'
-    if s3_object_is_accessible(bucket, key):
-        return f'/vsis3/{bucket}/{key}'
+    try:
+        if s3_object_is_accessible(bucket, key):
+            return f'/vsis3/{bucket}/{key}'
+    except botocore.exceptions.NoCredentialsError as e:
+        log.info('No credentials found')
 
     manifest_text = get_s2_manifest(scene_name)
     root = ET.fromstring(manifest_text)
