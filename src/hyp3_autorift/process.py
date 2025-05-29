@@ -174,6 +174,9 @@ def s3_object_is_accessible(bucket, key):
         if e.response['Error']['Code'] in ['403', '404']:
             return False
         raise
+    except botocore.exceptions.NoCredentialsError:
+        warnings.warn('No AWS credentials found')
+        return False
     return True
 
 
