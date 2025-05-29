@@ -175,7 +175,7 @@ def s3_object_is_accessible(bucket, key):
             return False
         raise
     except botocore.exceptions.NoCredentialsError:
-        log.info('No AWS credentials found')
+        warnings.warn('No AWS credentials found')
         return False
     return True
 
