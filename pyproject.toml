@@ -37,6 +37,7 @@ dependencies = [
     'scipy>=1.0',
     'xarray',
     # Conda-Forge only deps:
+    # 'autorift>=2.0.0',
     # 'compass>=0.5.6',
     # 'isce3>=0.14',
     # 'libgdal-jp2openjpeg',  # not sure if this plugin comes with the PyPI distribution

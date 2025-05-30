@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Yang Lei, Jet Propulsion Laboratory
 # November 2017
 # Modifications Copyright 2021 Alaska Satellite Facility

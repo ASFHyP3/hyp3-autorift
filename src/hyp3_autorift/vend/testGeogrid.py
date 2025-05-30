@@ -81,24 +81,6 @@ def cmdLineParse():
         default=0,
         help='flag for reading optical data (e.g. Landsat): use 1 for on and 0 (default) for off',
     )
-    # FIXME: used?
-    parser.add_argument(
-        '-b',
-        '--buffer',
-        dest='buffer',
-        type=bool,
-        required=False,
-        default=0,
-        help='buffer to add to the starting/end range accounting for all passes from the same relative orbit',
-    )
-    parser.add_argument(
-        '-p',
-        '--parse',
-        dest='parse',
-        action='store_true',
-        default=False,
-        help='Parse the SAFE zip file to get radar image and orbit metadata; no need to run ISCE',
-    )
 
     return parser.parse_args()
 

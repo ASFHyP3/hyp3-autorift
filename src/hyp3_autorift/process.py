@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -42,7 +43,7 @@ LANDSAT_SENSOR_MAPPING = {
 }
 
 DEFAULT_PARAMETER_FILE = (
-    '/vsicurl/http://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
+    '/vsicurl/https://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
 )
 
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
@@ -173,6 +174,9 @@ def s3_object_is_accessible(bucket, key):
         if e.response['Error']['Code'] in ['403', '404']:
             return False
         raise
+    except botocore.exceptions.NoCredentialsError:
+        warnings.warn('No AWS credentials found')
+        return False
     return True
 
 
@@ -569,6 +573,13 @@ def main():
         parser.error('Must provide exactly two granules.')
 
     if has_granules:
+        # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
+        warnings.warn(
+            'The positional argument for granules is deprecated and will be removed in a futre release. '
+            'Please use --reference and --secondary.',
+            DeprecationWarning,
+        )
+
         granules_sorted = sort_ref_sec([granules[0]], [granules[1]])
         reference = granules_sorted[0]
         secondary = granules_sorted[1]
