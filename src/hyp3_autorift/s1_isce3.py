@@ -23,6 +23,9 @@ from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
+# TODO: Move static layer functions to new file
+
+
 RADAR_GRID_PARAMS = [
     'NC_GLOBAL#sensing_start',
     'NC_GLOBAL#wavelength',
@@ -43,12 +46,51 @@ TOPO_CORRECTION_FILES = [
 ]
 
 
-def get_static_layer(burst_id):
-    # TODO: Create function to read from bucket
-    if False: # Does not have static layer
-        return None
+# TODO
+def retrieve_static_nc_from_s3(burst_id):
 
-    static_file = 'NETCDF:t090_191581_iw2_static.nc'
+    """
+    Planned Bucket Structure:
+
+    static_topo_layers:
+      - | {burst_id_w/o_swath}
+        - | {burst_id}_static.nc  # Should be 3 files total for IW1, IW2, IW3. (What about EW?)
+    """
+    
+    return None
+
+# TODO
+def upload_static_nc_to_s3(burst_id):
+
+    """
+    Planned Bucket Structure:
+
+    static_topo_layers:
+      - | {burst_id_w/o_swath}
+        - | {burst_id}_static.nc  # Should be 3 files total for IW1, IW2, IW3. (What about EW?)
+    """
+
+    return None
+
+
+def get_static_layer(burst_id):
+    """
+    Planned Directory Structure:
+
+        static_topo_corrections/
+          - | {burst_id}/
+            - | {burst_id}_static.nc     (Retrived from S3)
+            - | x.tif                    (Created from NetCDF)
+            - | y.tif                    (Created from NetCDF)
+            - | z.tif                    (Created from NetCDF)
+            - | layover_shadow_mask.tif  (Created from NetCDF)
+            - | radar_grid.txt           (Created from NetCDF)
+    """
+
+    static_file = 'NETCDF:t090_191581_iw2_static.nc' # retrieve_static_nc_from_s3(burst_id)
+
+    if not static_file: # Does not have static layer
+        return None
 
     static_dir = Path('./static_topo_corrections/')
     static_dir.mkdir(exist_ok=True)
@@ -56,10 +98,14 @@ def get_static_layer(burst_id):
     burst_static_dir = static_dir / burst_id
     burst_static_dir.mkdir(exist_ok=True)
 
-    for band, filename in enumerate(TOPO_CORRECTION_FILES, start=1):
+    files = [str(burst_static_dir / file) for file in TOPO_CORRECTION_FILES]
+
+    for band, filename in enumerate(files, start=1):
         band_str = f':Band{band}'
-        cmd = f'gdal_translate -of GTiff {static_file + band_str} {str(burst_static_dir / filename)}'
-        subprocess.run(cmd.split(' '))
+        subprocess.run(['gdal_translate', '-of', 'GTiff', static_file + band_str, filename])
+
+    # TODO: VRT Needs to have the correct projection info
+    subprocess.run(['gdalbuildvrt', str(burst_static_dir / 'topo.vrt'), *files])
 
     with gdal.Open(static_file) as ds:
         metadata = ds.GetMetadata()
@@ -77,14 +123,14 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
     burst_dir = glob.glob(burst_path + '/*')[0]
     burst_rdr_grid_txt = glob.glob(glob.glob(burst_path + '/*')[0] + '/*.txt')[0]
     burst_topo_nc = f'{burst_id}_static.nc'
-    topo_files = [burst_dir + '/' + file for file in ['x.tif', 'y.tif', 'z.tif', 'layover_shadow_mask.tif']]
+    topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
     with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
         rdr_grid = dict(zip(
             RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]    
         ))
 
-    with gdal.Open(topo_files[0]) as ds:
+    with gdal.Open(burst_dir + '/' + 'topo.vrt') as ds:
         cols = ds.RasterXSize
         rows = ds.RasterYSize
         projection = ds.GetProjection()
@@ -93,6 +139,8 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
     driver = gdal.GetDriverByName('netCDF')
     options = ['FORMAT=NC4', 'COMPRESS=DEFLATE']
 
+    # TODO: Correct data types
+    #       Should be float64, float64, float64, byte
     with driver.Create(burst_topo_nc, cols, rows, len(topo_files), gdal.GDT_Float32, options) as out_ds:
         out_ds.SetGeoTransform(geotransform)
         out_ds.SetProjection(projection)
@@ -105,11 +153,6 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
                 out_band.WriteArray(band_data)
 
     return burst_topo_nc
-
-
-def upload_static_layer(burst_id):
-    # Name should be stored in bucket folder with the name of the burst_id
-    return None
 
 
 def process_sentinel1_burst_isce3(reference, secondary):
