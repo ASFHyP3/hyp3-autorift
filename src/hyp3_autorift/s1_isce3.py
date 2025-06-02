@@ -4,6 +4,7 @@ import math
 import os
 import subprocess
 from datetime import timedelta
+from pathlib import Path
 
 import numpy as np
 import s1reader
@@ -20,6 +21,95 @@ from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
+
+
+RADAR_GRID_PARAMS = [
+    'NC_GLOBAL#sensing_start',
+    'NC_GLOBAL#wavelength',
+    'NC_GLOBAL#prf',
+    'NC_GLOBAL#starting_range',
+    'NC_GLOBAL#range_pixel_spacing',
+    'NC_GLOBAL#length',
+    'NC_GLOBAL#width',
+    'NC_GLOBAL#ref_epoch'
+]
+
+
+TOPO_CORRECTION_FILES = [
+    'x.tif',
+    'y.tif',
+    'z.tif',
+    'layover_shadow_mask.tif'
+]
+
+
+def get_static_layer(burst_id):
+    # TODO: Create function to read from bucket
+    if False: # Does not have static layer
+        return None
+
+    static_file = 'NETCDF:t090_191581_iw2_static.nc'
+
+    static_dir = Path('./static_topo_corrections/')
+    static_dir.mkdir(exist_ok=True)
+
+    burst_static_dir = static_dir / burst_id
+    burst_static_dir.mkdir(exist_ok=True)
+
+    for band, filename in enumerate(TOPO_CORRECTION_FILES, start=1):
+        band_str = f':Band{band}'
+        cmd = f'gdal_translate -of GTiff {static_file + band_str} {str(burst_static_dir / filename)}'
+        subprocess.run(cmd.split(' '))
+
+    with gdal.Open(static_file) as ds:
+        metadata = ds.GetMetadata()
+
+    with open(burst_static_dir / 'radar_grid.txt', 'w') as rdr_grid_file:
+        for param in RADAR_GRID_PARAMS:
+            rdr_grid_file.write(metadata[param] + '\n')
+
+    return static_dir
+
+
+def create_static_layer(burst_id, isce_product_path='./product/*'):
+    burst_paths = sorted(glob.glob(isce_product_path))
+    burst_path = [p for p in burst_paths if p.split('/')[-1] == burst_id][0]
+    burst_dir = glob.glob(burst_path + '/*')[0]
+    burst_rdr_grid_txt = glob.glob(glob.glob(burst_path + '/*')[0] + '/*.txt')[0]
+    burst_topo_nc = f'{burst_id}_static.nc'
+    topo_files = [burst_dir + '/' + file for file in ['x.tif', 'y.tif', 'z.tif', 'layover_shadow_mask.tif']]
+
+    with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
+        rdr_grid = dict(zip(
+            RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]    
+        ))
+
+    with gdal.Open(topo_files[0]) as ds:
+        cols = ds.RasterXSize
+        rows = ds.RasterYSize
+        projection = ds.GetProjection()
+        geotransform = ds.GetGeoTransform()
+
+    driver = gdal.GetDriverByName('netCDF')
+    options = ['FORMAT=NC4', 'COMPRESS=DEFLATE']
+
+    with driver.Create(burst_topo_nc, cols, rows, len(topo_files), gdal.GDT_Float32, options) as out_ds:
+        out_ds.SetGeoTransform(geotransform)
+        out_ds.SetProjection(projection)
+        out_ds.SetMetadata(rdr_grid)
+
+        for band, file in enumerate(topo_files, start=1):
+            with gdal.Open(file) as in_ds:
+                band_data = in_ds.GetRasterBand(1).ReadAsArray()
+                out_band = out_ds.GetRasterBand(band)
+                out_band.WriteArray(band_data)
+
+    return burst_topo_nc
+
+
+def upload_static_layer(burst_id):
+    # Name should be stored in bucket folder with the name of the burst_id
+    return None
 
 
 def process_sentinel1_burst_isce3(reference, secondary):
@@ -53,6 +143,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
+    topo_correction_file = None
 
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
 
@@ -61,13 +152,18 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    write_yaml(safe_ref, orbit_ref)
+    static_dir = get_static_layer(burst_id_ref)
+
+    write_yaml(safe_ref, orbit_ref, burst_id_ref, is_ref=True, static_corrections_dir=static_dir)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_ref)
 
-    write_yaml(safe_sec, orbit_sec, burst_id_sec)
+    write_yaml(safe_sec, orbit_sec, burst_id_sec, static_corrections_dir=static_dir)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
+
+    if not static_dir:
+        topo_correction_file = create_static_layer(burst_id_ref)
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
@@ -85,7 +181,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
 
-    return netcdf_file
+    return netcdf_file, [topo_correction_file]
 
 
 def process_sentinel1_slc_isce3(slc_ref, slc_sec):
@@ -526,7 +622,7 @@ def download_dem(dem, bounds):
     gdal.Warp('dem.tif', in_ds, options=warp_options)
 
 
-def write_yaml(safe, orbit_file, burst_id=None):
+def write_yaml(safe, orbit_file, burst_id=None, is_ref=False, static_corrections_dir=None):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
 
@@ -540,6 +636,13 @@ def write_yaml(safe, orbit_file, burst_id=None):
         product_folder = './product'
         scratch_folder = './scratch'
         output_folder = './output'
+    if static_corrections_dir:
+        s1_ref_file = str((static_corrections_dir / burst_id).absolute())
+        burst_id_str = '[' + burst_id + ']'
+        bool_reference = 'False'
+        product_folder = './product_sec' if not is_ref else './product'
+        scratch_folder = './product_sec' if not is_ref else './product'
+        output_folder = './output_sec' if not is_ref else './output'
     else:
         s1_ref_file = os.path.abspath(glob.glob('./product/' + burst_id + '/*')[0])
         burst_id_str = '[' + burst_id + ']'

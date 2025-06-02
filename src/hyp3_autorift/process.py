@@ -359,7 +359,7 @@ def process(
         naming_scheme: Naming scheme to use for product files
 
     Returns:
-        the autoRIFT product file, browse image, and thumbnail image
+        the autoRIFT product file, browse image, thumbnail image, and static topo correction files (for Sentinel-1 bursts)
     """
     reference_path = None
     secondary_path = None
@@ -367,13 +367,14 @@ def process(
     secondary_metadata = None
     reference_zero_path = None
     secondary_zero_path = None
+    topo_correction_files = None
 
     platform = get_platform(reference[0])
 
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
+        netcdf_file, topo_correction_files = process_sentinel1_burst_isce3(reference, secondary)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
@@ -488,7 +489,7 @@ def process(
 
     thumbnail_file = create_thumbnail(browse_file)
 
-    return product_file, browse_file, thumbnail_file
+    return product_file, browse_file, thumbnail_file, topo_correction_files
 
 
 def nullable_granule_list(granule_string: str) -> list[str]:
@@ -507,6 +508,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
+    parser.add_argument('--static-bucket-prefix', default='', help='AWS prefix (location in bucket) to add to static topographic correction files (Sentinel-1 only).')
     parser.add_argument(
         '--publish-bucket',
         default='',
@@ -591,7 +593,7 @@ def main():
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
         parser.error('all scenes must be of the same type.')
 
-    product_file, browse_file, thumbnail_file = process(
+    product_file, browse_file, thumbnail_file, topo_correction_files = process(
         reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
     )
 
@@ -599,6 +601,10 @@ def main():
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
+
+        if topo_correction_files:
+            for file in topo_correction_files:
+                upload_file_to_s3(file, args.bucket, args.static_bucket_prefix)
 
     # FIXME: HyP3 is passing the default value for this argument as '""' not "", so we're not getting an empty string
     if args.publish_bucket == '""':
@@ -609,3 +615,7 @@ def main():
         utils.upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
+
+        if topo_correction_files:
+            for file in topo_correction_files:
+                upload_file_to_s3(file, args.publish_bucket, args.static_bucket_prefix)
