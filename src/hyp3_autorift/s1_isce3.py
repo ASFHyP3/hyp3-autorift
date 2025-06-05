@@ -19,7 +19,7 @@ from s1reader.s1_orbit import retrieve_orbit_file
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.s1_static_files import get_static_layer, create_static_layer
+from hyp3_autorift.s1_static_files import get_static_layer, create_static_layer, upload_static_nc_to_s3
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
@@ -79,6 +79,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     if not static_dir:
         topo_correction_file = create_static_layer(burst_id_ref)
+        upload_static_nc_to_s3(Path(topo_correction_file), burst_id_ref)
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
@@ -96,7 +97,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
 
-    return netcdf_file, [topo_correction_file]
+    return netcdf_file, None
 
 
 def process_sentinel1_slc_isce3(slc_ref, slc_sec):

@@ -74,7 +74,10 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str):
 
     bucket_prefix = burst_id[:-4]  # Exclude swath
 
-    upload_file_to_s3(filename, S3_BUCKET, bucket_prefix)
+    try:
+        upload_file_to_s3(filename, S3_BUCKET, bucket_prefix)
+    except Exception as e:
+        print(f'Unable to upload {filename} to S3 due to {e}.')
 
 
 def get_static_layer(burst_id):
@@ -139,7 +142,7 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
     burst_path = [p for p in burst_paths if p.split('/')[-1] == burst_id][0]
     burst_dir = glob.glob(burst_path + '/*')[0]
     burst_rdr_grid_txt = glob.glob(glob.glob(burst_path + '/*')[0] + '/*.txt')[0]
-    burst_topo_nc = f'{burst_id}_static.nc'
+    burst_topo_nc = f'{burst_id}_static_rdr.nc'
     topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
     # Types of input bands; use this to cast before writing
@@ -156,7 +159,7 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
 
     # Create with Float64 to allow storing all types safely
     driver = gdal.GetDriverByName('netCDF')
-    options = ['FORMAT=NC4']
+    options = ['FORMAT=NC4', 'COMPRESS=DEFLATE']
     out_ds = driver.Create(burst_topo_nc, cols, rows, len(topo_files), gdal.GDT_Float64, options)
 
     if out_ds is None:
