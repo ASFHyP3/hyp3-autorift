@@ -34,7 +34,6 @@ TOPO_CORRECTION_FILES = [
 ]
 
 
-# TODO
 def retrieve_static_nc_from_s3(burst_id):
 
     """
@@ -46,13 +45,14 @@ def retrieve_static_nc_from_s3(burst_id):
     """
 
     bucket_prefix = burst_id[:-4]
-    filename = f'{burst_id}_static.nc'
-    key = f'/{bucket_prefix}/{filename}'
+    filename = f'{burst_id}_static_rdr.nc'
+    key = f'{bucket_prefix}/{filename}'
 
     try:
-        S3_CLIENT.get_object(Bucket=S3_BUCKET, key=key)
+        print(f'Attempting to Retrieve Static File: {key}')
+        S3_CLIENT.download_file(S3_BUCKET, key, filename)
     except Exception as e:
-        print(f'Unable to retrieve static topographic corrections for {burst_id}.')
+        print(f'Unable to retrieve static topographic corrections for {burst_id} due to {e}.')
         return None
 
     return filename
@@ -91,10 +91,12 @@ def get_static_layer(burst_id):
             - | radar_grid.txt           (Created from NetCDF)
     """
 
-    static_file = 'NETCDF:t090_191581_iw2_static.nc' # retrieve_static_nc_from_s3(burst_id)
+    static_file = retrieve_static_nc_from_s3(burst_id)
 
     if not static_file: # Does not have static layer
         return None
+
+    static_file = 'NETCDF:' + static_file
 
     static_dir = Path('./static_topo_corrections/')
     static_dir.mkdir(exist_ok=True)
@@ -158,7 +160,6 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
 
     if out_ds is None:
         raise RuntimeError("Failed to create NetCDF file. Check that your GDAL has NetCDF-4 support.")
-
 
     out_ds.SetMetadata(rdr_grid)
 
