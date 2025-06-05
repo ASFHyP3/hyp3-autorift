@@ -48,11 +48,12 @@ def retrieve_static_nc_from_s3(burst_id):
     filename = f'{burst_id}_static_rdr.nc'
     key = f'{bucket_prefix}/{filename}'
 
+    print(f'Retrieving Static File: {key}')
+
     try:
-        print(f'Attempting to Retrieve Static File: {key}')
         S3_CLIENT.download_file(S3_BUCKET, key, filename)
     except Exception as e:
-        print(f'Unable to retrieve static topographic corrections for {burst_id} due to {e}.')
+        print(f'Unable to retrieve static topographic corrections for {burst_id} from S3.')
         return None
 
     return filename
