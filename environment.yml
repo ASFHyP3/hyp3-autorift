@@ -22,6 +22,7 @@ dependencies:
   - h5netcdf  # for increased performance of crop.py
   - hyp3lib>=4,<5
   - isce3>=0.14
+  - libgdal-netcdf
   - libgdal-jp2openjpeg
   - matplotlib-base
   - netCDF4
