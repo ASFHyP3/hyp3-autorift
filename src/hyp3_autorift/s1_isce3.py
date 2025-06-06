@@ -76,7 +76,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     if not has_static_layer:
         topo_correction_file = create_static_layer(burst_id_ref)
-        upload_static_nc_to_s3(Path(topo_correction_file), burst_id_ref)
+        upload_static_nc_to_s3(topo_correction_file, burst_id_ref)
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
