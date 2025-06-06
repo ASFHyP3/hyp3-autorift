@@ -367,14 +367,13 @@ def process(
     secondary_metadata = None
     reference_zero_path = None
     secondary_zero_path = None
-    topo_correction_files = None
 
     platform = get_platform(reference[0])
 
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file, topo_correction_files = process_sentinel1_burst_isce3(reference, secondary)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
@@ -489,7 +488,7 @@ def process(
 
     thumbnail_file = create_thumbnail(browse_file)
 
-    return product_file, browse_file, thumbnail_file, topo_correction_files
+    return product_file, browse_file, thumbnail_file
 
 
 def nullable_granule_list(granule_string: str) -> list[str]:
@@ -593,7 +592,7 @@ def main():
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
         parser.error('all scenes must be of the same type.')
 
-    product_file, browse_file, thumbnail_file, topo_correction_files = process(
+    product_file, browse_file, thumbnail_file = process(
         reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
     )
 
@@ -601,10 +600,6 @@ def main():
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
-
-        if topo_correction_files:
-            for file in topo_correction_files:
-                upload_file_to_s3(file, args.bucket, args.static_bucket_prefix)
 
     # FIXME: HyP3 is passing the default value for this argument as '""' not "", so we're not getting an empty string
     if args.publish_bucket == '""':
@@ -615,7 +610,3 @@ def main():
         utils.upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
-
-        if topo_correction_files:
-            for file in topo_correction_files:
-                upload_file_to_s3(file, args.publish_bucket, args.static_bucket_prefix)
