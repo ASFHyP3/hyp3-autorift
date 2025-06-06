@@ -3,11 +3,11 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4037015.svg)](https://doi.org/10.5281/zenodo.4037015)
 
-The HyP3-autoRIFT plugin provides a set of workflows for feature tracking processing with the AutoRIFT [autonomous Repeat Image Feature Tracking](https://github.com/nasa-jpl/autoRIFT) (autoRIFT) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of remote sensing data. For more information on HyP3, see the [Background](#background) section.
+The HyP3 autoRIFT plugin provides a set of workflows for feature tracking processing with the AutoRIFT [autonomous Repeat Image Feature Tracking](https://github.com/nasa-jpl/autoRIFT) (autoRIFT) software package. This plugin is part of the [Alaska Satellite Facility's](https://asf.alaska.edu) larger HyP3 (Hybrid Plugin Processing Pipeline) system, which is a batch processing pipeline designed for on-demand processing of remote sensing data. For more information on HyP3, see the [Background](#background) section.
 
 ## Installation
 
-1. Ensure that conda is installed on your system (we recommend using [mambaforge](https://github.com/conda-forge/miniforge#mambaforge) to reduce setup times).
+1. Ensure that conda/mamba is installed on your system (we recommend using [Miniforge](https://conda-forge.org/download/)).
 2. Clone the `hyp3-autorift` repository and navigate to the root directory of this project
    ```bash
    git clone https://github.com/ASFHyP3/hyp3-autorift.git
@@ -19,14 +19,14 @@ The HyP3-autoRIFT plugin provides a set of workflows for feature tracking proces
    mamba env create -f environment.yml
    mamba activate hyp3-autorift
    ```
-4. Finally, install a development version of HyP3 autoRIFT
+4. Install a development version of HyP3 autoRIFT
    ```bash
    python -m pip install -e .
    ```
 
 ## Usage
 
-The HyP3-autoRIFT plugin provides workflows (accessible directly in Python or via a CLI) that can be used to process SAR  data or optical data using autoRIFT. HyP3-autoRIFT can process these satellite missions:
+The HyP3 autoRIFT plugin provides workflows (accessible directly in Python or via a CLI) that can be used to process SAR  data or optical data using autoRIFT. HyP3 autoRIFT can process these satellite missions:
 * SAR:
   * Sentinel-1
 * Optical:
@@ -52,14 +52,35 @@ For example:
 
 ```
 hyp3_autorift \
-  "S2B_MSIL1C_20200612T150759_N0209_R025_T22WEB_20200612T184700" \
-  "S2A_MSIL1C_20200627T150921_N0209_R025_T22WEB_20200627T170912"
+  --reference LC08_L1TP_009011_20200703_20200913_02_T1 \
+  --secondary LC08_L1TP_009011_20200820_20200905_02_T1
 ```
 
-This command will run autorift for a pair of Sentinel-2 images.
+This command will run autoRIFT for a Landsat 8 pair over Jakobshavn, Greenland. 
 
 > [!IMPORTANT]
 > Credentials are necessary to access Landsat and Sentinel-1 data. See the Credentials section for more information.
+
+Similarly, sets of Sentinel-1 bursts can be processed like:
+
+```
+hyp3_autorift \
+  --reference \
+      S1_105608_IW1_20240618T025544_VV_99C1-BURST \
+      S1_105607_IW1_20240618T025542_VV_C6D8-BURST \
+      S1_105606_IW1_20240618T025539_VV_C6D8-BURST \
+      S1_105605_IW1_20240618T025536_VV_C6D8-BURST \
+      S1_105604_IW1_20240618T025533_VV_C6D8-BURST \
+  --secondary \
+      S1_105608_IW1_20240630T025544_VV_3D6E-BURST \
+      S1_105607_IW1_20240630T025541_VV_2539-BURST \
+      S1_105606_IW1_20240630T025538_VV_2539-BURST \
+      S1_105605_IW1_20240630T025535_VV_2539-BURST \
+      S1_105604_IW1_20240630T025533_VV_2539-BURST
+```
+
+> [!IMPORTANT]
+>  We recommend processing at least 2 Sentinel-1 bursts along track, with 3-5 bursts seeing improvements in data quality.
 
 For all options available to this workflow, see the help documentation: 
 ```
@@ -125,7 +146,7 @@ docker run -it --rm \
 
 #### Docker Outputs
 
-To retain hyp3_autorift output files running via Docker there are two recommended approaches:
+When running hyp3-autorift via docker, there are two recommended approaches to retain the intermediate and output product files:
 
 1. Use a volume mount
 
@@ -157,21 +178,21 @@ HyP3 is broken into two components: the cloud architecture/API that manages the 
 The cloud infrastructure-as-code for HyP3 can be found in the main [HyP3 repository](https://github.com/asfhyp3/hyp3)., while this repository contains a plugin that can be used for feature tracking processing with AutoRIFT.
 
 ## License
-The HyP3-autoRIFT plugin is licensed under the BSD 3-Clause license. See the LICENSE file for more details.
+The HyP3 autoRIFT plugin is licensed under the BSD 3-Clause license. See the LICENSE file for more details. Some files from rom [nasa-jpl/autoRIFT](https://github.com/nasa-jpl/autoRIFT) have been vendord in [`src/hyp3_autorift/vend`](src/hyp3_autorift/vend) and retain their Apache 2.0 license from upstream. Please see the README in that directory for details.
 
 ## Code of conduct
-We strive to create a welcoming and inclusive community for all contributors to HyP3-autoRIFT. As such, all contributors to this project are expected to adhere to our code of conduct.
+We strive to create a welcoming and inclusive community for all contributors to HyP3 autoRIFT. As such, all contributors to this project are expected to adhere to our code of conduct.
 
-Please see `CODE_OF_CONDUCT.md` for the full code of conduct text.
+Please see our [`CODE_OF_CONDUCT.md`](https://github.com/ASFHyP3/.github/blob/main/CODE_OF_CONDUCT.md) for the full code of conduct text.
 
 ## Contributing
-Contributions to the HyP3-autoRIFT plugin are welcome! If you would like to contribute, please submit a pull request on the GitHub repository.
+Contributions to the HyP3 autoRIFT plugin are welcome! If you would like to contribute, please submit a pull request on the GitHub repository.
 
 ## Contact Us
-Want to talk about HyP3-autoRIFT? We would love to hear from you!
+Want to talk about HyP3 autoRIFT? We would love to hear from you!
 
 Found a bug? Want to request a feature?
 [open an issue](https://github.com/ASFHyP3/asf_tools/issues/new)
 
 General questions? Suggestions? Or just want to talk to the team?
-[chat with us on gitter](https://gitter.im/ASFHyP3/community)
+[Open a discussion](https://github.com/ASFHyP3/hyp3-autorift/discussions)

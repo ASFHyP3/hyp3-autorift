@@ -16,9 +16,9 @@ def main():
     parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '++process',
-        choices=['hyp3_autorift', 's1_correction'],
+        choices=['hyp3_autorift'],
         default='hyp3_autorift',
-        help='Select the console_script entrypoint to use',  # console_script entrypoints are specified in `setup.py`
+        help='Select the console_script entrypoint to use',  # as specified in `pyproject.toml`
     )
     parser.add_argument('++omp-num-threads', type=int, help='The number of OpenMP threads to use for parallel regions')
 
@@ -35,7 +35,7 @@ def main():
     if not (Path.home() / '.netrc').exists():
         warnings.warn('Earthdata credentials must be present as environment variables, or in your netrc.', UserWarning)
 
-    eps = entry_points()['console_scripts']
+    eps = entry_points(group='console_scripts')
     (process_entry_point,) = {process for process in eps if process.name == args.process}
 
     sys.argv = [args.process, *unknowns]

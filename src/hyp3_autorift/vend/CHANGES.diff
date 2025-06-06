@@ -1,528 +1,342 @@
+diff --git upstream/testGeogrid.py testGeogrid.py
+--- testGeogrid.py
++++ testGeogrid.py
+@@ -2,6 +2,7 @@
+ 
+ # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -201,7 +202,7 @@
+     return info
+ 
+ 
+-def coregisterLoadMetadata(indir_m, indir_s):
++def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
+     """
+     Input file.
+     """
+@@ -227,6 +228,9 @@
+     elif re.findall('LT0[45]_', DS.GetDescription()).__len__() > 0:
+         nameString = os.path.basename(DS.GetDescription())
+         info.time = nameString.split('_')[3]
++    elif 'sentinel-s2-l1c' in indir_m or 's2-l1c-us-west-2' in indir_m:
++        s2_name = kwargs['reference_metadata']['id']
++        info.time = s2_name.split('_')[2]
+     elif re.findall('S2._', DS.GetDescription()).__len__() > 0:
+         info.time = DS.GetDescription().split('_')[2]
+     else:
+@@ -250,6 +254,9 @@
+     elif re.findall('LT0[45]_', DS1.GetDescription()).__len__() > 0:
+         nameString1 = os.path.basename(DS1.GetDescription())
+         info1.time = nameString1.split('_')[3]
++    elif 'sentinel-s2-l1c' in indir_s or 's2-l1c-us-west-2' in indir_s:
++        s2_name = kwargs['secondary_metadata']['id']
++        info1.time = s2_name.split('_')[2]
+     elif re.findall('S2._', DS1.GetDescription()).__len__() > 0:
+         info1.time = DS1.GetDescription().split('_')[2]
+     else:
+diff --git upstream/testautoRIFT.py testautoRIFT.py
+--- testautoRIFT.py
++++ testautoRIFT.py
+@@ -2,6 +2,7 @@
+ 
+ # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
++# Modifications Copyright 2021 Alaska Satellite Facility
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+@@ -45,8 +46,8 @@
+ from osgeo import gdal
+ from s1reader import load_bursts
+ 
+-import netcdf_output as no
+-from testGeogrid import getPol
++import hyp3_autorift.vend.netcdf_output as no
++from hyp3_autorift.vend.testGeogrid import getPol
+ 
+ 
+ def get_topsinsar_config():
+@@ -286,6 +287,7 @@
+     geogrid_run_info=None,
+     preprocessing_methods=('hps', 'hps'),
+     preprocessing_filter_width=5,
++    zero_mask=None,
+ ):
+     """
+     Wire and run geogrid.
+@@ -303,8 +305,8 @@
+ 
+     # take the amplitude only for the radar images
+     if optflag == 0:
+-        I1 = np.abs(I1)
+-        I2 = np.abs(I2)
++        I1 = loadProduct('reference.tif')
++        I2 = loadProduct('secondary.tif')
+ 
+     obj.I1 = I1
+     obj.I2 = I2
+@@ -328,6 +330,7 @@
+     #        We should not mask based on zero values in the L7 images as this percolates into SearchLimit{X,Y}
+     #        and prevents autoRIFT from looking at large parts of the images, but untangling the logic here
+     #        has proved too difficult, so lets just turn it off if `wallis_fill` preprocessing is going to be used.
++    #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
+     # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
+     if 'wallis_fill' not in preprocessing_methods:
+         for ii in range(obj.xGrid.shape[0]):
+@@ -337,6 +340,11 @@
+                         I2[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0
+                     ):
+                         noDataMask[ii, jj] = True
++    elif zero_mask is not None:
++        for ii in range(obj.xGrid.shape[0]):
++            for jj in range(obj.xGrid.shape[1]):
++                if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
++                    noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
+ 
+     # mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
+ 
+@@ -409,24 +417,32 @@
+     print('Pre-process Start!!!')
+     print(f'Using Wallis Filter Width: {obj.WallisFilterWidth}')
+ 
+-    # TODO: Allow different filters to be applied images independently
+-    # default to most stringent filtering
++    # TODO: Allow different filters to be applied images independently; default to most stringent filtering
+     if 'wallis_fill' in preprocessing_methods:
+-        obj.preprocess_filt_wal_nodata_fill()
++        # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
++        #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
++        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
++                      UserWarning)
++        obj.zeroMask = zero_mask
++        # obj.preprocess_filt_wal_nodata_fill()
+     elif 'wallis' in preprocessing_methods:
+-        obj.preprocess_filt_wal()
++        # FIXME: Ensuring landsat 7 images are projected correctly requires wallis filtering and then reprojecting the
++        #       secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
++        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
++                      UserWarning)
++        obj.zeroMask = zero_mask
++        # obj.preprocess_filt_wal()
+     elif 'fft' in preprocessing_methods:
+-        # FIXME: The Landsat 4/5 FFT preprocessor looks for the image corners to
+-        #        determine the scene rotation, but Geogrid + autoRIFT rond the
+-        #        corners when co-registering and chop the non-overlapping corners
+-        #        when subsetting to the common image overlap. FFT filer needs to
+-        #        be applied to the native images before they are processed by
+-        #        Geogrid or autoRIFT.
++        # FIXME: Ensuring landsat 7 images are projected correctly requires fft filtering and then reprojecting the
++        #        secondary scene before processing with Geogrid or autoRIFT. Furthermore, the Landsat 4/5 FFT
++        #        preprocessor looks for the image corners to determine the scene rotation, but Geogrid + autoRIFT round
++        #        corners when co-registering and chop the non-overlapping corners when subsetting to the common image
++        #        overlap. FFT filer needs to  be applied to the native images before they are processed by Geogrid or
++        #        autoRIFT; this now occurs in hyp3-autorift/process.py
+         # obj.preprocess_filt_wal()
+         # obj.preprocess_filt_fft()
+-        warnings.warn(
+-            'FFT filtering must be done before processing with geogrid! Be careful when using this method', UserWarning
+-        )
++        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
++                      UserWarning)
+     else:
+         obj.preprocess_filt_hps()
+     print('Pre-process Done!!!')
+@@ -529,6 +545,7 @@
+     mpflag,
+     ncname,
+     geogrid_run_info=None,
++    **kwargs,
+ ):
+     if optical_flag == 1:
+         data_m, data_s = loadProductOptical(indir_m, indir_s)
+@@ -641,6 +658,17 @@
+             elif len(re.findall('LT0[45]_', name)) > 0:
+                 preprocessing_methods[ii] = 'fft'
+ 
++        zero_mask = None
++        indir_m_zero = f'{indir_m.split(".")[0]}_zeroMask.{indir_m.split(".")[1]}'
++        indir_s_zero = f'{indir_s.split(".")[0]}_zeroMask.{indir_s.split(".")[1]}'
++        if os.path.exists(indir_m_zero) or os.path.exists(indir_s_zero):
++            m_zero, s_zero = loadProductOptical(indir_m_zero, indir_s_zero)
++            m_zero = m_zero.astype(np.uint8)
++            s_zero = s_zero.astype(np.uint8)
++
++            zero_mask = m_zero | s_zero
++            zero_mask = zero_mask.astype(np.uint8)
++
+         print(f'Using preprocessing methods {preprocessing_methods}')
+ 
+         (
+@@ -674,6 +702,7 @@
+             geogrid_run_info=geogrid_run_info,
+             preprocessing_methods=preprocessing_methods,
+             preprocessing_filter_width=preprocessing_filter_width,
++            zero_mask=zero_mask,
+         )
+         if nc_sensor is not None:
+             no.netCDF_packaging_intermediate(
+@@ -1094,6 +1123,7 @@
+                         dx_mean_shift1,
+                         dy_mean_shift1,
+                         error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+ 
+                 elif nc_sensor in ('L4', 'L5', 'L7', 'L8', 'L9'):
+@@ -1140,8 +1170,8 @@
+                         out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+ 
+-                    d0 = datetime(int(master_split[3][0:4]), int(master_split[3][4:6]), int(master_split[3][6:8]))
+-                    d1 = datetime(int(slave_split[3][0:4]), int(slave_split[3][4:6]), int(slave_split[3][6:8]))
++                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
++                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                     date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+@@ -1232,6 +1262,7 @@
+                         dx_mean_shift1,
+                         dy_mean_shift1,
+                         error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+ 
+                 elif nc_sensor == 'S2':
+@@ -1250,24 +1281,11 @@
+                         YPixelSize = geogrid_run_info['YPixelSize']
+                         epsg = geogrid_run_info['epsg']
+ 
+-                    master_path = indir_m
+-                    slave_path = indir_s
++                    master_id = kwargs['reference_metadata']['id']
++                    slave_id = kwargs['secondary_metadata']['id']
+ 
+-                    master_split = master_path.split('_')
+-                    slave_split = slave_path.split('_')
+-
+-                    if re.findall('://', master_path).__len__() > 0:
+-                        master_filename_full = master_path.split('/')
+-                        for item in master_filename_full:
+-                            if re.findall('S2._', item).__len__() > 0:
+-                                master_filename = item
+-                        slave_filename_full = slave_path.split('/')
+-                        for item in slave_filename_full:
+-                            if re.findall('S2._', item).__len__() > 0:
+-                                slave_filename = item
+-                    else:
+-                        master_filename = os.path.basename(master_path)[:-8]
+-                        slave_filename = os.path.basename(slave_path)[:-8]
++                    master_split = master_id.split('_')
++                    slave_split = slave_id.split('_')
+ 
+                     pair_type = 'optical'
+                     detection_method = 'feature'
+@@ -1281,14 +1299,14 @@
+                     PPP = roi_valid_percentage * 100
+                     if ncname is None:
+                         out_nc_filename = (
+-                            f'./{master_filename}_X_{slave_filename}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
++                            f'./{master_id}_X_{slave_id}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                         )
+                     else:
+                         out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+ 
+-                    d0 = datetime(int(master_split[2][0:4]), int(master_split[2][4:6]), int(master_split[2][6:8]))
+-                    d1 = datetime(int(slave_split[2][0:4]), int(slave_split[2][4:6]), int(slave_split[2][6:8]))
++                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
++                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
+                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
+                     date_dt = np.float64(date_dt_base)
+                     if date_dt < 0:
+@@ -1301,12 +1319,12 @@
+                     slave_dt = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+ 
+                     IMG_INFO_DICT = {
+-                        'id_img1': master_filename,
+-                        'id_img2': slave_filename,
++                        'id_img1': master_id,
++                        'id_img2': slave_id,
+                         'acquisition_date_img1': master_dt,
+                         'acquisition_date_img2': slave_dt,
+-                        'correction_level_img1': master_split[4][:3],
+-                        'correction_level_img2': slave_split[4][:3],
++                        'correction_level_img1': master_split[1][3:],
++                        'correction_level_img2': slave_split[1][3:],
+                         'mission_img1': master_split[0][-3],
+                         'mission_img2': slave_split[0][-3],
+                         'satellite_img1': master_split[0][-2:],
+@@ -1369,6 +1387,7 @@
+                         dx_mean_shift1,
+                         dy_mean_shift1,
+                         error_vector,
++                        parameter_file=kwargs['parameter_file'],
+                     )
+ 
+                 elif nc_sensor is None:
+diff --git upstream/netcdf_output.py netcdf_output.py
 --- netcdf_output.py
 +++ netcdf_output.py
-@@ -1,14 +1,17 @@
--#!/usr/bin/env python3
+@@ -1,6 +1,8 @@
+ #!/usr/bin/env python3
  # Yang Lei, Jet Propulsion Laboratory
  # November 2017
 +# Modifications Copyright 2021 Alaska Satellite Facility
- 
++
  import datetime
  import os
-+import subprocess
  
- import netCDF4
+@@ -8,6 +10,8 @@
  import numpy as np
  import pandas as pd
  
 +import hyp3_autorift
 +
  
- def v_error_cal(vx_error, vy_error):
-     vx = np.random.normal(0, vx_error, 1000000)
-@@ -140,7 +143,7 @@
-                      offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                      DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
-                      detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector):
-+                     dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector, parameter_file):
- 
+ def get_satellite_attribute(info):
+     mission_mapping = {
+@@ -260,6 +264,7 @@
+     dx_mean_shift1,
+     dy_mean_shift1,
+     error_vector,
++    parameter_file,
+ ):
      vx_mean_shift = offset2vx_1 * dx_mean_shift + offset2vx_2 * dy_mean_shift
      temp = vx_mean_shift
-@@ -327,8 +330,12 @@
-     # CHIPSIZEY = np.round(np.clip(CHIPSIZEY, 0, 65535)).astype(np.uint16)
-     # INTERPMASK = np.round(np.clip(INTERPMASK, 0, 255)).astype(np.uint8)
+@@ -418,9 +423,9 @@
+     author = 'Alex S. Gardner, JPL/NASA; Yang Lei, GPS/Caltech'
+     institution = 'NASA Jet Propulsion Laboratory (JPL), California Institute of Technology'
  
--    source = f'NASA MEaSUREs ITS_LIVE project. Processed with autoRIFT version ' \
+-    source = (
+-        f'NASA MEaSUREs ITS_LIVE project. Processed with autoRIFT version {IMG_INFO_DICT["autoRIFT_software_version"]}'
+-    )
 +    source = f'NASA MEaSUREs ITS_LIVE project. Processed by ASF DAAC HyP3 {datetime.datetime.now().year} using the ' \
 +             f'{hyp3_autorift.__name__} plugin version {hyp3_autorift.__version__} running autoRIFT version ' \
-              f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
-+    if pair_type == 'radar':
-+        isce_version = subprocess.check_output('conda list | grep isce | awk \'{print $2}\'', shell=True, text=True)
-+        source += f' built with ISCE version {isce_version.strip()}'
-     if IMG_INFO_DICT['mission_img1'].startswith('S'):
-         source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
-     if IMG_INFO_DICT['mission_img1'].startswith('L'):
-@@ -342,8 +349,10 @@
-                  '  and Its Application for Tracking Ice Displacement. Remote Sensing, 13(4), p.749.\n' \
-                  '  https://doi.org/10.3390/rs13040749\n' \
-                  '\n' \
--                 'Additionally, a DOI is provided for the software used to generate this data:\n' \
-+                 'Additionally, DOI\'s are provided for the software used to generate this data:\n' \
-                  '* autoRIFT: https://doi.org/10.5281/zenodo.4025445\n' \
-+                 '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n' \
-+                 '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581'
++             f'{IMG_INFO_DICT["autoRIFT_software_version"]}'
+     if pair_type == 'radar':
+         import isce3
  
-     tran = [tran[0] + tran[1]/2, tran[1], 0.0, tran[3] + tran[5]/2, 0.0, tran[5]]
+@@ -439,8 +444,10 @@
+         '  and Its Application for Tracking Ice Displacement. Remote Sensing, 13(4), p.749.\n'
+         '  https://doi.org/10.3390/rs13040749\n'
+         '\n'
+-        'Additionally, a DOI is provided for the software used to generate this data:\n'
++        'Additionally, DOI\'s are provided for the software used to generate this data:\n'
+         '* autoRIFT: https://doi.org/10.5281/zenodo.4025445\n'
++        '* HyP3 autoRIFT plugin: https://doi.org/10.5281/zenodo.4037016\n'
++        '* HyP3 processing environment: https://doi.org/10.5281/zenodo.3962581'
+     )
+     tran = [tran[0] + tran[1] / 2, tran[1], 0.0, tran[3] + tran[5] / 2, 0.0, tran[5]]
  
-@@ -357,6 +366,7 @@
-     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
+@@ -454,6 +461,7 @@
+     nc_outfile.setncattr('date_created', datetime.datetime.now().strftime('%d-%b-%Y %H:%M:%S'))
      nc_outfile.setncattr('title', title)
-     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT["autoRIFT_software_version"])
+     nc_outfile.setncattr('autoRIFT_software_version', IMG_INFO_DICT['autoRIFT_software_version'])
 +    nc_outfile.setncattr('autoRIFT_parameter_file', parameter_file)
      nc_outfile.setncattr('scene_pair_type', pair_type)
+     nc_outfile.setncattr('satellite', get_satellite_attribute(IMG_INFO_DICT))
      nc_outfile.setncattr('motion_detection_method', detection_method)
-     nc_outfile.setncattr('motion_coordinates', coordinates)
---- testautoRIFT.py
-+++ testautoRIFT.py
-@@ -2,6 +2,7 @@
- 
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
-+# Modifications Copyright 2021 Alaska Satellite Facility
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
-@@ -418,7 +419,7 @@
- 
- def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, scale_factor, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
--                            geogrid_run_info=None):
-+                            geogrid_run_info=None, **kwargs):
- 
-     import numpy as np
-     import time
-@@ -517,7 +518,7 @@
-     intermediate_nc_file = 'autoRIFT_intermediate.nc'
- 
-     if os.path.exists(intermediate_nc_file):
--        import netcdf_output as no
-+        import hyp3_autorift.vend.netcdf_output as no
-         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
-     else:
-         m_name = os.path.basename(indir_m)
-@@ -548,7 +549,7 @@
-                 preprocessing_methods=preprocessing_methods, preprocessing_filter_width=preprocessing_filter_width,
-         )
-         if nc_sensor is not None:
--            import netcdf_output as no
-+            import hyp3_autorift.vend.netcdf_output as no
-             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
- 
-     if optical_flag == 0:
-@@ -584,11 +585,11 @@
-     if SSM is not None:
-         SSM[SEARCHLIMITX == 0] = False
- 
--    import scipy.io as sio
--    sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
-+    # import scipy.io as sio
-+    # sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
- 
- #    #####################  Uncomment for debug mode
--#    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY})
-+#    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'GridSpacingX':GridSpacingX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY,'origSize':origSize,'noDataMask':noDataMask})
- #    conts = sio.loadmat('debug.mat')
- #    DX = conts['Dx']
- #    DY = conts['Dy']
-@@ -701,7 +702,7 @@
- 
-                 if nc_sensor == "S1":
-                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
- 
-                 if geogrid_run_info is None:
-@@ -841,17 +842,16 @@
-                         dt = geogrid_run_info['dt']
-                         epsg = geogrid_run_info['epsg']
- 
--                    runCmd('topsinsar_filename.py')
--    #                import scipy.io as sio
--                    conts = sio.loadmat('topsinsar_filename.mat')
--                    master_filename = conts['master_filename'][0]
--                    slave_filename = conts['slave_filename'][0]
--                    master_dt = conts['master_dt'][0]
--                    slave_dt = conts['slave_dt'][0]
-+                    from hyp3_autorift.s1_isce2 import get_topsinsar_config
-+                    conts = get_topsinsar_config()
-+                    master_filename = conts['reference_filename']
-+                    slave_filename = conts['secondary_filename']
-+                    master_dt = conts['reference_dt']
-+                    slave_dt = conts['secondary_dt']
-                     master_split = str.split(master_filename,'_')
-                     slave_split = str.split(slave_filename,'_')
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     pair_type = 'radar'
-                     detection_method = 'feature'
-                     coordinates = 'radar'
-@@ -916,7 +916,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                         DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
- 
-                 elif nc_sensor in ("L4", "L5", "L7", "L8", "L9"):
-@@ -948,7 +949,7 @@
- #                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
- #                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -965,8 +966,8 @@
-                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
- 
--                    d0 = datetime(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
--                    d1 = datetime(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
-+                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-+                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
-                     date_dt = np.float64(date_dt_base)
-                     if date_dt < 0:
-@@ -1016,7 +1017,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
- 
-                 elif nc_sensor == "S2":
-@@ -1033,29 +1035,17 @@
-                         YPixelSize = geogrid_run_info['YPixelSize']
-                         epsg = geogrid_run_info['epsg']
- 
--                    master_path = indir_m
--                    slave_path = indir_s
-+                    master_id = kwargs['reference_metadata']['id']
-+                    slave_id = kwargs['secondary_metadata']['id']
- 
--                    master_split = master_path.split('_')
--                    slave_split = slave_path.split('_')
-+                    master_split = master_id.split('_')
-+                    slave_split = slave_id.split('_')
- 
--                    if re.findall("://",master_path).__len__() > 0:
--                        master_filename_full = master_path.split('/')
--                        for item in master_filename_full:
--                            if re.findall("S2._",item).__len__() > 0:
--                                master_filename = item
--                        slave_filename_full = slave_path.split('/')
--                        for item in slave_filename_full:
--                            if re.findall("S2._",item).__len__() > 0:
--                                slave_filename = item
--                    else:
--                        master_filename = os.path.basename(master_path)[:-8]
--                        slave_filename = os.path.basename(slave_path)[:-8]
- 
- #                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
- #                    slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -1065,14 +1055,14 @@
-                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
-                     PPP = roi_valid_percentage * 100
-                     if ncname is None:
--                        out_nc_filename = f"./{master_filename}_X_{slave_filename}" \
-+                        out_nc_filename = f"./{master_id}_X_{slave_id}" \
-                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     else:
-                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
- 
--                    d0 = datetime(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
--                    d1 = datetime(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
-+                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
-+                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
-                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
-                     date_dt = np.float64(date_dt_base)
-                     if date_dt < 0:
-@@ -1112,7 +1102,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
- 
-                 elif nc_sensor is None:
---- testautoRIFT_ISCE.py
-+++ testautoRIFT_ISCE.py
-@@ -2,6 +2,7 @@
- 
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
-+# Modifications Copyright 2021 Alaska Satellite Facility
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
-@@ -148,6 +149,7 @@
-     obj.configure()
- 
-     obj.WallisFilterWidth = preprocessing_filter_width
-+    print(f'Setting Wallis Filter Width to {preprocessing_filter_width}')
- 
- #    ##########     uncomment if starting from preprocessed images
- #    I1 = I1.astype(np.uint8)
-@@ -416,7 +418,7 @@
- 
- def generateAutoriftProduct(indir_m, indir_s, grid_location, init_offset, search_range, chip_size_min, chip_size_max,
-                             offset2vx, offset2vy, scale_factor, stable_surface_mask, optical_flag, nc_sensor, mpflag, ncname,
--                            geogrid_run_info=None):
-+                            geogrid_run_info=None, **kwargs):
- 
-     import numpy as np
-     import time
-@@ -515,7 +517,7 @@
-     intermediate_nc_file = 'autoRIFT_intermediate.nc'
- 
-     if os.path.exists(intermediate_nc_file):
--        import netcdf_output as no
-+        import hyp3_autorift.vend.netcdf_output as no
-         Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask = no.netCDF_read_intermediate(intermediate_nc_file)
-     else:
-         m_name = os.path.basename(indir_m)
-@@ -546,7 +548,7 @@
-                 preprocessing_methods=preprocessing_methods, preprocessing_filter_width=preprocessing_filter_width,
-         )
-         if nc_sensor is not None:
--            import netcdf_output as no
-+            import hyp3_autorift.vend.netcdf_output as no
-             no.netCDF_packaging_intermediate(Dx, Dy, InterpMask, ChipSizeX, GridSpacingX, ScaleChipSizeY, SearchLimitX, SearchLimitY, origSize, noDataMask, intermediate_nc_file)
- 
-     if optical_flag == 0:
-@@ -582,11 +584,11 @@
-     if SSM is not None:
-         SSM[SEARCHLIMITX == 0] = False
- 
--    import scipy.io as sio
--    sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
-+    # import scipy.io as sio
-+    # sio.savemat('offset.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX})
- 
- #    #####################  Uncomment for debug mode
--#    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY})
-+#    sio.savemat('debug.mat',{'Dx':DX,'Dy':DY,'InterpMask':INTERPMASK,'ChipSizeX':CHIPSIZEX,'GridSpacingX':GridSpacingX,'ScaleChipSizeY':ScaleChipSizeY,'SearchLimitX':SEARCHLIMITX,'SearchLimitY':SEARCHLIMITY,'origSize':origSize,'noDataMask':noDataMask})
- #    conts = sio.loadmat('debug.mat')
- #    DX = conts['Dx']
- #    DY = conts['Dy']
-@@ -699,7 +701,7 @@
- 
-                 if nc_sensor == "S1":
-                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(indir_m, xGrid, yGrid, VX, VY, DX, DY, nodata, tran, proj, GridSpacingX, ScaleChipSizeY, swath_offset_bias_ref)
- 
-                 if geogrid_run_info is None:
-@@ -839,17 +841,16 @@
-                         dt = geogrid_run_info['dt']
-                         epsg = geogrid_run_info['epsg']
- 
--                    runCmd('topsinsar_filename.py')
--    #                import scipy.io as sio
--                    conts = sio.loadmat('topsinsar_filename.mat')
--                    master_filename = conts['master_filename'][0]
--                    slave_filename = conts['slave_filename'][0]
--                    master_dt = conts['master_dt'][0]
--                    slave_dt = conts['slave_dt'][0]
-+                    from hyp3_autorift.utils import get_topsinsar_config
-+                    conts = get_topsinsar_config()
-+                    master_filename = conts['reference_filename']
-+                    slave_filename = conts['secondary_filename']
-+                    master_dt = conts['reference_dt']
-+                    slave_dt = conts['secondary_dt']
-                     master_split = str.split(master_filename,'_')
-                     slave_split = str.split(slave_filename,'_')
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     pair_type = 'radar'
-                     detection_method = 'feature'
-                     coordinates = 'radar'
-@@ -914,7 +915,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, offset2vr, offset2va, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                         DXref, DYref, rangePixelSize, azimuthPixelSize, dt, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
- 
-                 elif nc_sensor in ("L4", "L5", "L7", "L8", "L9"):
-@@ -946,7 +948,7 @@
- #                    master_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+master_MTL_path))[2][1:-2],':')
- #                    slave_time = str.split(str.split(runCmd('fgrep "SCENE_CENTER_TIME" '+slave_MTL_path))[2][1:-2],':')
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -963,8 +965,8 @@
-                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
- 
--                    d0 = datetime(np.int(master_split[3][0:4]),np.int(master_split[3][4:6]),np.int(master_split[3][6:8]))
--                    d1 = datetime(np.int(slave_split[3][0:4]),np.int(slave_split[3][4:6]),np.int(slave_split[3][6:8]))
-+                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-+                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
-                     date_dt = np.float64(date_dt_base)
-                     if date_dt < 0:
-@@ -1014,7 +1016,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
- 
-                 elif nc_sensor == "S2":
-@@ -1031,29 +1034,17 @@
-                         YPixelSize = geogrid_run_info['YPixelSize']
-                         epsg = geogrid_run_info['epsg']
- 
--                    master_path = indir_m
--                    slave_path = indir_s
-+                    master_id = kwargs['reference_metadata']['id']
-+                    slave_id = kwargs['secondary_metadata']['id']
- 
--                    master_split = master_path.split('_')
--                    slave_split = slave_path.split('_')
-+                    master_split = master_id.split('_')
-+                    slave_split = slave_id.split('_')
- 
--                    if re.findall("://",master_path).__len__() > 0:
--                        master_filename_full = master_path.split('/')
--                        for item in master_filename_full:
--                            if re.findall("S2._",item).__len__() > 0:
--                                master_filename = item
--                        slave_filename_full = slave_path.split('/')
--                        for item in slave_filename_full:
--                            if re.findall("S2._",item).__len__() > 0:
--                                slave_filename = item
--                    else:
--                        master_filename = os.path.basename(master_path)[:-8]
--                        slave_filename = os.path.basename(slave_path)[:-8]
- 
- #                    master_filename = master_split[0][-3:]+'_'+master_split[2]+'_'+master_split[4][:3]+'_'+os.path.basename(master_path)
- #                    slave_filename = slave_split[0][-3:]+'_'+slave_split[2]+'_'+slave_split[4][:3]+'_'+os.path.basename(slave_path)
- 
--                    import netcdf_output as no
-+                    import hyp3_autorift.vend.netcdf_output as no
-                     pair_type = 'optical'
-                     detection_method = 'feature'
-                     coordinates = 'map'
-@@ -1063,14 +1054,14 @@
-                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
-                     PPP = roi_valid_percentage * 100
-                     if ncname is None:
--                        out_nc_filename = f"./{master_filename}_X_{slave_filename}" \
-+                        out_nc_filename = f"./{master_id}_X_{slave_id}" \
-                                           f"_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     else:
-                         out_nc_filename = f"{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc"
-                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
- 
--                    d0 = datetime(np.int(master_split[2][0:4]),np.int(master_split[2][4:6]),np.int(master_split[2][6:8]))
--                    d1 = datetime(np.int(slave_split[2][0:4]),np.int(slave_split[2][4:6]),np.int(slave_split[2][6:8]))
-+                    d0 = datetime.strptime(kwargs['reference_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
-+                    d1 = datetime.strptime(kwargs['secondary_metadata']['properties']['datetime'], '%Y-%m-%dT%H:%M:%SZ')
-                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
-                     date_dt = np.float64(date_dt_base)
-                     if date_dt < 0:
-@@ -1110,7 +1101,8 @@
-                         offset2vx_1, offset2vx_2, offset2vy_1, offset2vy_2, None, None, scale_factor_1, scale_factor_2, MM, VXref, VYref,
-                         None, None, XPixelSize, YPixelSize, None, epsg, srs, tran, out_nc_filename, pair_type,
-                         detection_method, coordinates, IMG_INFO_DICT, stable_count, stable_count1, stable_shift_applied,
--                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector
-+                        dx_mean_shift, dy_mean_shift, dx_mean_shift1, dy_mean_shift1, error_vector,
-+                        parameter_file=kwargs['parameter_file'],
-                     )
- 
-                 elif nc_sensor is None:
---- testGeogrid_ISCE.py
-+++ testGeogrid_ISCE.py
-@@ -2,6 +2,7 @@
- 
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
-+# Modifications Copyright 2021 Alaska Satellite Facility
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
-@@ -142,7 +143,7 @@
-     return info
- 
- 
--def coregisterLoadMetadataOptical(indir_m, indir_s):
-+def coregisterLoadMetadataOptical(indir_m, indir_s, **kwargs):
-     '''
-     Input file.
-     '''
-@@ -178,6 +179,9 @@
-     elif re.findall("LT0[45]_",DS.GetDescription()).__len__() > 0:
-         nameString = os.path.basename(DS.GetDescription())
-         info.time = nameString.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_m or 's2-l1c-us-west-2' in indir_m:
-+        s2_name = kwargs['reference_metadata']['id']
-+        info.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-         info.time = DS.GetDescription().split('_')[2]
-     else:
-@@ -201,6 +205,9 @@
-     elif re.findall("LT0[45]_",DS1.GetDescription()).__len__() > 0:
-         nameString1 = os.path.basename(DS1.GetDescription())
-         info1.time = nameString1.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_s or 's2-l1c-us-west-2' in indir_s:
-+        s2_name = kwargs['secondary_metadata']['id']
-+        info1.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
-         info1.time = DS1.GetDescription().split('_')[2]
-     else:
---- testGeogridOptical.py
-+++ testGeogridOptical.py
-@@ -2,6 +2,7 @@
- 
- #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- # Copyright 2019 California Institute of Technology. ALL RIGHTS RESERVED.
-+# Modifications Copyright 2021 Alaska Satellite Facility
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
-@@ -72,7 +73,7 @@
-     pass
- 
- 
--def coregisterLoadMetadata(indir_m, indir_s):
-+def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
-     '''
-     Input file.
-     '''
-@@ -108,6 +109,9 @@
-     elif re.findall("LT0[45]_",DS.GetDescription()).__len__() > 0:
-         nameString = os.path.basename(DS.GetDescription())
-         info.time = nameString.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_m or 's2-l1c-us-west-2' in indir_m:
-+        s2_name = kwargs['reference_metadata']['id']
-+        info.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS.GetDescription()).__len__() > 0:
-         info.time = DS.GetDescription().split('_')[2]
-     else:
-@@ -131,6 +135,9 @@
-     elif re.findall("LT0[45]_",DS1.GetDescription()).__len__() > 0:
-         nameString1 = os.path.basename(DS1.GetDescription())
-         info1.time = nameString1.split('_')[3]
-+    elif 'sentinel-s2-l1c' in indir_s or 's2-l1c-us-west-2' in indir_s:
-+        s2_name = kwargs['secondary_metadata']['id']
-+        info1.time = s2_name.split('_')[2]
-     elif re.findall("S2._",DS1.GetDescription()).__len__() > 0:
-         info1.time = DS1.GetDescription().split('_')[2]
-     else:

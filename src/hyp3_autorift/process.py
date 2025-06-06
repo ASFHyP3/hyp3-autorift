@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import shutil
+import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -42,11 +43,12 @@ LANDSAT_SENSOR_MAPPING = {
 }
 
 DEFAULT_PARAMETER_FILE = (
-    '/vsicurl/http://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
+    '/vsicurl/https://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
 )
 
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
-    'S1': 'sentinel1',
+    'S1-SLC': 'sentinel1',
+    'S1-BURST': 'sentinel1',
     'S2': 'sentinel2',
     'L4': 'landsatOLI',
     'L5': 'landsatOLI',
@@ -172,6 +174,9 @@ def s3_object_is_accessible(bucket, key):
         if e.response['Error']['Code'] in ['403', '404']:
             return False
         raise
+    except botocore.exceptions.NoCredentialsError:
+        warnings.warn('No AWS credentials found')
+        return False
     return True
 
 
@@ -191,6 +196,8 @@ def least_precise_orbit_of(orbits):
 
 
 def get_datetime(scene_name):
+    if 'BURST' in scene_name:
+        return datetime.strptime(scene_name[14:29], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S1'):
         return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
     if scene_name.startswith('S2') and len(scene_name) > 25:  # ESA
@@ -204,12 +211,15 @@ def get_datetime(scene_name):
 
 
 def get_platform(scene: str) -> str:
-    if scene.startswith('S1') or scene.startswith('S2'):
+    if scene.startswith('S1'):
+        if 'BURST' in scene:
+            return 'S1-BURST'
+        return 'S1-SLC'
+    if scene.startswith('S2'):
         return scene[0:2]
-    elif scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
+    if scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
         return scene[0] + scene[3]
-    else:
-        raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
+    raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
 def create_filtered_filepath(path: str) -> str:
@@ -339,16 +349,16 @@ def get_opendata_prefix(file: Path):
 
 
 def process(
-    reference: str,
-    secondary: str,
+    reference: list[str],
+    secondary: list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:
-        reference: Name of the reference Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
-        secondary: Name of the secondary Sentinel-1, Sentinel-2, or Landsat-8 Collection 2 scene
+        reference: Name of the reference Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
+        secondary: Name of the secondary Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
 
@@ -362,12 +372,17 @@ def process(
     reference_zero_path = None
     secondary_zero_path = None
 
-    platform = get_platform(reference)
+    platform = get_platform(reference[0])
 
-    if platform == 'S1':
-        from hyp3_autorift.s1_isce2 import process_sentinel1_with_isce2
+    if platform == 'S1-BURST':
+        from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_with_isce2(reference, secondary, parameter_file)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
+
+    elif platform == 'S1-SLC':
+        from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
+
+        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0])
 
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -378,10 +393,10 @@ def process(
         os.environ['AWS_REGION'] = 'us-west-2'
 
         if platform == 'S2':
-            reference_metadata = get_s2_metadata(reference)
+            reference_metadata = get_s2_metadata(reference[0])
             reference_path = reference_metadata['path']
 
-            secondary_metadata = get_s2_metadata(secondary)
+            secondary_metadata = get_s2_metadata(secondary[0])
             secondary_path = secondary_metadata['path']
 
         elif 'L' in platform:
@@ -389,13 +404,13 @@ def process(
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
             os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-            reference_metadata = get_lc2_metadata(reference)
+            reference_metadata = get_lc2_metadata(reference[0])
             reference_path = get_lc2_path(reference_metadata)
 
-            secondary_metadata = get_lc2_metadata(secondary)
+            secondary_metadata = get_lc2_metadata(secondary[0])
             secondary_path = get_lc2_path(secondary_metadata)
 
-            filter_platform = min([platform, get_platform(secondary)])
+            filter_platform = min([platform, get_platform(secondary[0])])
             if filter_platform in ('L4', 'L5', 'L7'):
                 # Log path here before we transform it
                 log.info(f'Reference scene path: {reference_path}')
@@ -424,7 +439,7 @@ def process(
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
 
-        from hyp3_autorift.vend.testGeogridOptical import coregisterLoadMetadata, runGeogrid
+        from hyp3_autorift.vend.testGeogrid import coregisterLoadMetadata, runGeogrid
 
         meta_r, meta_s = coregisterLoadMetadata(
             reference_path,
@@ -480,6 +495,18 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
+def nullable_granule_list(granule_string: str) -> list[str]:
+    granule_string = granule_string.replace('None', '').strip()
+    granule_list = [granule for granule in granule_string.split(' ') if granule]
+    return granule_list
+
+
+def sort_ref_sec(reference: list[str], secondary: list[str]) -> tuple[list[str], list[str]]:
+    if get_datetime(reference[0]) > get_datetime(secondary[0]):
+        return secondary, reference
+    return reference, secondary
+
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
@@ -502,21 +529,81 @@ def main():
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
         help='Naming scheme to use for product files',
     )
-    parser.add_argument('granules', type=str.split, nargs='+', help='Granule pair to process')
+    parser.add_argument(
+        'granules',
+        type=nullable_granule_list,
+        nargs='*',
+        help='Pair of Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to '
+        'process. Cannot be used with the `--reference` or `--secondary` arguments.',
+    )
+    parser.add_argument(
+        '--reference',
+        type=nullable_granule_list,
+        default=[],
+        nargs='+',
+        help='List of reference Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
+        'to process. Cannot be used with the `granules` arguments.',
+    )
+    parser.add_argument(
+        '--secondary',
+        type=nullable_granule_list,
+        default=[],
+        nargs='+',
+        help='List of secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
+        'to process. Cannot be used with the `granules` arguments.',
+    )
     args = parser.parse_args()
-
-    args.granules = [item for sublist in args.granules for item in sublist]
-    if len(args.granules) != 2:
-        parser.error('Must provide exactly two granules')
 
     logging.basicConfig(
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO
     )
 
-    g1, g2 = sorted(args.granules, key=get_datetime)
+    granules = [item for sublist in args.granules for item in sublist]
+    reference = [item for sublist in args.reference for item in sublist]
+    secondary = [item for sublist in args.secondary for item in sublist]
+
+    has_granules = len(granules) > 0
+    has_ref_sec = len(reference) > 0 and len(secondary) > 0
+
+    if not (has_granules or has_ref_sec):
+        parser.error('Must provide either `granules` or `--reference` and `--secondary`.')
+    if has_granules and has_ref_sec:
+        parser.error('Must provide granules OR --reference and --secondary, not both.')
+    if has_granules and len(granules) != 2:
+        parser.error('Must provide exactly two granules.')
+
+    if has_granules:
+        # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
+        warnings.warn(
+            'The positional argument for granules is deprecated and will be removed in a futre release. '
+            'Please use --reference and --secondary.',
+            DeprecationWarning,
+        )
+
+        granules_sorted = sort_ref_sec([granules[0]], [granules[1]])
+        reference = granules_sorted[0]
+        secondary = granules_sorted[1]
+    else:
+        reference, secondary = sort_ref_sec(reference, secondary)
+
+    if len(reference) != len(secondary):
+        parser.error('Must provide the same number of reference and secondary scenes.')
+
+    try:
+        ref_platforms = {get_platform(scene) for scene in reference}
+        sec_platforms = {get_platform(scene) for scene in secondary}
+    except NotImplementedError as e:
+        parser.error(str(e))
+
+    if len(reference) > 1 and ref_platforms != {'S1-BURST'}:
+        parser.error('Only Sentinel-1 bursts support multiple reference scenes.')
+
+    landsat_missions = {'L4', 'L5', 'L7', 'L8', 'L9'}
+    if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
+        parser.error('all scenes must be of the same type.')
 
     product_file, browse_file, thumbnail_file = process(
-        g1, g2, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
     )
 
     if args.bucket:
