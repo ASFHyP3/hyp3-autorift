@@ -15,6 +15,8 @@ S3_CLIENT = boto3.client('s3')
 # FIXME: This is a temporary bucket for testing 
 S3_BUCKET = 's1-static-file-testing'
 
+STATIC_DIR = Path('./static_topo_corrections/')
+
 RADAR_GRID_PARAMS = [
     'NC_GLOBAL#sensing_start',
     'NC_GLOBAL#wavelength',
@@ -59,7 +61,7 @@ def retrieve_static_nc_from_s3(burst_id):
     return filename
 
 
-# TODO
+# TODO: Replace with upload_to_s3 publish version
 def upload_static_nc_to_s3(filename: Path, burst_id: str):
 
     """
@@ -80,6 +82,13 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str):
         print(f'Unable to upload {filename} to S3 due to {e}.')
 
 
+def get_static_layers(burst_ids):
+    has_static_layer = {}
+    for burst_id in burst_ids:
+        has_static_layer[burst_id] = get_static_layer(burst_id)
+    return has_static_layer
+
+
 def get_static_layer(burst_id):
 
     """
@@ -98,13 +107,12 @@ def get_static_layer(burst_id):
     static_file = retrieve_static_nc_from_s3(burst_id)
 
     if not static_file: # Does not have static layer
-        return None
+        return False
 
     static_file = 'NETCDF:' + static_file
 
-    static_dir = Path('./static_topo_corrections/')
-    static_dir.mkdir(exist_ok=True)
-    burst_static_dir = static_dir / burst_id
+    STATIC_DIR.mkdir(exist_ok=True)
+    burst_static_dir = STATIC_DIR / burst_id
     burst_static_dir.mkdir(exist_ok=True)
 
     files = [str(burst_static_dir / file) for file in TOPO_CORRECTION_FILES]
@@ -134,7 +142,7 @@ def get_static_layer(burst_id):
         for param in RADAR_GRID_PARAMS:
             rdr_grid_file.write(metadata[param] + '\n')
 
-    return static_dir
+    return True
 
 
 def create_static_layer(burst_id, isce_product_path='./product/*'):
@@ -177,4 +185,4 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
             out_ds.GetRasterBand(i + 1).WriteArray(band_data)
 
     out_ds.FlushCache()
-    return burst_topo_nc
+    return Path(burst_topo_nc)

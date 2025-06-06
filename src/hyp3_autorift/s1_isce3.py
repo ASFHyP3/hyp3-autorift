@@ -19,7 +19,7 @@ from s1reader.s1_orbit import retrieve_orbit_file
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.s1_static_files import get_static_layer, create_static_layer, upload_static_nc_to_s3
+from hyp3_autorift.s1_static_files import get_static_layer, create_static_layer, upload_static_nc_to_s3, STATIC_DIR, get_static_layers
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
@@ -64,20 +64,17 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    static_dir = get_static_layer(burst_id_ref)
+    has_static_layer = get_static_layer(burst_id_ref)
 
-    if static_dir:
-        write_yaml(safe_ref, orbit_ref, burst_id_ref, is_ref=True, static_corrections_dir=static_dir)
-    else:
-        write_yaml(safe_ref, orbit_ref, is_ref=True)
+    write_yaml(safe_ref, orbit_ref, burst_id_ref, is_ref=True, use_static_layer=has_static_layer)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_ref)
 
-    write_yaml(safe_sec, orbit_sec, burst_id_sec, static_corrections_dir=static_dir)
+    write_yaml(safe_sec, orbit_sec, burst_id_sec, use_static_layer=has_static_layer)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
 
-    if not static_dir:
+    if not has_static_layer:
         topo_correction_file = create_static_layer(burst_id_ref)
         upload_static_nc_to_s3(Path(topo_correction_file), burst_id_ref)
 
@@ -97,7 +94,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
 
-    return netcdf_file, None
+    return netcdf_file
 
 
 def process_sentinel1_slc_isce3(slc_ref, slc_sec):
@@ -121,13 +118,32 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    write_yaml(safe_ref, orbit_ref)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
+    has_static_layer = get_static_layers(burst_ids_ref)
+
+    for burst_id in burst_ids_ref:
+        write_yaml(
+            safe=safe_ref,
+            orbit_file=orbit_ref,
+            burst_id=burst_id, 
+            is_ref=True,
+            use_static_layer=has_static_layer[burst_id]
+        )
+        s1_cslc.run('s1_cslc.yaml', 'radar')
+
+        if not has_static_layer[burst_id]:
+            topo_correction_file = create_static_layer(burst_id)
+            upload_static_nc_to_s3(topo_correction_file, burst_id)
+
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
-        write_yaml(safe_sec, orbit_sec, burst_id=burst_id_sec)
+        write_yaml(
+            safe=safe_sec,
+            orbit_file=orbit_sec,
+            burst_id=burst_id_sec,
+            use_static_layer=has_static_layer[burst_id_sec]
+        )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
     merge_swaths(safe_ref, orbit_ref, swaths=swaths)
@@ -538,22 +554,22 @@ def download_dem(dem, bounds):
     gdal.Warp('dem.tif', in_ds, options=warp_options)
 
 
-def write_yaml(safe, orbit_file, burst_id=None, is_ref=False, static_corrections_dir=None):
+def write_yaml(safe, orbit_file, burst_id=None, is_ref=False, use_static_layer=False):
     abspath = os.path.abspath(safe)
     yaml_folder = os.path.dirname(hyp3_autorift.__file__) + '/schemas'
 
     with open(f'{yaml_folder}/s1_cslc_template.yaml') as yaml:
         lines = yaml.readlines()
 
-    if burst_id is None:
+    if is_ref and not use_static_layer:
         s1_ref_file = ''
         burst_id_str = ''
         bool_reference = 'True'
         product_folder = './product'
         scratch_folder = './scratch'
         output_folder = './output'
-    elif static_corrections_dir:
-        s1_ref_file = str((static_corrections_dir / burst_id).absolute())
+    elif use_static_layer:
+        s1_ref_file = str((STATIC_DIR / burst_id).absolute())
         burst_id_str = '[' + burst_id + ']'
         bool_reference = 'False'
         product_folder = './product_sec' if not is_ref else './product'
