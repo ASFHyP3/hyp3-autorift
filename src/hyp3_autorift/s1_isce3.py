@@ -19,8 +19,12 @@ import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.s1_static_files import (
-    get_static_layer, get_static_layers, create_static_layer, 
-    upload_static_nc_to_s3, STATIC_DIR, S3_BUCKET
+    S3_BUCKET,
+    STATIC_DIR,
+    create_static_layer,
+    get_static_layer,
+    get_static_layers,
+    upload_static_nc_to_s3,
 )
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
@@ -39,7 +43,9 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket):
 
         swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
 
-        return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths)
+        return process_slc(
+            safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths
+        )
 
     reference = reference[0]
     secondary = secondary[0]
@@ -47,10 +53,14 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket):
     burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
 
-    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec, static_files_bucket)
+    return process_burst(
+        safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec, static_files_bucket
+    )
 
 
-def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec, static_files_bucket):
+def process_burst(
+    safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec, static_files_bucket
+):
     swath = int(granule_ref.split('_')[2][2])
     meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
     meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
@@ -79,7 +89,6 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     write_yaml(safe_sec, orbit_sec, burst_id_sec, use_static_layer=has_static_layer)
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
-
 
     if not has_static_layer and static_files_bucket:
         topo_correction_file = create_static_layer(burst_id_ref)
@@ -117,7 +126,9 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket):
     return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket)
 
 
-def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths=(1, 2, 3)):
+def process_slc(
+    safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths=(1, 2, 3)
+):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
@@ -136,9 +147,9 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         write_yaml(
             safe=safe_ref,
             orbit_file=orbit_ref,
-            burst_id=burst_id, 
+            burst_id=burst_id,
             is_ref=True,
-            use_static_layer=has_static_layer[burst_id]
+            use_static_layer=has_static_layer[burst_id],
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
@@ -151,10 +162,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
     for burst_id_sec in burst_ids:
         print('Burst', burst_id_sec)
         write_yaml(
-            safe=safe_sec,
-            orbit_file=orbit_sec,
-            burst_id=burst_id_sec,
-            use_static_layer=has_static_layer[burst_id_sec]
+            safe=safe_sec, orbit_file=orbit_sec, burst_id=burst_id_sec, use_static_layer=has_static_layer[burst_id_sec]
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 

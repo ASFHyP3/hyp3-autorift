@@ -1,20 +1,18 @@
 import glob
-import os
-import subprocess
 from pathlib import Path
 
 import boto3
 import numpy as np
-from hyp3lib.aws import upload_file_to_s3
 from osgeo import gdal
 
 from hyp3_autorift.utils import upload_file_to_s3_with_publish_access_keys
+
 
 gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
 
-# FIXME: This is a temporary bucket for testing 
+# FIXME: This is a temporary bucket for testing
 S3_BUCKET = 's1-static-file-testing'
 
 STATIC_DIR = Path('./static_topo_corrections/')
@@ -27,19 +25,13 @@ RADAR_GRID_PARAMS = [
     'NC_GLOBAL#range_pixel_spacing',
     'NC_GLOBAL#length',
     'NC_GLOBAL#width',
-    'NC_GLOBAL#ref_epoch'
+    'NC_GLOBAL#ref_epoch',
 ]
 
-TOPO_CORRECTION_FILES = [
-    'x.tif',
-    'y.tif',
-    'z.tif',
-    'layover_shadow_mask.tif'
-]
+TOPO_CORRECTION_FILES = ['x.tif', 'y.tif', 'z.tif', 'layover_shadow_mask.tif']
 
 
 def retrieve_static_nc_from_s3(burst_id, bucket):
-
     """
     Planned Bucket Structure:
 
@@ -56,7 +48,7 @@ def retrieve_static_nc_from_s3(burst_id, bucket):
 
     try:
         S3_CLIENT.download_file(bucket, key, filename)
-    except Exception as e:
+    except Exception:
         print(f'Unable to retrieve static topographic corrections for {burst_id} from S3.')
         return None
 
@@ -65,7 +57,6 @@ def retrieve_static_nc_from_s3(burst_id, bucket):
 
 # TODO: Replace with upload_to_s3 publish version
 def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str):
-
     """
     Planned Bucket Structure:
 
@@ -92,7 +83,6 @@ def get_static_layers(burst_ids, bucket):
 
 
 def get_static_layer(burst_id, bucket):
-
     """
     Planned Directory Structure:
 
@@ -108,7 +98,7 @@ def get_static_layer(burst_id, bucket):
 
     static_file = retrieve_static_nc_from_s3(burst_id, bucket)
 
-    if not static_file: # Does not have static layer
+    if not static_file:  # Does not have static layer
         return False
 
     static_file = 'NETCDF:' + static_file
@@ -156,9 +146,7 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
     topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
     with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
-        rdr_grid = dict(zip(
-            RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]    
-        ))
+        rdr_grid = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]))
 
     with gdal.Open(burst_dir + '/' + 'topo.vrt') as ds:
         cols = ds.RasterXSize
@@ -170,7 +158,7 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
     out_ds = driver.Create(burst_topo_nc, cols, rows, len(topo_files), gdal.GDT_Float64, options)
 
     if out_ds is None:
-        raise RuntimeError("Failed to create NetCDF file. Check that your GDAL has NetCDF-4 support.")
+        raise RuntimeError('Failed to create NetCDF file. Check that your GDAL has NetCDF-4 support.')
 
     out_ds.SetMetadata(rdr_grid)
 

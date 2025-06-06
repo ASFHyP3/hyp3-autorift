@@ -349,7 +349,7 @@ def process(
     secondary: list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
-    publish_bucket: str = ''
+    publish_bucket: str = '',
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
@@ -509,7 +509,11 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
-    parser.add_argument('--static-bucket-prefix', default='', help='AWS prefix (location in bucket) to add to static topographic correction files (Sentinel-1 only).')
+    parser.add_argument(
+        '--static-bucket-prefix',
+        default='',
+        help='AWS prefix (location in bucket) to add to static topographic correction files (Sentinel-1 only).',
+    )
     parser.add_argument(
         '--publish-bucket',
         default='',
@@ -599,15 +603,17 @@ def main():
         args.publish_bucket = ''
 
     product_file, browse_file, thumbnail_file = process(
-        reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme, publish_bucket=args.publish_bucket
+        reference,
+        secondary,
+        parameter_file=args.parameter_file,
+        naming_scheme=args.naming_scheme,
+        publish_bucket=args.publish_bucket,
     )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
-
-    return None
 
     if args.publish_bucket:
         prefix = get_opendata_prefix(product_file)
