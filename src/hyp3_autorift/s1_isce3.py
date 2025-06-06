@@ -130,7 +130,7 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         print('Replacing Publish Bucket')
         static_files_bucket = S3_BUCKET
 
-    has_static_layer = get_static_layers(burst_ids_ref)
+    has_static_layer = get_static_layers(burst_ids_ref, static_files_bucket)
 
     for burst_id in burst_ids_ref:
         write_yaml(
