@@ -152,7 +152,6 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
         cols = ds.RasterXSize
         rows = ds.RasterYSize
 
-    # Create with Float64 to allow storing all types safely
     driver = gdal.GetDriverByName('netCDF')
     options = ['FORMAT=NC4', 'COMPRESS=DEFLATE']
     out_ds = driver.Create(burst_topo_nc, cols, rows, len(topo_files), gdal.GDT_Float64, options)
