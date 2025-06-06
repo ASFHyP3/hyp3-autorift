@@ -75,12 +75,9 @@ def process_burst(
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    # FIXME: Remove before release
-    if not static_files_bucket:
-        print('Replacing Publish Bucket')
-        static_files_bucket = S3_BUCKET
+    retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
 
-    has_static_layer = get_static_layer(burst_id_ref, static_files_bucket)
+    has_static_layer = get_static_layer(burst_id_ref, retrieval_bucket)
 
     write_yaml(safe_ref, orbit_ref, burst_id_ref, is_ref=True, use_static_layer=has_static_layer)
     s1_cslc.run('s1_cslc.yaml', 'radar')
@@ -136,12 +133,9 @@ def process_slc(
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    # FIXME: Remove before release
-    if not static_files_bucket:
-        print('Replacing Publish Bucket')
-        static_files_bucket = S3_BUCKET
+    retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
 
-    has_static_layer = get_static_layers(burst_ids_ref, static_files_bucket)
+    has_static_layer = get_static_layers(burst_ids_ref, retrieval_bucket)
 
     for burst_id in burst_ids_ref:
         write_yaml(

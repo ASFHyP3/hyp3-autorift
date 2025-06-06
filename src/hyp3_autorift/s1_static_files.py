@@ -12,8 +12,9 @@ gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
 
-# FIXME: This is a temporary bucket for testing
-S3_BUCKET = 's1-static-file-testing'
+# Default bucket for retrieval to support hyp3
+S3_BUCKET = 'its-live-data'
+S3_BUCKET_PREFIX = 'static-topo-corrections'
 
 STATIC_DIR = Path('./static_topo_corrections/')
 
@@ -40,7 +41,7 @@ def retrieve_static_nc_from_s3(burst_id, bucket):
         - | {burst_id}_static.nc  # Should be 3 files total for IW1, IW2, IW3. (What about EW?)
     """
 
-    bucket_prefix = burst_id[:-4]
+    bucket_prefix = f'{S3_BUCKET_PREFIX}/{burst_id[:-4]}'
     filename = f'{burst_id}_static_rdr.nc'
     key = f'{bucket_prefix}/{filename}'
 
@@ -55,7 +56,6 @@ def retrieve_static_nc_from_s3(burst_id, bucket):
     return filename
 
 
-# TODO: Replace with upload_to_s3 publish version
 def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str):
     """
     Planned Bucket Structure:
@@ -67,7 +67,7 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str):
 
     assert filename.exists()
 
-    bucket_prefix = burst_id[:-4]  # Exclude swath
+    bucket_prefix = f'{S3_BUCKET_PREFIX}/{burst_id[:-4]}'
 
     try:
         upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
