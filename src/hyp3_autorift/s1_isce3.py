@@ -4,7 +4,6 @@ import math
 import os
 import subprocess
 from datetime import timedelta
-from pathlib import Path
 
 import numpy as np
 import s1reader
@@ -19,12 +18,15 @@ from s1reader.s1_orbit import retrieve_orbit_file
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.s1_static_files import get_static_layer, create_static_layer, upload_static_nc_to_s3, STATIC_DIR, get_static_layers
+from hyp3_autorift.s1_static_files import (
+    get_static_layer, get_static_layers, create_static_layer, 
+    upload_static_nc_to_s3, STATIC_DIR, S3_BUCKET
+)
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(reference, secondary):
+def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
@@ -37,7 +39,7 @@ def process_sentinel1_burst_isce3(reference, secondary):
 
         swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
 
-        return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths)
+        return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths)
 
     reference = reference[0]
     secondary = secondary[0]
@@ -45,17 +47,16 @@ def process_sentinel1_burst_isce3(reference, secondary):
     burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
     burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
 
-    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec)
+    return process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec, static_files_bucket)
 
 
-def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec):
+def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec, static_files_bucket):
     swath = int(granule_ref.split('_')[2][2])
     meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
     meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
-    topo_correction_file = None
 
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
 
@@ -64,7 +65,12 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
 
-    has_static_layer = get_static_layer(burst_id_ref)
+    # FIXME: Remove before release
+    if not static_files_bucket:
+        print('Replacing Publish Bucket')
+        static_files_bucket = S3_BUCKET
+
+    has_static_layer = get_static_layer(burst_id_ref, static_files_bucket)
 
     write_yaml(safe_ref, orbit_ref, burst_id_ref, is_ref=True, use_static_layer=has_static_layer)
     s1_cslc.run('s1_cslc.yaml', 'radar')
@@ -74,9 +80,10 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
 
-    if not has_static_layer:
+
+    if not has_static_layer and static_files_bucket:
         topo_correction_file = create_static_layer(burst_id_ref)
-        upload_static_nc_to_s3(topo_correction_file, burst_id_ref)
+        upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
@@ -97,7 +104,7 @@ def process_burst(safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_i
     return netcdf_file
 
 
-def process_sentinel1_slc_isce3(slc_ref, slc_sec):
+def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket):
     safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
     safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
 
@@ -107,16 +114,21 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec):
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
-    return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec)
+    return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket)
 
 
-def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, swaths=(1, 2, 3)):
+def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths=(1, 2, 3)):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
 
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
     download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+
+    # FIXME: Remove before release
+    if not static_files_bucket:
+        print('Replacing Publish Bucket')
+        static_files_bucket = S3_BUCKET
 
     has_static_layer = get_static_layers(burst_ids_ref)
 
@@ -130,9 +142,9 @@ def process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_i
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-        if not has_static_layer[burst_id]:
+        if not has_static_layer[burst_id] and static_files_bucket:
             topo_correction_file = create_static_layer(burst_id)
-            upload_static_nc_to_s3(topo_correction_file, burst_id)
+            upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
 
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 

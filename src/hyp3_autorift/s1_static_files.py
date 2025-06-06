@@ -8,6 +8,8 @@ import numpy as np
 from hyp3lib.aws import upload_file_to_s3
 from osgeo import gdal
 
+from hyp3_autorift.utils import upload_file_to_s3_with_publish_access_keys
+
 gdal.UseExceptions()
 
 S3_CLIENT = boto3.client('s3')
@@ -36,7 +38,7 @@ TOPO_CORRECTION_FILES = [
 ]
 
 
-def retrieve_static_nc_from_s3(burst_id):
+def retrieve_static_nc_from_s3(burst_id, bucket):
 
     """
     Planned Bucket Structure:
@@ -53,7 +55,7 @@ def retrieve_static_nc_from_s3(burst_id):
     print(f'Retrieving Static File: {key}')
 
     try:
-        S3_CLIENT.download_file(S3_BUCKET, key, filename)
+        S3_CLIENT.download_file(bucket, key, filename)
     except Exception as e:
         print(f'Unable to retrieve static topographic corrections for {burst_id} from S3.')
         return None
@@ -62,7 +64,7 @@ def retrieve_static_nc_from_s3(burst_id):
 
 
 # TODO: Replace with upload_to_s3 publish version
-def upload_static_nc_to_s3(filename: Path, burst_id: str):
+def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str):
 
     """
     Planned Bucket Structure:
@@ -77,19 +79,19 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str):
     bucket_prefix = burst_id[:-4]  # Exclude swath
 
     try:
-        upload_file_to_s3(filename, S3_BUCKET, bucket_prefix)
+        upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
     except Exception as e:
         print(f'Unable to upload {filename} to S3 due to {e}.')
 
 
-def get_static_layers(burst_ids):
+def get_static_layers(burst_ids, bucket):
     has_static_layer = {}
     for burst_id in burst_ids:
-        has_static_layer[burst_id] = get_static_layer(burst_id)
+        has_static_layer[burst_id] = get_static_layer(burst_id, bucket)
     return has_static_layer
 
 
-def get_static_layer(burst_id):
+def get_static_layer(burst_id, bucket):
 
     """
     Planned Directory Structure:
@@ -104,7 +106,7 @@ def get_static_layer(burst_id):
             - | radar_grid.txt           (Created from NetCDF)
     """
 
-    static_file = retrieve_static_nc_from_s3(burst_id)
+    static_file = retrieve_static_nc_from_s3(burst_id, bucket)
 
     if not static_file: # Does not have static layer
         return False
@@ -153,9 +155,6 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
     burst_topo_nc = f'{burst_id}_static_rdr.nc'
     topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
-    # Types of input bands; use this to cast before writing
-    expected_types = [gdal.GDT_Float64, gdal.GDT_Float64, gdal.GDT_Float64, gdal.GDT_Byte]
-
     with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
         rdr_grid = dict(zip(
             RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]    
@@ -174,6 +173,8 @@ def create_static_layer(burst_id, isce_product_path='./product/*'):
         raise RuntimeError("Failed to create NetCDF file. Check that your GDAL has NetCDF-4 support.")
 
     out_ds.SetMetadata(rdr_grid)
+
+    expected_types = [gdal.GDT_Float64, gdal.GDT_Float64, gdal.GDT_Float64, gdal.GDT_Byte]
 
     for i, (file, gdal_type) in enumerate(zip(topo_files, expected_types)):
         with gdal.Open(file) as in_ds:
