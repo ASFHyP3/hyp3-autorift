@@ -311,7 +311,7 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
 
             if len(bursts) > 1:
                 slc_az_end_index = -bursts[-1].last_valid_line
-                merged_az_end_index = az_offset + slc_rows - (slc_az_end_index - slc_az_start_index)
+                merged_az_end_index = az_offset + slc_rows + (slc_az_end_index - slc_az_start_index)
             else:
                 slc_az_end_index = bursts[0].last_valid_line
                 merged_az_end_index = az_offset + (slc_az_end_index - slc_az_start_index)
