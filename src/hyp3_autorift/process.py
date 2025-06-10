@@ -361,7 +361,7 @@ def process(
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
 
     Returns:
-        the autoRIFT product file, browse image, thumbnail image, and static topo correction files (for Sentinel-1 bursts)
+        the autoRIFT product file, browse image, thumbnail image
     """
     reference_path = None
     secondary_path = None
