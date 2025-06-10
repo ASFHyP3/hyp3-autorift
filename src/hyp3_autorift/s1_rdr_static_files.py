@@ -89,7 +89,7 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str) -> None:
         print(f'Unable to upload {filename} to S3 due to {e}.')
 
 
-def get_static_layers(burst_ids: list[str], bucket: str) -> list[bool]:
+def get_static_layers(burst_ids: list[str], bucket: str) -> dict[str, bool]:
     """Download radar-geometry topographic corrections and stage them for ISCE3 processing
 
     Args:
@@ -97,8 +97,7 @@ def get_static_layers(burst_ids: list[str], bucket: str) -> list[bool]:
         bucket: The bucket to download from
 
     Returns:
-        List of boolean values that correspond to whether a static correction file was found
-        for the respective burst
+        Dict of burst ids to boolean values that correspond to whether a static correction file was found
     """
 
     has_static_layer = {}
