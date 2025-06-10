@@ -61,7 +61,7 @@ def retrieve_static_nc_from_s3(burst_id: str, bucket: str, filename: str) -> str
             message = f'Got access denied when attempting to retrieve static correction file for {burst_id}.'
         else:
             message = e
-        print(message)
+        print(message + ' `rdr2geo` will be run for this burst.')
         return None
 
     return filename
