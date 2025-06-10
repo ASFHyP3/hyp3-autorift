@@ -18,7 +18,7 @@ from s1reader.s1_orbit import retrieve_orbit_file
 import hyp3_autorift
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.s1_static_files import (
+from hyp3_autorift.s1_rdr_static_files import (
     S3_BUCKET,
     STATIC_DIR,
     create_static_layer,
@@ -281,8 +281,10 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
 
     assert sensing_start and sensing_stop and rng_pixel_spacing
 
-    total_rng_samples = last_rng_samples + int(np.floor((last_start_rng - first_start_rng) / rng_pixel_spacing))
-    total_az_samples = 1 + int(np.round((sensing_stop - sensing_start).total_seconds() / az_time_interval))
+    num_rng_pixels = int(np.floor((last_start_rng - first_start_rng) / rng_pixel_spacing))
+    sensing_time = (sensing_stop - sensing_start).total_seconds()
+    total_rng_samples = last_rng_samples + num_rng_pixels
+    total_az_samples = 1 + int(np.round(sensing_time / az_time_interval))
 
     for slc in ['ref', 'sec']:
         swath_index = 0
@@ -293,20 +295,29 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
 
             slc_path = slc + '_swath_iw' + str(swath) + '.tif'
             slc_array = read_slc_gdal(slc_path)
+            slc_rows = slc_array.shape[0]
 
             bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
 
+            first_rng_sample = bursts[0].first_valid_sample
+            last_rng_sample = bursts[0].last_valid_sample
             az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
-            rng_offset = rng_offsets[swath_index] + bursts[0].first_valid_sample
-            az_end_index = az_offset + slc_array.shape[0] - bursts[-1].last_valid_line - bursts[0].first_valid_line
-            rng_end_index = rng_offset + (bursts[0].last_valid_sample - bursts[0].first_valid_sample)
-
+            rng_offset = rng_offsets[swath_index] + first_rng_sample
+            rng_end_index = rng_offset + (last_rng_sample - first_rng_sample)
             invalid_pixel_buffer = 64 if swath != max(swaths) else 0
+            slc_az_start_index = bursts[0].first_valid_line
 
-            merged_az_slice = slice(az_offset, az_end_index)
+            if len(bursts) > 1:
+                slc_az_end_index = -bursts[-1].last_valid_line
+                merged_az_end_index = az_offset + slc_rows - (slc_az_end_index - slc_az_start_index)
+            else:
+                slc_az_end_index = bursts[0].last_valid_line
+                merged_az_end_index = az_offset + (slc_az_end_index - slc_az_start_index)
+
+            merged_az_slice = slice(az_offset, merged_az_end_index)
             merged_rng_slice = slice(rng_offset, rng_end_index - invalid_pixel_buffer)
-            slc_az_slice = slice(bursts[0].first_valid_line, -bursts[-1].last_valid_line)
-            slc_rng_slice = slice(bursts[0].first_valid_sample, bursts[0].last_valid_sample - invalid_pixel_buffer)
+            slc_az_slice = slice(slc_az_start_index, slc_az_end_index)
+            slc_rng_slice = slice(first_rng_sample, last_rng_sample - invalid_pixel_buffer)
 
             cond = np.logical_and(
                 merged_arr[merged_az_slice, merged_rng_slice] == 0, slc_array[slc_az_slice, slc_rng_slice] != 0
