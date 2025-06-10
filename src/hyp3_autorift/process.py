@@ -514,11 +514,6 @@ def main():
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
     parser.add_argument(
-        '--static-bucket-prefix',
-        default='',
-        help='AWS prefix (location in bucket) to add to static topographic correction files (Sentinel-1 only).',
-    )
-    parser.add_argument(
         '--publish-bucket',
         default='',
         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
