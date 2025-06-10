@@ -590,7 +590,7 @@ def write_yaml(safe, orbit_file, burst_id=None, is_ref=False, use_static_layer=F
 
     if is_ref and not use_static_layer:
         s1_ref_file = ''
-        burst_id_str = ''
+        burst_id_str = '[' + burst_id + ']' if burst_id else ''
         bool_reference = 'True'
         product_folder = './product'
         scratch_folder = './scratch'
