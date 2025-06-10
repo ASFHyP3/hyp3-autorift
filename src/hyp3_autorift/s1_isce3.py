@@ -89,7 +89,8 @@ def process_burst(
 
     if not has_static_layer and static_files_bucket:
         topo_correction_file = create_static_layer(burst_id_ref)
-        upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
+        if topo_correction_file:
+            upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
 
     geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
 
@@ -149,7 +150,8 @@ def process_slc(
 
         if not has_static_layer[burst_id] and static_files_bucket:
             topo_correction_file = create_static_layer(burst_id)
-            upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
+            if topo_correction_file:
+                upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
 
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
