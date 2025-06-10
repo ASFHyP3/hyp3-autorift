@@ -4,8 +4,9 @@ from pathlib import Path
 import boto3
 import numpy as np
 from botocore.exceptions import ClientError
-from hyp3lib.aws import upload_file_to_s3
 from osgeo import gdal
+
+from hyp3_autorift.utils import upload_file_to_s3_with_publish_access_keys
 
 
 gdal.UseExceptions()
@@ -83,8 +84,7 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str) -> None:
     bucket_prefix = f'{S3_BUCKET_PREFIX}/{burst_id[:-4]}'
 
     try:
-        # upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
-        upload_file_to_s3(filename, bucket, bucket_prefix)
+        upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
     except Exception as e:
         print(f'Unable to upload {filename} to S3 due to {e}.')
 
