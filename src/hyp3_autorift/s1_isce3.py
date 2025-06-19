@@ -30,7 +30,7 @@ from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket):
+def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
@@ -44,7 +44,15 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket):
         swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
 
         return process_slc(
-            safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths
+            safe_ref,
+            safe_sec,
+            orbit_ref,
+            orbit_sec,
+            burst_ids_ref,
+            burst_ids_sec,
+            static_files_bucket,
+            use_static_files,
+            swaths,
         )
 
     reference = reference[0]
@@ -54,45 +62,83 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket):
     burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
 
     return process_burst(
-        safe_ref, safe_sec, orbit_ref, orbit_sec, reference, burst_id_ref, burst_id_sec, static_files_bucket
+        safe_ref,
+        safe_sec,
+        orbit_ref,
+        orbit_sec,
+        reference,
+        burst_id_ref,
+        burst_id_sec,
+        static_files_bucket,
+        use_static_files,
     )
 
 
 def process_burst(
-    safe_ref, safe_sec, orbit_ref, orbit_sec, granule_ref, burst_id_ref, burst_id_sec, static_files_bucket
+    safe_ref,
+    safe_sec,
+    orbit_ref,
+    orbit_sec,
+    granule_ref,
+    burst_id_ref,
+    burst_id_sec,
+    static_files_bucket,
+    use_static_files,
 ):
     swath = int(granule_ref.split('_')[2][2])
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
+    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
+
+    download_dem(
+        dem=parameter_info['geogrid']['dem'],
+        bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
+    )
+
+    if use_static_files:
+        retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
+        has_static_layer = get_static_layer(burst_id_ref, retrieval_bucket)
+        do_static_upload = not has_static_layer and static_files_bucket
+    else:
+        has_static_layer = False
+        do_static_upload = False
+
+    write_yaml(
+        safe=safe_ref,
+        orbit_file=orbit_ref,
+        burst_id=burst_id_ref,
+        is_ref=True,
+        use_static_layer=has_static_layer,
+    )
+    s1_cslc.run('s1_cslc.yaml', 'radar')
+    convert2isce(burst_id_ref)
+
+    if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref)):
+        upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
+        subprocess.run(['rm', topo_correction_file])
+
+    write_yaml(
+        safe=safe_sec,
+        orbit_file=orbit_sec,
+        burst_id=burst_id_sec,
+        use_static_layer=has_static_layer,
+    )
+    s1_cslc.run('s1_cslc.yaml', 'radar')
+    convert2isce(burst_id_sec, ref=False)
+
     meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
     meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
-
-    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-
-    download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
-
-    retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
-
-    has_static_layer = get_static_layer(burst_id_ref, retrieval_bucket)
-
-    write_yaml(safe_ref, orbit_ref, burst_id_ref, is_ref=True, use_static_layer=has_static_layer)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    convert2isce(burst_id_ref)
-
-    write_yaml(safe_sec, orbit_sec, burst_id_sec, use_static_layer=has_static_layer)
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    convert2isce(burst_id_sec, ref=False)
-
-    if not has_static_layer and static_files_bucket:
-        topo_correction_file = create_static_layer(burst_id_ref)
-        if topo_correction_file:
-            upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
-
-    geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+    geogrid_info = runGeogrid(
+        info=meta_r,
+        info1=meta_s,
+        optical_flag=0,
+        epsg=parameter_info['epsg'],
+        **parameter_info['geogrid'],
+    )
 
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
@@ -111,7 +157,7 @@ def process_burst(
     return netcdf_file
 
 
-def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket):
+def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_static_files):
     safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
     safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
 
@@ -121,44 +167,66 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket):
     burst_ids_ref = get_burst_ids(safe_ref, orbit_ref)
     burst_ids_sec = get_burst_ids(safe_sec, orbit_sec)
 
-    return process_slc(safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket)
+    return process_slc(
+        safe_ref,
+        safe_sec,
+        orbit_ref,
+        orbit_sec,
+        burst_ids_ref,
+        burst_ids_sec,
+        static_files_bucket,
+        use_static_files,
+    )
 
 
 def process_slc(
-    safe_ref, safe_sec, orbit_ref, orbit_sec, burst_ids_ref, burst_ids_sec, static_files_bucket, swaths=(1, 2, 3)
+    safe_ref,
+    safe_sec,
+    orbit_ref,
+    orbit_sec,
+    burst_ids_ref,
+    burst_ids_sec,
+    static_files_bucket,
+    use_static_files,
+    swaths=(1, 2, 3),
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
-
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
+    burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
 
-    download_dem(parameter_info['geogrid']['dem'], [lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]])
+    download_dem(
+        dem=parameter_info['geogrid']['dem'],
+        bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
+    )
 
-    retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
+    if use_static_files:
+        retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
+        has_static_layer = get_static_layers(burst_ids, retrieval_bucket)
+        do_static_upload = {burst_id: static_files_bucket and not has_static_layer[burst_id] for burst_id in burst_ids}
+    else:
+        has_static_layer = {}
+        do_static_upload = {}
 
-    has_static_layer = get_static_layers(burst_ids_ref, retrieval_bucket)
-
-    for burst_id in burst_ids_ref:
+    for burst_id in burst_ids:
         write_yaml(
             safe=safe_ref,
             orbit_file=orbit_ref,
             burst_id=burst_id,
             is_ref=True,
-            use_static_layer=has_static_layer[burst_id],
+            use_static_layer=use_static_files and has_static_layer[burst_id],
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-        if not has_static_layer[burst_id] and static_files_bucket:
-            topo_correction_file = create_static_layer(burst_id)
-            if topo_correction_file:
-                upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
+        if do_static_upload[burst_id] and (topo_correction_file := create_static_layer(burst_id)):
+            upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
+            subprocess.run(['rm', topo_correction_file])
 
-    burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
-
-    for burst_id_sec in burst_ids:
-        print('Burst', burst_id_sec)
         write_yaml(
-            safe=safe_sec, orbit_file=orbit_sec, burst_id=burst_id_sec, use_static_layer=has_static_layer[burst_id_sec]
+            safe=safe_sec,
+            orbit_file=orbit_sec,
+            burst_id=burst_id,
+            use_static_layer=use_static_files and has_static_layer[burst_id],
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
@@ -170,17 +238,20 @@ def process_slc(
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    geogrid_info = runGeogrid(meta_r, meta_s, optical_flag=0, epsg=parameter_info['epsg'], **parameter_info['geogrid'])
+    geogrid_info = runGeogrid(
+        info=meta_r,
+        info1=meta_s,
+        optical_flag=0,
+        epsg=parameter_info['epsg'],
+        **parameter_info['geogrid'],
+    )
 
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
 
-    ref = 'reference.tif'
-    sec = 'secondary.tif'
-
     netcdf_file = generateAutoriftProduct(
-        ref,
-        sec,
+        'reference.tif',
+        'secondary.tif',
         nc_sensor='S1',
         optical_flag=False,
         ncname=None,

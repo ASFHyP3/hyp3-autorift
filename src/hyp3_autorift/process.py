@@ -354,6 +354,7 @@ def process(
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
+    use_static_files: bool = True,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
@@ -379,12 +380,12 @@ def process(
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
-        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket)
+        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files)
 
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -554,6 +555,13 @@ def main():
         help='List of secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
         'to process. Cannot be used with the `granules` arguments.',
     )
+    parser.add_argument(
+        '--no-static-topo-corrections',
+        dest='use_static_files',
+        action='store_false',
+        help='Skip using static topographic correction files for ISCE3 processing (for Sentinel-1 only).',
+    )
+    parser.set_defaults(use_static_files=True)
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -614,6 +622,7 @@ def main():
         parameter_file=args.parameter_file,
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
+        use_static_files=args.use_static_files,
     )
 
     if args.bucket:
