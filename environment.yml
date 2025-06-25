@@ -37,6 +37,7 @@ dependencies:
   - xarray
   # for compiling nasa-jpl/autoRIFT and for build arm container
   - cxx-compiler
+  - gfortran
   - eigen
   - numba
   - scikit-image
