@@ -41,16 +41,13 @@ RUN mamba env create -f /hyp3-autorift/environment.yml && \
     conda clean -afy && \
     conda activate hyp3-autorift && \
     sed -i 's/conda activate base/conda activate hyp3-autorift/g' /home/conda/.profile && \
-    git clone https://github.com/isce-framework/isce3 && \
-    git clone https://github.com/opera-adt/COMPASS && \
-    git clone https://github.com/isce-framework/s1-reader && \
-    git clone https://github.com/nasa-jpl/autoRIFT && \
     export CMAKE_PREFIX_PATH=$CONDA_PREFIX && \
     export LDFLAGS="-lcurl" && \
-    cd isce3 && python -m pip install . && cd .. \
-    cd COMPASS && python -m pip install . && cd .. \
-    cd s1-reader && python -m pip install . && cd .. \
-    cd autoRIFT && python -m pip install . && cd .. \
+    python -m pip install git+https://github.com/dbekaert/RAiDER && \
+    python -m pip install git+https://github.com/isce-framework/isce3 && \
+    python -m pip install git+https://github.com/opera-adt/COMPASS && \
+    python -m pip install git+https://github.com/isce-framework/s1-reader && \
+    python -m pip install git+https://github.com/nasa-jpl/autoRIFT && \
     python -m pip install --no-cache-dir /hyp3-autorift
 
 ENTRYPOINT ["/hyp3-autorift/src/hyp3_autorift/etc/entrypoint.sh"]
