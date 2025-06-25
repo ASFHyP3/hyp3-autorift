@@ -218,10 +218,6 @@ def process_slc(
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-        if do_static_upload[burst_id] and (topo_correction_file := create_static_layer(burst_id)):
-            upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
-            subprocess.run(['rm', topo_correction_file])
-
         write_yaml(
             safe=safe_sec,
             orbit_file=orbit_sec,
@@ -229,6 +225,13 @@ def process_slc(
             use_static_layer=use_static_files and has_static_layer[burst_id],
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
+
+        if do_static_upload[burst_id] and (topo_correction_file := create_static_layer(burst_id)):
+            upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
+            subprocess.run(['rm', topo_correction_file])
+
+        if has_static_layer[burst_id]:
+            subprocess.run(['rm', '-rf', str((STATIC_DIR / burst_id).absolute())])
 
     merge_swaths(safe_ref, orbit_ref, swaths=swaths)
 
