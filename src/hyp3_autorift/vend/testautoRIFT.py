@@ -303,11 +303,6 @@ def runAutorift(
 
     obj.MultiThread = mpflag
 
-    # take the amplitude only for the radar images
-    if optflag == 0:
-        I1 = loadProduct('reference.tif')
-        I2 = loadProduct('secondary.tif')
-
     obj.I1 = I1
     obj.I2 = I2
 
