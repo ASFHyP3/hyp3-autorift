@@ -304,7 +304,9 @@ def runAutorift(
     obj.MultiThread = mpflag
 
     obj.I1 = I1
+    I1 = None
     obj.I2 = I2
+    I2 = None
 
     # create the grid if it does not exist
     if xGrid is None:
@@ -331,8 +333,8 @@ def runAutorift(
         for ii in range(obj.xGrid.shape[0]):
             for jj in range(obj.xGrid.shape[1]):
                 if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
-                    if (I1[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0) | (
-                        I2[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0
+                    if (obj.I1[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0) | (
+                        obj.I2[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0
                     ):
                         noDataMask[ii, jj] = True
     elif zero_mask is not None:
