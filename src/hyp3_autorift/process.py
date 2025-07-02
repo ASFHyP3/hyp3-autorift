@@ -19,6 +19,7 @@ import numpy as np
 import requests
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.image import create_thumbnail
+from hyp3lib.util import string_is_true
 from netCDF4 import Dataset
 from osgeo import gdal
 
@@ -498,6 +499,11 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
+def nullable_string(argument_string: str) -> str | None:
+    argument_string = argument_string.replace('None', '').strip()
+    return argument_string if argument_string else None
+
+
 def nullable_granule_list(granule_string: str) -> list[str]:
     granule_string = granule_string.replace('None', '').strip()
     granule_list = [granule for granule in granule_string.split(' ') if granule]
@@ -516,7 +522,8 @@ def main():
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
     parser.add_argument(
         '--publish-bucket',
-        default='',
+        type=nullable_string,
+        default=None,
         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
         'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
     )
@@ -556,12 +563,11 @@ def main():
         'to process. Cannot be used with the `granules` arguments.',
     )
     parser.add_argument(
-        '--no-static-topo-corrections',
-        dest='use_static_files',
-        action='store_false',
-        help='Skip using static topographic correction files for ISCE3 processing (for Sentinel-1 only).',
+        '--use-static-files',
+        type=string_is_true,
+        default=True,
+        help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
     )
-    parser.set_defaults(use_static_files=True)
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -585,7 +591,7 @@ def main():
     if has_granules:
         # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
         warnings.warn(
-            'The positional argument for granules is deprecated and will be removed in a futre release. '
+            'The positional argument for granules is deprecated and will be removed in a future release. '
             'Please use --reference and --secondary.',
             DeprecationWarning,
         )
@@ -611,10 +617,6 @@ def main():
     landsat_missions = {'L4', 'L5', 'L7', 'L8', 'L9'}
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
         parser.error('all scenes must be of the same type.')
-
-    # FIXME: HyP3 is passing the default value for this argument as '""' not "", so we're not getting an empty string
-    if args.publish_bucket == '""':
-        args.publish_bucket = ''
 
     product_file, browse_file, thumbnail_file = process(
         reference,

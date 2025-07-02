@@ -124,7 +124,7 @@ def get_static_layer(burst_id: str, bucket: str) -> bool:
         bucket: The bucket to download from
 
     Returns:
-        True if a static file was retreived else False
+        True if a static file was retrieved else False
     """
 
     STATIC_DIR.mkdir(exist_ok=True)
