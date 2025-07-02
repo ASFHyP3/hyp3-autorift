@@ -591,7 +591,7 @@ def main():
     if has_granules:
         # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
         warnings.warn(
-            'The positional argument for granules is deprecated and will be removed in a futre release. '
+            'The positional argument for granules is deprecated and will be removed in a future release. '
             'Please use --reference and --secondary.',
             DeprecationWarning,
         )
