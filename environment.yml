@@ -55,4 +55,4 @@ dependencies:
       - -r requirements-static.txt
       - -r requirements-isce3.txt
       # TODO: need to be manually installed currently
-      - -r requirements-radar.txt
+      # - -r requirements-radar.txt
