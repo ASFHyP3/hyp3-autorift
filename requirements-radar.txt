@@ -1,0 +1,5 @@
+git+https://github.com/dbekaert/RAiDER.git@v0.5.5
+git+https://github.com/isce-framework/isce3.git@v0.24.5
+git+https://github.com/opera-adt/COMPASS.git@v0.5.6
+git+https://github.com/isce-framework/s1-reader.git@v0.2.5
+git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0

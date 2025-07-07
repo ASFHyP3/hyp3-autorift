@@ -45,7 +45,7 @@ dependencies:
   - gtest
   - fftw
   - pybind11
-  - ruamel 
+  - ruamel
   - ruamel.yaml  # completely different package from ruamel
   - yamale
   - backoff
@@ -54,3 +54,5 @@ dependencies:
   - pip:
       - -r requirements-static.txt
       - -r requirements-isce3.txt
+      # TODO: need to be manually installed currently
+      - -r requirements-radar.txt
