@@ -14,30 +14,43 @@ dependencies:
   - setuptools>=61
   - setuptools_scm>=6.2
   # For running
-  - autoRIFT>=2.0.0
+  # - autoRIFT>=2.0.0
   - boto3
   - botocore
   - burst2safe>=1.4.4
-  - compass>=0.5.6
+  # - compass>=0.5.6
   - gdal>=3
   - h5netcdf  # for increased performance of crop.py
   - hyp3lib>=4,<5
-  - isce3>=0.14
+  # - isce3>=0.14
+  - libgdal-netcdf
   - libgdal-jp2openjpeg
   - matplotlib-base
   - netCDF4
-  - numpy>=1.20
+  - numpy==1.26.0
   - opencv
   - pandas>=1.4
   - pyproj>=3.3
   - requests>=2.0
-  - s1reader>=0.2.2
+  # - s1reader>=0.2.2
   - scipy>=1.0
   - xarray
-  # for compiling nasa-jpl/autoRIFT
-  # - cxx-compiler
-  # - eigen
-  # - numba
-  # - scikit-image
+  # for compiling nasa-jpl/autoRIFT and for build arm container
+  - cxx-compiler
+  - gfortran
+  - eigen
+  - numba
+  - scikit-image
+  - pkgconfig
+  - gtest
+  - fftw
+  - pybind11
+  - ruamel 
+  - ruamel.yaml  # completely different package from ruamel
+  - yamale
+  - backoff
+  - pyre
+
   - pip:
       - -r requirements-static.txt
+      - -r requirements-isce3.txt

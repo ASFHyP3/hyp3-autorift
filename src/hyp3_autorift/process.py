@@ -19,6 +19,7 @@ import numpy as np
 import requests
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.image import create_thumbnail
+from hyp3lib.util import string_is_true
 from netCDF4 import Dataset
 from osgeo import gdal
 
@@ -353,6 +354,8 @@ def process(
     secondary: list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
+    publish_bucket: str = '',
+    use_static_files: bool = True,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
@@ -361,9 +364,10 @@ def process(
         secondary: Name of the secondary Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
+        publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
 
     Returns:
-        the autoRIFT product file, browse image, and thumbnail image
+        the autoRIFT product file, browse image, thumbnail image
     """
     reference_path = None
     secondary_path = None
@@ -377,12 +381,12 @@ def process(
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
-        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0])
+        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files)
 
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -495,6 +499,11 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
+def nullable_string(argument_string: str) -> str | None:
+    argument_string = argument_string.replace('None', '').strip()
+    return argument_string if argument_string else None
+
+
 def nullable_granule_list(granule_string: str) -> list[str]:
     granule_string = granule_string.replace('None', '').strip()
     granule_list = [granule for granule in granule_string.split(' ') if granule]
@@ -513,7 +522,8 @@ def main():
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
     parser.add_argument(
         '--publish-bucket',
-        default='',
+        type=nullable_string,
+        default=None,
         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
         'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
     )
@@ -552,6 +562,12 @@ def main():
         help='List of secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
         'to process. Cannot be used with the `granules` arguments.',
     )
+    parser.add_argument(
+        '--use-static-files',
+        type=string_is_true,
+        default=True,
+        help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -575,7 +591,7 @@ def main():
     if has_granules:
         # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
         warnings.warn(
-            'The positional argument for granules is deprecated and will be removed in a futre release. '
+            'The positional argument for granules is deprecated and will be removed in a future release. '
             'Please use --reference and --secondary.',
             DeprecationWarning,
         )
@@ -603,17 +619,18 @@ def main():
         parser.error('all scenes must be of the same type.')
 
     product_file, browse_file, thumbnail_file = process(
-        reference, secondary, parameter_file=args.parameter_file, naming_scheme=args.naming_scheme
+        reference,
+        secondary,
+        parameter_file=args.parameter_file,
+        naming_scheme=args.naming_scheme,
+        publish_bucket=args.publish_bucket,
+        use_static_files=args.use_static_files,
     )
 
     if args.bucket:
         upload_file_to_s3(product_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(browse_file, args.bucket, args.bucket_prefix)
         upload_file_to_s3(thumbnail_file, args.bucket, args.bucket_prefix)
-
-    # FIXME: HyP3 is passing the default value for this argument as '""' not "", so we're not getting an empty string
-    if args.publish_bucket == '""':
-        args.publish_bucket = ''
 
     if args.publish_bucket:
         prefix = get_opendata_prefix(product_file)
