@@ -49,6 +49,7 @@ dependencies:
   - ruamel.yaml  # completely different package from ruamel
   - yamale
   - backoff
+  - sel(linux/amd64): pyre
   - pip:
       - -r requirements-static.txt
       - -r requirements-radar.txt
