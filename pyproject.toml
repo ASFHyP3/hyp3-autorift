@@ -151,18 +151,7 @@ pyproj = ">=3.3"
 requests = ">=2.0"
 scipy = ">=1.0"
 xarray = "*"
-
-[tool.pixi.target.linux-64.dependencies]
-autoRIFT = ">=2.0.0"
-compass = ">=0.5.6"
-isce3 = ">=0.14"
-s1reader = ">=0.2.2"
-pyre = "*"
-
-[tool.pixi.target.linux-64.pypi-dependencies]
-hyp3_autorift = { path = ".", editable = true }
-
-[tool.pixi.target.linux-aarch64.dependencies]
+# For building radar deps
 cxx-compiler = "*"
 gfortran = "*"
 eigen = "*"
@@ -177,31 +166,14 @@ ruamel = "*"
 yamale = "*"
 backoff = "*"
 
-[tool.pixi.target.linux-aarch64.pypi-dependencies]
+[tool.pixi.target.linux-64.dependencies]
+pyre = "*"
+
+[tool.pixi.pypi-dependencies]
 pyre = "*"
 pysolid = "*"
 snaphu = "*"
-raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "1028fcc9c453bffb56766987e45c33899403645e" }  # v0.5.5
-
-[tool.pixi.target.osx-64.dependencies]
-autoRIFT = ">=2.0.0"
-compass = ">=0.5.6"
-isce3 = ">=0.14"
-s1reader = ">=0.2.2"
-pyre = "*"
-
-[tool.pixi.target.osx-64.pypi-dependencies]
-hyp3_autorift = { path = ".", editable = true }
-
-[tool.pixi.target.osx-arm64.dependencies]
-autoRIFT = ">=2.0.0"
-compass = ">=0.5.6"
-isce3 = ">=0.14"
-s1reader = ">=0.2.2"
-pyre = "*"
-
-[tool.pixi.target.osx-arm64.pypi-dependencies]
-hyp3_autorift = { path = ".", editable = true }
+raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
@@ -228,6 +200,17 @@ cmd = [
 ]
 depends-on = ["install-isce3"]
 
+[tool.pixi.tasks.install-autorift]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
+]
+depends-on = ["install-radar"]
+
+
 [tool.pixi.tasks.install-editable]
 cmd = [
     "python",
@@ -238,13 +221,3 @@ cmd = [
     ".",
 ]
 depends-on = ["install-autorift"]
-
-[tool.pixi.tasks.install-autorift]
-cmd = [
-    "python",
-    "-m",
-    "pip",
-    "install",
-    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
-]
-depends-on = ["install-radar"]
