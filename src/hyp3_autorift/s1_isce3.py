@@ -205,8 +205,8 @@ def process_slc(
         has_static_layer = get_static_layers(burst_ids, retrieval_bucket)
         do_static_upload = {burst_id: static_files_bucket and not has_static_layer[burst_id] for burst_id in burst_ids}
     else:
-        has_static_layer = {}
-        do_static_upload = {}
+        has_static_layer = {burst_id: False for burst_id in burst_ids}
+        do_static_upload = has_static_layer
 
     for burst_id in burst_ids:
         write_yaml(
@@ -233,9 +233,8 @@ def process_slc(
         if has_static_layer[burst_id]:
             subprocess.run(['rm', '-rf', str((STATIC_DIR / burst_id).absolute())])
 
-    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
-
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
+    slc_shape = merge_swaths(safe_ref, orbit_ref, swaths=swaths)
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths, slc_shape=slc_shape)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
@@ -406,6 +405,8 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
         write_slc_gdal(merged_arr, 'reference.tif' if slc == 'ref' else 'secondary.tif')
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
+
+    return merged_arr.shape
 
 
 def get_azimuth_reference_offsets(bursts: list):
