@@ -176,8 +176,7 @@ snaphu = "*"
 raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
 
 [tool.pixi.environments]
-default = { features = [], solve-group = "default" }
-develop = { features = ["develop"], solve-group = "default" }
+default = { features = ["develop"], solve-group = "default" }
 
 [tool.pixi.tasks.install-isce3]
 cmd = [
