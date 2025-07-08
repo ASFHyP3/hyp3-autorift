@@ -1,3 +1,4 @@
+pyre
 pysolid
 snaphu
 git+https://github.com/dbekaert/RAiDER.git@v0.5.5
