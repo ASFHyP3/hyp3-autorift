@@ -35,7 +35,7 @@ dependencies:
   # - s1reader>=0.2.2
   - scipy>=1.0
   - xarray
-  # for compiling nasa-jpl/autoRIFT and for build arm container
+  # for compiling nasa-jpl/autoRIFT and for building an arm container
   - cxx-compiler
   - gfortran
   - eigen
@@ -49,7 +49,6 @@ dependencies:
   - ruamel.yaml  # completely different package from ruamel
   - yamale
   - backoff
-  - pyre
   - pip:
       - -r requirements-static.txt
       - -r requirements-radar.txt
