@@ -127,7 +127,13 @@ follow_imports = "skip"
 channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
+[tool.pixi.pypi-options]
+no-build-isolation = [
+    'isce3',
+]
+
 [tool.pixi.dependencies]
+pip = "*"
 boto3 = "*"
 botocore = "*"
 burst2safe = ">=1.4.4"
@@ -146,15 +152,15 @@ requests = ">=2.0"
 scipy = ">=1.0"
 xarray = "*"
 
-[tool.pixi.pypi-dependencies]
-hyp3_autorift = { path = ".", editable = true }
-
 [tool.pixi.target.linux-64.dependencies]
 autoRIFT = ">=2.0.0"
 compass = ">=0.5.6"
 isce3 = ">=0.14"
 s1reader = ">=0.2.2"
 pyre = "*"
+
+[tool.pixi.target.linux-64.pypi-dependencies]
+hyp3_autorift = { path = ".", editable = true }
 
 [tool.pixi.target.linux-aarch64.dependencies]
 cxx-compiler = "*"
@@ -176,10 +182,6 @@ pyre = "*"
 pysolid = "*"
 snaphu = "*"
 raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "1028fcc9c453bffb56766987e45c33899403645e" }  # v0.5.5
-# NOTE: ISCE3 does release-stub branches and doesn't include the pyproject.toml in the realease artifacts, so "version number" is a shakey concept.
-isce3 = {git = "git+https://github.com/jhkennedy/isce3.git", rev = "19238de2cab43686126307b706ff34a7dbdd2e80"}  # post v0.24.5
-compass = {git = "https://github.com/opera-adt/COMPASS.git", rev = "487c7eb7461faaf4719f0342b7757cdcf61401e1" }  # v0.5.6
-s1reader = {git = "https://github.com/isce-framework/s1-reader.git", rev = "f1c8aa305d025cff339e7cca0065844a81aebb5e" }  # v0.2.5
 
 [tool.pixi.target.osx-64.dependencies]
 autoRIFT = ">=2.0.0"
@@ -188,6 +190,9 @@ isce3 = ">=0.14"
 s1reader = ">=0.2.2"
 pyre = "*"
 
+[tool.pixi.target.osx-64.pypi-dependencies]
+hyp3_autorift = { path = ".", editable = true }
+
 [tool.pixi.target.osx-arm64.dependencies]
 autoRIFT = ">=2.0.0"
 compass = ">=0.5.6"
@@ -195,8 +200,51 @@ isce3 = ">=0.14"
 s1reader = ">=0.2.2"
 pyre = "*"
 
+[tool.pixi.target.osx-arm64.pypi-dependencies]
+hyp3_autorift = { path = ".", editable = true }
+
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
 develop = { features = ["develop"], solve-group = "default" }
 
-[tool.pixi.tasks]
+[tool.pixi.tasks.install-isce3]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/isce-framework/isce3.git@6116cdaca709c861839804567cca406667887d8b",
+]
+depends-on = []
+
+[tool.pixi.tasks.install-radar]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/opera-adt/COMPASS.git@v0.5.6",
+    "git+https://github.com/isce-framework/s1-reader.git@v0.2.5",
+]
+depends-on = ["install-isce3"]
+
+[tool.pixi.tasks.install-editable]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "-e",
+    ".",
+]
+depends-on = ["install-autorift"]
+
+[tool.pixi.tasks.install-autorift]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
+]
+depends-on = ["install-radar"]
