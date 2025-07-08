@@ -50,9 +50,8 @@ dependencies:
   - yamale
   - backoff
   - pyre
-
   - pip:
       - -r requirements-static.txt
-      - -r requirements-isce3.txt
-      # TODO: need to be manually installed currently
-      # - -r requirements-radar.txt
+      - -r requirements-radar.txt
+      # TODO: needs to be manually installed currently
+      # - git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0
