@@ -22,6 +22,8 @@ classifiers=[
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
+    # NOTE: Duplicated in "[tool.pixi.dependencies]" to prefer conda-forge dependencies.
+    #       see: https://pixi.sh/dev/python/pyproject_toml/#dependency-section
     'boto3',
     'botocore',
     'burst2safe>=1.4.4',
@@ -36,13 +38,6 @@ dependencies = [
     'requests>=2.0',
     'scipy>=1.0',
     'xarray',
-    # Conda-Forge only deps:
-    # 'autorift>=2.0.0',
-    # 'compass>=0.5.6',
-    # 'isce3>=0.14',
-    # 'libgdal-jp2openjpeg',  # not sure if this plugin comes with the PyPI distribution
-    # 'opencv',  # technically could be opencv-python on PyPI but there's subtle differences with the conda package
-    # 's1reader>=0.2.2',
 ]
 dynamic = ["version"]
 
@@ -53,6 +48,9 @@ develop = [
     'pytest-console-scripts',
     'pytest-cov',
     'responses',
+    'ruff==0.11.12',
+    'mypy==1.16.0',
+    'types-requests',
 ]
 
 [project.scripts]
@@ -124,3 +122,81 @@ exclude = ["/vend/"]
 [[tool.mypy.overrides]]
 module = "hyp3_autorift.vend.*"
 follow_imports = "skip"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+
+[tool.pixi.dependencies]
+boto3 = "*"
+botocore = "*"
+burst2safe = ">=1.4.4"
+gdal = ">=3"
+h5netcdf = "*"
+hyp3lib = ">=4,<5"
+libgdal-netcdf = "*"
+libgdal-jp2openjpeg = "*"
+matplotlib-base = "*"
+netcdf4 = "*"
+numpy = "==1.26.0"
+opencv = "*"
+pandas = ">=1.4"
+pyproj = ">=3.3"
+requests = ">=2.0"
+scipy = ">=1.0"
+xarray = "*"
+
+[tool.pixi.pypi-dependencies]
+hyp3_autorift = { path = ".", editable = true }
+
+[tool.pixi.target.linux-64.dependencies]
+autoRIFT = ">=2.0.0"
+compass = ">=0.5.6"
+isce3 = ">=0.14"
+s1reader = ">=0.2.2"
+pyre = "*"
+
+[tool.pixi.target.linux-aarch64.dependencies]
+cxx-compiler = "*"
+gfortran = "*"
+eigen = "*"
+numba = "*"
+scikit-image = "*"
+pkgconfig = "*"
+gtest = "*"
+fftw = "*"
+pybind11 = "*"
+ruamel = "*"
+"ruamel.yaml" = "*"
+yamale = "*"
+backoff = "*"
+
+[tool.pixi.target.linux-aarch64.pypi-dependencies]
+pyre = "*"
+pysolid = "*"
+snaphu = "*"
+raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "1028fcc9c453bffb56766987e45c33899403645e" }  # v0.5.5
+# NOTE: ISCE3 does release-stub branches and doesn't include the pyproject.toml in the realease artifacts, so "version number" is a shakey concept.
+isce3 = {git = "git+https://github.com/isce-framework/isce3.git", rev = "6116cdaca709c861839804567cca406667887d8b"}  # post v0.24.5
+compass = {git = "https://github.com/opera-adt/COMPASS.git", rev = "487c7eb7461faaf4719f0342b7757cdcf61401e1" }  # v0.5.6
+s1reader = {git = "https://github.com/isce-framework/s1-reader.git", rev = "f1c8aa305d025cff339e7cca0065844a81aebb5e" }  # v0.2.5
+
+[tool.pixi.target.osx-64.dependencies]
+autoRIFT = ">=2.0.0"
+compass = ">=0.5.6"
+isce3 = ">=0.14"
+s1reader = ">=0.2.2"
+pyre = "*"
+
+[tool.pixi.target.osx-arm64.dependencies]
+autoRIFT = ">=2.0.0"
+compass = ">=0.5.6"
+isce3 = ">=0.14"
+s1reader = ">=0.2.2"
+pyre = "*"
+
+[tool.pixi.environments]
+default = { features = [], solve-group = "default" }
+develop = { features = ["develop"], solve-group = "default" }
+
+[tool.pixi.tasks]
