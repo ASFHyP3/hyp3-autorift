@@ -49,9 +49,6 @@ dependencies:
   - ruamel.yaml  # completely different package from ruamel
   - yamale
   - backoff
-  - sel(linux/amd64): pyre
+  - pyre
   - pip:
       - -r requirements-static.txt
-      - -r requirements-radar.txt
-      # TODO: needs to be manually installed currently
-      # - git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0
