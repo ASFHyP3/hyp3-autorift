@@ -169,8 +169,10 @@ backoff = "*"
 [tool.pixi.target.linux-64.dependencies]
 pyre = "*"
 
-[tool.pixi.pypi-dependencies]
+[tool.pixi.target.linux-aarch64.pypi-dependencies]
 pyre = "*"
+
+[tool.pixi.pypi-dependencies]
 pysolid = "*"
 snaphu = "*"
 raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
