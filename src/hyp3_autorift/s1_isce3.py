@@ -285,7 +285,7 @@ def write_slc_gdal(data: np.ndarray, out_path: str):
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
+def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, ...]:
     """Merges the bursts within the provided swath(s) and then merges the swaths.
        The secondary image is merged according to the reference image's metadata.
 
