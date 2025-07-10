@@ -35,7 +35,7 @@ ADDITIONAL_METADATA_PARAMS = [
     'NC_GLOBAL#last_valid_line',
     'NC_GLOBAL#first_valid_sample',
     'NC_GLOBAL#last_valid_sample',
-    'NC_GLOBAL#azimuth_time_interval'
+    'NC_GLOBAL#azimuth_time_interval',
 ]
 
 TOPO_CORRECTION_FILES = ['x.tif', 'y.tif', 'z.tif', 'layover_shadow_mask.tif']
@@ -71,7 +71,7 @@ def retrieve_static_nc_from_s3(burst_id: str, bucket: str, filename: str) -> str
             message = e
         print(message + ' `rdr2geo` will be run for this burst.')
         return None
-    except NoCredentialsError as e:
+    except NoCredentialsError:
         print('No AWS Credentials Provided.')
         return None
 
@@ -193,9 +193,7 @@ def create_static_layer(burst_id: str, burst_info, isce_product_path: str = './p
         burst_info.azimuth_time_interval,
     ]
 
-    metadata = dict(metadata, **dict(
-        zip(ADDITIONAL_METADATA_PARAMS, additional_metadata_vals)
-    ))
+    metadata = dict(metadata, **dict(zip(ADDITIONAL_METADATA_PARAMS, additional_metadata_vals)))
 
     with gdal.Open(burst_dir + '/' + 'topo.vrt') as ds:
         cols = ds.RasterXSize
