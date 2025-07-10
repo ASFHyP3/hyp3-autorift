@@ -5,6 +5,7 @@ import boto3
 import numpy as np
 from botocore.exceptions import ClientError, NoCredentialsError
 from osgeo import gdal
+from s1reader import Sentinel1BurstSlc
 
 from hyp3_autorift.utils import upload_file_to_s3_with_publish_access_keys
 
@@ -164,11 +165,12 @@ def get_static_layer(burst_id: str, bucket: str) -> bool:
     return True
 
 
-def create_static_layer(burst_id: str, burst_info, isce_product_path: str = './product/*') -> Path | None:
+def create_static_layer(burst_id: str, burst: Sentinel1BurstSlc, isce_product_path: str = './product/*') -> Path | None:
     """Create a radar-geometry static topographic correction netCDF from a processed reference burst.
 
     Args:
         burst_id: ISCE format burst ID
+        burst: Burst object from s1reader
         isce_product_path: The directory containing the reference burst ISCE product
 
     Returns:
@@ -186,11 +188,11 @@ def create_static_layer(burst_id: str, burst_info, isce_product_path: str = './p
         metadata = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]))
 
     additional_metadata_vals = [
-        burst_info.first_valid_line,
-        burst_info.last_valid_line,
-        burst_info.first_valid_sample,
-        burst_info.last_valid_sample,
-        burst_info.azimuth_time_interval,
+        burst.first_valid_line,
+        burst.last_valid_line,
+        burst.first_valid_sample,
+        burst.last_valid_sample,
+        burst.azimuth_time_interval,
     ]
 
     metadata = dict(metadata, **dict(zip(ADDITIONAL_METADATA_PARAMS, additional_metadata_vals)))
