@@ -29,13 +29,11 @@ jobs:
           activate-environment: true
 
       - name: Run pixi install task
-        shell: bash -l {0}
         run: |
           pixi run install-editable
 
       - name: set outputs
         id: set_outputs
-        shell: bash -l {0}
         run: |
           export SDIST_VERSION=$(python -m setuptools_scm)
           echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
