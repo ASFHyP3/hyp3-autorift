@@ -18,16 +18,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.10.*", "3.11.*", "3.12.*"]
+        pixi_environment: ["py310", "py311", "py312"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: prefix-dev/setup-pixi@v0.8.10
 
-      - name: Run pixi install task
+      - name: Run pixi tests task
         run: |
-          pixi run install-editable
-
-      - name: Pytest in conda environment
-        run: |
-           pixi exec --spec python=${{ matrix.python_version }} pytest --cov=hyp3_autorift
+          pixi run -e ${{ matrix.pixi_environment }} tests

@@ -183,8 +183,22 @@ pyre = "*"
 snaphu = "*"
 raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
 
+
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
 [tool.pixi.environments]
 default = { features = ["develop"], solve-group = "default" }
+py310 = { features = ["develop", "py310"]}
+py311 = { features = ["develop", "py311"]}
+py312 = { features = ["develop", "py312"], solve-group = "default"}
+
 
 [tool.pixi.tasks.install-isce3]
 cmd = [
@@ -228,3 +242,10 @@ cmd = [
     ".",
 ]
 depends-on = ["install-autorift"]
+
+[tool.pixi.tasks.tests]
+cmd = [
+    "pytest",
+    "--cov=hyp3_autorift",
+]
+depends-on = ["install-editable"]
