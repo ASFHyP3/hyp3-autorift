@@ -12,21 +12,45 @@ on:
       - develop
 
 jobs:
-  call-version-info-workflow:
-    uses: ASFHyP3/actions/.github/workflows/reusable-version-info.yml@v0.20.0
+  version-info:
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
-    with:
-      python_version: '3.10'
+    outputs:
+      version: ${{ steps.set_outputs.outputs.version }}
+      version_tag: ${{ steps.set_outputs.outputs.version_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          activate-environment: true
+
+      - name: Run pixi install task
+        shell: bash -l {0}
+        run: |
+          pixi run install-editable
+
+      - name: set outputs
+        id: set_outputs
+        shell: bash -l {0}
+        run: |
+          export SDIST_VERSION=$(python -m setuptools_scm)
+          echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
+          echo "version_tag=${SDIST_VERSION/+/_}" >> $GITHUB_OUTPUT
+          echo "Version number: ${SDIST_VERSION}"
+
 
   dockerize:
-    needs: call-version-info-workflow
+    needs: version-info
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
     concurrency:
-      group: ${{ needs.call-version-info-workflow.outputs.version_tag }}
+      group: ${{ needs.version-info.outputs.version_tag }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
@@ -62,22 +86,22 @@ jobs:
           file: ./Dockerfile
           push: ${{ ! github.event.pull_request.head.repo.fork }}
           tags: |
-            ghcr.io/${{ env.REPO }}:${{ needs.call-version-info-workflow.outputs.version_tag }}
+            ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
           labels: |
             org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
-            org.opencontainers.image.version=${{ needs.call-version-info-workflow.outputs.version_tag }}
+            org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Add test tag
-        if: ${{ github.event_name != 'pull_request' && contains(needs.call-version-info-workflow.outputs.version_tag, '.dev') }}
+        if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
         uses: akhilerm/tag-push-action@v2.2.0
         with:
-          src: ghcr.io/${{ env.REPO }}:${{ needs.call-version-info-workflow.outputs.version_tag }}
+          src: ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
           dst: ghcr.io/${{ env.REPO }}:test
 
       - name: Add latest tag
-        if: ${{ github.event_name != 'pull_request' && ! contains(needs.call-version-info-workflow.outputs.version_tag, '.dev') }}
+        if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
         uses: akhilerm/tag-push-action@v2.2.0
         with:
-          src: ghcr.io/${{ env.REPO }}:${{ needs.call-version-info-workflow.outputs.version_tag }}
+          src: ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
           dst: ghcr.io/${{ env.REPO }}:latest
