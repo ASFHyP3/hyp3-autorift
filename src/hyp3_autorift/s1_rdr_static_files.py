@@ -72,7 +72,7 @@ def retrieve_static_nc_from_s3(burst_id: str, bucket: str, filename: str) -> str
         print(message + ' `rdr2geo` will be run for this burst.')
         return None
     except NoCredentialsError:
-        print('No AWS Credentials Provided.')
+        print('AWS credentials are required to retrieve static files from the provided bucket.')
         return None
 
     return filename
