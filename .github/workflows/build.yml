@@ -28,10 +28,6 @@ jobs:
         with:
           activate-environment: true
 
-      - name: Run pixi install task
-        run: |
-          pixi run install-editable
-
       - name: set outputs
         id: set_outputs
         run: |
