@@ -115,7 +115,7 @@ def process_burst(
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_ref)
 
-    if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref, burst_info=burst)):
+    if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref, burst=burst)):
         upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
         subprocess.run(['rm', topo_correction_file])
 
@@ -232,7 +232,7 @@ def process_slc(
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-        if do_static_upload and (topo_correction_file := create_static_layer(burst_id, burst_info=burst)):
+        if do_static_upload and (topo_correction_file := create_static_layer(burst_id, burst=burst)):
             upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
             subprocess.run(['rm', topo_correction_file])
 
