@@ -25,11 +25,9 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.10
 
       - name: Run pixi install task
-        shell: bash -l {0}
         run: |
           pixi run install-editable
 
       - name: Pytest in conda environment
-        shell: pixi exec --spec python=${{ matrix.python_version }} -- bash -e {0}
         run: |
-          pytest --cov=hyp3_autorift
+           pixi exec --spec python=${{ matrix.python_version }} pytest --cov=hyp3_autorift
