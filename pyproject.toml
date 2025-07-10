@@ -165,6 +165,7 @@ ruamel = "*"
 "ruamel.yaml" = "*"
 yamale = "*"
 backoff = "*"
+pysolid = "*"
 
 [tool.pixi.target.linux-64.dependencies]
 pyre = "*"
@@ -172,8 +173,13 @@ pyre = "*"
 [tool.pixi.target.linux-aarch64.pypi-dependencies]
 pyre = "*"
 
+[tool.pixi.target.osx-64.dependencies]
+pyre = "*"
+
+[tool.pixi.target.osx-arm64.dependencies]
+pyre = "*"
+
 [tool.pixi.pypi-dependencies]
-pysolid = "*"
 snaphu = "*"
 raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
 
