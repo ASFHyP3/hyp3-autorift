@@ -3,7 +3,7 @@ from pathlib import Path
 
 import boto3
 import numpy as np
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
 from osgeo import gdal
 
 from hyp3_autorift.utils import upload_file_to_s3_with_publish_access_keys
@@ -28,6 +28,14 @@ RADAR_GRID_PARAMS = [
     'NC_GLOBAL#length',
     'NC_GLOBAL#width',
     'NC_GLOBAL#ref_epoch',
+]
+
+ADDITIONAL_METADATA_PARAMS = [
+    'NC_GLOBAL#first_valid_line',
+    'NC_GLOBAL#last_valid_line',
+    'NC_GLOBAL#first_valid_sample',
+    'NC_GLOBAL#last_valid_sample',
+    'NC_GLOBAL#azimuth_time_interval'
 ]
 
 TOPO_CORRECTION_FILES = ['x.tif', 'y.tif', 'z.tif', 'layover_shadow_mask.tif']
@@ -63,6 +71,9 @@ def retrieve_static_nc_from_s3(burst_id: str, bucket: str, filename: str) -> str
             message = e
         print(message + ' `rdr2geo` will be run for this burst.')
         return None
+    except NoCredentialsError as e:
+        print('No AWS Credentials Provided.')
+        return None
 
     return filename
 
@@ -87,23 +98,6 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str) -> None:
         upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
     except Exception as e:
         print(f'Unable to upload {filename} to S3 due to {e}.')
-
-
-def get_static_layers(burst_ids: list[str], bucket: str) -> dict[str, bool]:
-    """Download radar-geometry topographic corrections and stage them for ISCE3 processing
-
-    Args:
-        burst_ids: List of ISCE format burst IDs
-        bucket: The bucket to download from
-
-    Returns:
-        Dict of burst ids to boolean values that correspond to whether a static correction file was found
-    """
-
-    has_static_layer = {}
-    for burst_id in burst_ids:
-        has_static_layer[burst_id] = get_static_layer(burst_id, bucket)
-    return has_static_layer
 
 
 def get_static_layer(burst_id: str, bucket: str) -> bool:
@@ -170,7 +164,7 @@ def get_static_layer(burst_id: str, bucket: str) -> bool:
     return True
 
 
-def create_static_layer(burst_id: str, isce_product_path: str = './product/*') -> Path | None:
+def create_static_layer(burst_id: str, burst_info, isce_product_path: str = './product/*') -> Path | None:
     """Create a radar-geometry static topographic correction netCDF from a processed reference burst.
 
     Args:
@@ -189,7 +183,19 @@ def create_static_layer(burst_id: str, isce_product_path: str = './product/*') -
     topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
     with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
-        rdr_grid = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]))
+        metadata = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]))
+
+    additional_metadata_vals = [
+        burst_info.first_valid_line,
+        burst_info.last_valid_line,
+        burst_info.first_valid_sample,
+        burst_info.last_valid_sample,
+        burst_info.azimuth_time_interval,
+    ]
+
+    metadata = dict(metadata, **dict(
+        zip(ADDITIONAL_METADATA_PARAMS, additional_metadata_vals)
+    ))
 
     with gdal.Open(burst_dir + '/' + 'topo.vrt') as ds:
         cols = ds.RasterXSize
@@ -203,7 +209,7 @@ def create_static_layer(burst_id: str, isce_product_path: str = './product/*') -
         print('Failed to create radar static correction NetCDF file. Check that your GDAL has NetCDF-4 support.')
         return None
 
-    out_ds.SetMetadata(rdr_grid)
+    out_ds.SetMetadata(metadata)
 
     for i, file in enumerate(topo_files):
         with gdal.Open(file) as in_ds:
