@@ -43,6 +43,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 develop = [
+    'setuptools_scm',
     'pillow>=7.0',
     'pytest',
     'pytest-console-scripts',
@@ -183,6 +184,8 @@ pyre = "*"
 snaphu = "*"
 raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
 
+[tool.pixi.feature.pycharm.dependencies]
+pixi-pycharm = "*"
 
 [tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
@@ -194,7 +197,7 @@ python = "3.11.*"
 python = "3.12.*"
 
 [tool.pixi.environments]
-default = { features = ["develop"], solve-group = "default" }
+default = { features = ["develop", "pycharm"], solve-group = "default" }
 py310 = { features = ["develop", "py310"]}
 py311 = { features = ["develop", "py311"]}
 py312 = { features = ["develop", "py312"], solve-group = "default"}
