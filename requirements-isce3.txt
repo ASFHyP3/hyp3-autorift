@@ -1,3 +1,2 @@
-pyre
 pysolid
 snaphu

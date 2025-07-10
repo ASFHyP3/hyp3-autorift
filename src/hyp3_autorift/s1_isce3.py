@@ -239,9 +239,8 @@ def process_slc(
         if has_static_layer:
             subprocess.run(['rm', '-rf', str((STATIC_DIR / burst_id).absolute())])
 
-    merge_swaths(safe_ref, orbit_ref, swaths=swaths)
-
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths)
+    slc_shape = merge_swaths(safe_ref, orbit_ref, swaths=swaths)
+    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths, slc_shape=slc_shape)
     meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
@@ -292,7 +291,7 @@ def write_slc_gdal(data: np.ndarray, out_path: str):
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
+def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, ...]:
     """Merges the bursts within the provided swath(s) and then merges the swaths.
        The secondary image is merged according to the reference image's metadata.
 
@@ -412,6 +411,8 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> None:
         write_slc_gdal(merged_arr, 'reference.tif' if slc == 'ref' else 'secondary.tif')
 
     subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
+
+    return merged_arr.shape
 
 
 def get_azimuth_reference_offsets(bursts: list):

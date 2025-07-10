@@ -429,3 +429,32 @@ def test_get_opendata_prefix():
         'LT05_L1GS_219121_19841206_20200918_02_T2_X_LT05_L1GS_226120_19850124_20200918_02_T2_G0120V02_P000.nc'
     )
     assert process.get_opendata_prefix(file) == 'velocity_image_pair/landsatOLI/v02/S80W120'
+
+
+@pytest.mark.parametrize(
+    'argument_string,expected',
+    [
+        ('', None),
+        ('None', None),
+        ('none', 'none'),
+        ('foobar', 'foobar'),
+    ],
+)
+def test_nullable_string(argument_string, expected):
+    assert process.nullable_string(argument_string) == expected
+
+
+@pytest.mark.parametrize(
+    'granule_string,expected',
+    [
+        ('', []),
+        ('None', []),
+        ('None None', []),
+        ('none', ['none']),
+        ('foobar', ['foobar']),
+        ('fizz buzz', ['fizz', 'buzz']),
+        ('a b c d', ['a', 'b', 'c', 'd']),
+    ],
+)
+def test_nullable_granule_list(granule_string, expected):
+    assert process.nullable_granule_list(granule_string) == expected

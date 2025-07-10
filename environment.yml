@@ -49,6 +49,7 @@ dependencies:
   - ruamel.yaml  # completely different package from ruamel
   - yamale
   - backoff
+  - pyre
 
   - pip:
       - -r requirements-static.txt
