@@ -7,22 +7,23 @@ The HyP3 autoRIFT plugin provides a set of workflows for feature tracking proces
 
 ## Installation
 
-1. Ensure that conda/mamba is installed on your system (we recommend using [Miniforge](https://conda-forge.org/download/)).
+1. Ensure that pixi is installed on your system: <https://pixi.sh/latest/installation/>.
 2. Clone the `hyp3-autorift` repository and navigate to the root directory of this project
    ```bash
    git clone https://github.com/ASFHyP3/hyp3-autorift.git
    cd hyp3-autorift
    ```
-3. Create  and activate your Python environment
+3. setup the development environment
    ```bash
-   
-   mamba env create -f environment.yml
-   mamba activate hyp3-autorift
+    pixi run install-editable
    ```
-4. Install a development version of HyP3 autoRIFT
+4. (optional) [traditional conda-like activation](https://pixi.sh/latest/workspace/environment/#traditional-conda-activate-like-activation) of the pixi environment
    ```bash
-   python -m pip install -e .
+   eval "$(pixi shell-hook)"
    ```
+
+    > [!TIP]
+    > If you've done (4), you don't need to prefix commands with `pixi run`.
 
 ## Usage
 
@@ -35,28 +36,28 @@ The HyP3 autoRIFT plugin provides workflows (accessible directly in Python or vi
   
 To see all available workflows, run:
 ```
-python -m hyp3_autorift ++help
+pixi run python -m hyp3_autorift ++help
 ```
 
 ### `hyp3_autorift` workflow
 
 The `hyp3_autorift` workflow is used to get dense feature tracking between two images using autoRIFT. You can run this workflow by selecting the `hyp3_autorift` process: 
 ```
-python -m hyp3_autorift ++process hyp3_autorift [WORKFLOW_ARGS]
+pixi run python -m hyp3_autorift ++process hyp3_autorift [WORKFLOW_ARGS]
 ```
 or by using the `hyp3_autorift` console script:
 ```
-hyp3_autorift [WORKFLOW_ARGS]
+pixi run hyp3_autorift [WORKFLOW_ARGS]
 ```
 For example:
 
 ```
-hyp3_autorift \
+pixi run  hyp3_autorift \
   --reference LC08_L1TP_009011_20200703_20200913_02_T1 \
   --secondary LC08_L1TP_009011_20200820_20200905_02_T1
 ```
 
-This command will run autoRIFT for a Landsat 8 pair over Jakobshavn, Greenland. 
+will run autoRIFT for a Landsat 8 pair over Jakobshavn, Greenland.
 
 > [!IMPORTANT]
 > Credentials are necessary to access Landsat and Sentinel-1 data. See the Credentials section for more information.
@@ -64,7 +65,7 @@ This command will run autoRIFT for a Landsat 8 pair over Jakobshavn, Greenland.
 Similarly, sets of Sentinel-1 bursts can be processed like:
 
 ```
-hyp3_autorift \
+pixi run hyp3_autorift \
   --reference \
       S1_105608_IW1_20240618T025544_VV_99C1-BURST \
       S1_105607_IW1_20240618T025542_VV_C6D8-BURST \
@@ -84,7 +85,7 @@ hyp3_autorift \
 
 For all options available to this workflow, see the help documentation: 
 ```
-hyp3_autorift --help
+pixi run hyp3_autorift --help
 ```
 
 ### Credentials
