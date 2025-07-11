@@ -22,6 +22,8 @@ classifiers=[
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
+    # NOTE: Duplicated in "[tool.pixi.dependencies]" to prefer conda-forge dependencies.
+    #       see: https://pixi.sh/dev/python/pyproject_toml/#dependency-section
     'boto3',
     'botocore',
     'burst2safe>=1.4.4',
@@ -36,23 +38,20 @@ dependencies = [
     'requests>=2.0',
     'scipy>=1.0',
     'xarray',
-    # Conda-Forge only deps:
-    # 'autorift>=2.0.0',
-    # 'compass>=0.5.6',
-    # 'isce3>=0.14',
-    # 'libgdal-jp2openjpeg',  # not sure if this plugin comes with the PyPI distribution
-    # 'opencv',  # technically could be opencv-python on PyPI but there's subtle differences with the conda package
-    # 's1reader>=0.2.2',
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 develop = [
+    'setuptools_scm',
     'pillow>=7.0',
     'pytest',
     'pytest-console-scripts',
     'pytest-cov',
     'responses',
+    'ruff==0.11.12',
+    'mypy==1.16.0',
+    'types-requests',
 ]
 
 [project.scripts]
@@ -124,3 +123,132 @@ exclude = ["/vend/"]
 [[tool.mypy.overrides]]
 module = "hyp3_autorift.vend.*"
 follow_imports = "skip"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+
+[tool.pixi.pypi-options]
+no-build-isolation = [
+    'isce3',
+]
+
+[tool.pixi.dependencies]
+pip = "*"
+boto3 = "*"
+botocore = "*"
+burst2safe = ">=1.4.4"
+gdal = ">=3"
+h5netcdf = "*"
+hyp3lib = ">=4,<5"
+libgdal-netcdf = "*"
+libgdal-jp2openjpeg = "*"
+matplotlib-base = "*"
+netcdf4 = "*"
+numpy = "==1.26.0"
+opencv = "*"
+pandas = ">=1.4"
+pyproj = ">=3.3"
+requests = ">=2.0"
+scipy = ">=1.0"
+xarray = "*"
+# For building radar deps
+cxx-compiler = "*"
+gfortran = "*"
+eigen = "*"
+numba = "*"
+scikit-image = "*"
+pkgconfig = "*"
+gtest = "*"
+fftw = "*"
+pybind11 = "*"
+ruamel = "*"
+"ruamel.yaml" = "*"
+yamale = "*"
+backoff = "*"
+pysolid = "*"
+
+[tool.pixi.target.linux-64.dependencies]
+pyre = "*"
+
+[tool.pixi.target.linux-aarch64.pypi-dependencies]
+pyre = "*"
+
+[tool.pixi.target.osx-64.dependencies]
+pyre = "*"
+
+[tool.pixi.target.osx-arm64.dependencies]
+pyre = "*"
+
+[tool.pixi.pypi-dependencies]
+snaphu = "*"
+raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
+
+[tool.pixi.feature.pycharm.dependencies]
+pixi-pycharm = "*"
+
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.environments]
+default = { features = ["develop", "pycharm"], solve-group = "default" }
+py310 = { features = ["develop", "py310"]}
+py311 = { features = ["develop", "py311"]}
+py312 = { features = ["develop", "py312"], solve-group = "default"}
+
+
+[tool.pixi.tasks.install-isce3]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/isce-framework/isce3.git@6116cdaca709c861839804567cca406667887d8b",
+]
+depends-on = []
+
+[tool.pixi.tasks.install-radar]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/opera-adt/COMPASS.git@v0.5.6",
+    "git+https://github.com/isce-framework/s1-reader.git@v0.2.5",
+]
+depends-on = ["install-isce3"]
+
+[tool.pixi.tasks.install-autorift]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
+]
+depends-on = ["install-radar"]
+
+
+[tool.pixi.tasks.install-editable]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "-e",
+    ".",
+]
+depends-on = ["install-autorift"]
+
+[tool.pixi.tasks.tests]
+cmd = [
+    "pytest",
+    "--cov=hyp3_autorift",
+]
+depends-on = ["install-editable"]

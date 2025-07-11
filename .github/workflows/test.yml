@@ -1,0 +1,29 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  pytest:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        pixi_environment: ["py310", "py311", "py312"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.10
+
+      - name: Run pixi tests task
+        run: |
+          pixi run -e ${{ matrix.pixi_environment }} tests
