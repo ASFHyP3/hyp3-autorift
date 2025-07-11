@@ -2,6 +2,7 @@ import copy
 import glob
 import math
 import os
+import shutil
 import subprocess
 from datetime import timedelta
 
@@ -23,7 +24,6 @@ from hyp3_autorift.s1_rdr_static_files import (
     STATIC_DIR,
     create_static_layer,
     get_static_layer,
-    get_static_layers,
     upload_static_nc_to_s3,
 )
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
@@ -103,25 +103,28 @@ def process_burst(
         has_static_layer = False
         do_static_upload = False
 
+    pol = getPol(safe_ref, orbit_ref)
+    burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id_ref])[0]
+
     write_yaml(
         safe=safe_ref,
         orbit_file=orbit_ref,
         burst_id=burst_id_ref,
         is_ref=True,
-        use_static_layer=has_static_layer,
+        use_static_layer=use_static_files and has_static_layer,
     )
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_ref)
 
-    if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref)):
+    if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref, burst=burst)):
         upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
-        subprocess.run(['rm', topo_correction_file])
+        topo_correction_file.unlink()
 
     write_yaml(
         safe=safe_sec,
         orbit_file=orbit_sec,
         burst_id=burst_id_sec,
-        use_static_layer=has_static_layer,
+        use_static_layer=use_static_files and has_static_layer,
     )
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
@@ -194,27 +197,31 @@ def process_slc(
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
     burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
+    pol = getPol(safe_ref, orbit_ref)
 
     download_dem(
         dem=parameter_info['geogrid']['dem'],
         bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
     )
 
-    if use_static_files:
-        retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
-        has_static_layer = get_static_layers(burst_ids, retrieval_bucket)
-        do_static_upload = {burst_id: static_files_bucket and not has_static_layer[burst_id] for burst_id in burst_ids}
-    else:
-        has_static_layer = {burst_id: False for burst_id in burst_ids}
-        do_static_upload = has_static_layer
-
     for burst_id in burst_ids:
+        swath = int(burst_id.split('_')[-1][-1])
+        burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
+
+        if use_static_files:
+            retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
+            has_static_layer = get_static_layer(burst_id, retrieval_bucket)
+            do_static_upload = not has_static_layer and static_files_bucket
+        else:
+            has_static_layer = False
+            do_static_upload = False
+
         write_yaml(
             safe=safe_ref,
             orbit_file=orbit_ref,
             burst_id=burst_id,
             is_ref=True,
-            use_static_layer=use_static_files and has_static_layer[burst_id],
+            use_static_layer=use_static_files and has_static_layer,
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
@@ -222,16 +229,16 @@ def process_slc(
             safe=safe_sec,
             orbit_file=orbit_sec,
             burst_id=burst_id,
-            use_static_layer=use_static_files and has_static_layer[burst_id],
+            use_static_layer=use_static_files and has_static_layer,
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-        if do_static_upload[burst_id] and (topo_correction_file := create_static_layer(burst_id)):
+        if do_static_upload and (topo_correction_file := create_static_layer(burst_id, burst=burst)):
             upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
-            subprocess.run(['rm', topo_correction_file])
+            topo_correction_file.unlink()
 
-        if has_static_layer[burst_id]:
-            subprocess.run(['rm', '-rf', str((STATIC_DIR / burst_id).absolute())])
+        if has_static_layer:
+            shutil.rmtree(STATIC_DIR / burst_id)
 
     slc_shape = merge_swaths(safe_ref, orbit_ref, swaths=swaths)
     meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths, slc_shape=slc_shape)
