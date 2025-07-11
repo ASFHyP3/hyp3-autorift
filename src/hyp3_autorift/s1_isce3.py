@@ -2,6 +2,7 @@ import copy
 import glob
 import math
 import os
+import shutil
 import subprocess
 from datetime import timedelta
 
@@ -117,7 +118,7 @@ def process_burst(
 
     if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref, burst=burst)):
         upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
-        subprocess.run(['rm', topo_correction_file])
+        topo_correction_file.unlink()
 
     write_yaml(
         safe=safe_sec,
@@ -234,10 +235,10 @@ def process_slc(
 
         if do_static_upload and (topo_correction_file := create_static_layer(burst_id, burst=burst)):
             upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
-            subprocess.run(['rm', topo_correction_file])
+            topo_correction_file.unlink()
 
         if has_static_layer:
-            subprocess.run(['rm', '-rf', str((STATIC_DIR / burst_id).absolute())])
+            shutil.rmtree(STATIC_DIR / burst_id)
 
     slc_shape = merge_swaths(safe_ref, orbit_ref, swaths=swaths)
     meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths, slc_shape=slc_shape)
