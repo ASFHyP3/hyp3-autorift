@@ -1,3 +1,3 @@
 #!/bin/bash --login
 set -e
-pixi run hyp3_autorift "$@"
+pixi run python -m hyp3_autorift "$@"
