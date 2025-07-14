@@ -49,8 +49,8 @@ develop = [
     'pytest-console-scripts',
     'pytest-cov',
     'responses',
-    'ruff==0.11.12',
-    'mypy==1.16.0',
+    'ruff==0.12.3',
+    'mypy==1.16.1',
     'types-requests',
 ]
 
