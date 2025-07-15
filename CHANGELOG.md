@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0]
+
+> [!IMPORTANT]
+> This release includes a major change to the hyp3-autorift development environment! hyp3-autorift now uses [pixi](https://pixi.sh/) to manage development environments.
+
+### Added
+- Support for the use and creation of pre-generated radar-geometry topographic corrections for ISCE3 when processing Sentinel-1 scenes.
+
+### Changed
+- hyp3-autorift now uses [pixi](https://pixi.sh/) to manage development environments instead of conda/mamba. For more info, see [#361](https://github.com/ASFHyP3/hyp3-autorift/pull/361).
+  - Environments, their dependencies, etc. are now all configured in the `tool.pixi` sections of the `pyproject.toml`
+  - Pixi now writes a `pixi.lock` file.
+  - The Dockerfile uses the pixi base image and `entrypoint.sh` has been updated to use the pixi environment accordingly.
+- hyp3-autorift docker images are now multiarch, supporting linux-amd64 and linux-arm64. For more info, see [#361](https://github.com/ASFHyP3/hyp3-autorift/pull/361). 
+- CI/CD pipelines that required an `environment.yml` have been reimplemented to use pixi, including `build.yml`, `static-analysis.yml` and `test.yml`.
+
+### Removed
+- Environment/requirements files used by conda/mamba, such as `environment.yml` and `requirements-*.txt`, in favor of pixi config and lock files.  
+
+
 ## [0.22.0]
 ### Added
 - `--reference` and `--secondary` arguments to `hyp3_autorift` to specify the scenes to process, which should be preferred over the now deprecated `granules` arguments.

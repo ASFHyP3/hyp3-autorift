@@ -1,6 +1,10 @@
 #### joe made this: http://goel.io/joe
 
 #### python ####
+
+# pixi environments
+.pixi
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
