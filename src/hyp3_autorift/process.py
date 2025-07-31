@@ -338,7 +338,7 @@ def point_to_region(lat: float, lon: float) -> str:
     return f'{nw_hemisphere}{region_lat:02d}{ew_hemisphere}{region_lon:03d}'
 
 
-def get_opendata_prefix(file: Path):
+def get_opendata_prefix(file: Path) -> str:
     # filenames have form GRANULE1_X_GRANULE2
     scene = file.name.split('_X_')[0]
 
@@ -347,6 +347,12 @@ def get_opendata_prefix(file: Path):
     region = point_to_region(lat, lon)
 
     return '/'.join(['velocity_image_pair', PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname], 'v02', region])
+
+
+def save_opendata_prefix(prefix: str) -> Path:
+    prefix_file = Path.cwd() / 'publish_prefix.json'
+    prefix_file.write_text(json.dumps({'publish_prefix': prefix}))
+    return prefix_file
 
 
 def process(
@@ -637,3 +643,7 @@ def main():
         utils.upload_file_to_s3_with_publish_access_keys(product_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
+
+        if args.bucket:
+            prefix_file = save_opendata_prefix(prefix)
+            upload_file_to_s3(prefix_file, args.bucket, args.bucket_prefix)
