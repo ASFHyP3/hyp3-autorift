@@ -351,13 +351,15 @@ def get_opendata_prefix(file: Path) -> str:
 
 def save_publication_info(bucket: str, prefix: str, name: str) -> Path:
     prefix_file = Path.cwd() / 'publish_info.json'
-    prefix_file.write_text(json.dumps(
-        {
-            'bucket': bucket,
-            'prefix': prefix,
-            'name': name,
-        }
-    ))
+    prefix_file.write_text(
+        json.dumps(
+            {
+                'bucket': bucket,
+                'prefix': prefix,
+                'name': name,
+            }
+        )
+    )
     return prefix_file
 
 
