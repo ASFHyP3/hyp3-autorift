@@ -350,8 +350,8 @@ def get_opendata_prefix(file: Path) -> str:
 
 
 def save_publication_info(bucket: str, prefix: str, name: str) -> Path:
-    prefix_file = Path.cwd() / 'publish_info.json'
-    prefix_file.write_text(
+    publish_info_file = Path.cwd() / 'publish_info.json'
+    publish_info_file.write_text(
         json.dumps(
             {
                 'bucket': bucket,
@@ -360,7 +360,7 @@ def save_publication_info(bucket: str, prefix: str, name: str) -> Path:
             }
         )
     )
-    return prefix_file
+    return publish_info_file
 
 
 def process(
@@ -653,5 +653,5 @@ def main():
         utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
 
         if args.bucket:
-            prefix_file = save_publication_info(args.bucket, prefix, product_file.name)
-            upload_file_to_s3(prefix_file, args.bucket, args.bucket_prefix)
+            publish_info_file = save_publication_info(args.bucket, prefix, product_file.name)
+            upload_file_to_s3(publish_info_file, args.bucket, args.bucket_prefix)
