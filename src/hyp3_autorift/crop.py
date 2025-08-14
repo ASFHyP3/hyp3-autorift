@@ -51,9 +51,9 @@ def binary_search(arr, val):
     if test_val == val:
         return val
     elif test_val > val:
-        return binary_search(arr[:len(arr) // 2], val)
+        return binary_search(arr[: len(arr) // 2], val)
     else:
-        return binary_search(arr[len(arr) // 2:], val)
+        return binary_search(arr[len(arr) // 2 :], val)
 
 
 def get_aligned_min(dim_range, val, grid_spacing):
@@ -73,7 +73,7 @@ def get_aligned_max(dim_range, val, grid_spacing):
 
     if val > nearest:
         nearest += grid_spacing
- 
+
     difference = nearest - val
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
@@ -89,7 +89,6 @@ def get_extent_for_epsg(epsg):
         raise NotImplementedError('Only EPSG:3413 and EPSG:3976 are currently supported.')
 
 
-# TODO: Move the chunking code to the correct place, if this is not it.
 def crop_netcdf_product(netcdf_file: Path) -> Path:
     """
 
@@ -106,6 +105,11 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         y_values = xy_ds.y.values
         grid_y_min, grid_y_max = y_values.min(), y_values.max()
 
+        # Based on X/Y extends, mask original dataset
+        mask_lon = (ds.x >= grid_x_min) & (ds.x <= grid_x_max)
+        mask_lat = (ds.y >= grid_y_min) & (ds.y <= grid_y_max)
+        mask = mask_lon & mask_lat
+
         projection = ds['mapping'].attrs['spatial_epsg']
         epsg_bounds = get_extent_for_epsg(projection)
         grid_spacing = CHUNK_SIZE * PIXEL_SIZE
@@ -118,26 +122,14 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         grid_y_min, bottom_pad = get_aligned_min(y_range, grid_y_min, grid_spacing)
         grid_y_max, top_pad = get_aligned_max(y_range, grid_y_max, grid_spacing)
 
-        print(f'Projection: EPSG:{projection}')
-        print(f'Projection Extent: {epsg_bounds}')
-        print(f'grid_x_min:    {grid_x_min}')
-        print(f'grid_x_max:    {grid_x_max}')
-        print(f'grid_y_min:    {grid_y_min}')
-        print(f'grid_y_max:    {grid_y_max}')
-
         x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
-        y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)
-
-        # Based on X/Y extends, mask original dataset
-        mask_lon = (ds.x >= grid_x_min) & (ds.x <= grid_x_max)
-        mask_lat = (ds.y >= grid_y_min) & (ds.y <= grid_y_max)
-        mask = mask_lon & mask_lat
+        y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
 
         cropped_ds = ds.where(mask).dropna(dim='x', how='all').dropna(dim='y', how='all')
         cropped_ds = cropped_ds.load()
 
-        cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode="constant", constant_values=-32767)
-        cropped_ds = cropped_ds.pad(y=(bottom_pad, top_pad), mode="constant", constant_values=-32767)
+        cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode='constant', constant_values=-32767)
+        cropped_ds = cropped_ds.pad(y=(top_pad, bottom_pad), mode='constant', constant_values=-32767)
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
