@@ -42,6 +42,7 @@ CHUNK_SIZE = 512
 PIXEL_SIZE = 120
 
 
+#TODO: This can be replaced with a direct calculation.
 def binary_search(arr, val):
     if len(arr) == 1:
         return arr[0]
@@ -80,6 +81,7 @@ def get_aligned_max(dim_range, val, grid_spacing):
     return val + padding, int(padding / 120)
 
 
+# TODO: Support UTM
 def get_extent_for_epsg(epsg):
     if epsg == 3413:
         return [-3850000, -5350000, 3750000, 5850000]
