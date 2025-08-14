@@ -38,6 +38,53 @@ import xarray as xr
 
 
 ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
+CHUNK_SIZE = 512
+PIXEL_SIZE = 120
+
+
+def binary_search(arr, val):
+    if len(arr) == 1:
+        return arr[0]
+
+    test_val = arr[len(arr) // 2]
+
+    if test_val == val:
+        return val
+    elif test_val > val:
+        return binary_search(arr[:len(arr) // 2], val)
+    else:
+        return binary_search(arr[len(arr) // 2:], val)
+
+
+def get_aligned_min(dim_range, val, grid_spacing):
+    nearest = binary_search(dim_range, val)
+
+    if val < nearest:
+        nearest -= grid_spacing
+
+    difference = val - nearest
+    pixel_misalignment = difference % PIXEL_SIZE
+    return val - (difference - pixel_misalignment)
+
+
+def get_aligned_max(dim_range, val, grid_spacing):
+    nearest = binary_search(dim_range, val)
+
+    if val > nearest:
+        nearest += grid_spacing
+ 
+    difference = nearest - val
+    pixel_misalignment = difference % PIXEL_SIZE
+    return val + (difference - pixel_misalignment)
+
+
+def get_extent_for_epsg(epsg):
+    if epsg == 3413:
+        return [-3850000, -5350000, 3750000, 5850000]
+    elif epsg == 3976:
+        return [-3950000, -3950000, 3950000, 4350000]
+    else:
+        raise NotImplementedError('Only EPSG:3413 and EPSG:3976 are currently supported.')
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
@@ -55,6 +102,29 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         y_values = xy_ds.y.values
         grid_y_min, grid_y_max = y_values.min(), y_values.max()
+
+        projection = ds['mapping'].attrs['spatial_epsg']
+        epsg_bounds = get_extent_for_epsg(projection)
+        grid_spacing = CHUNK_SIZE * PIXEL_SIZE
+
+        x_range = np.arange(epsg_bounds[0], epsg_bounds[2], grid_spacing)
+        y_range = np.arange(epsg_bounds[1], epsg_bounds[3], grid_spacing)
+
+        aligned_x_min = get_aligned_min(x_range, grid_x_min, grid_spacing)
+        aligned_x_max = get_aligned_max(x_range, grid_x_max, grid_spacing)
+        aligned_y_min = get_aligned_min(y_range, grid_y_min, grid_spacing)
+        aligned_y_max = get_aligned_max(y_range, grid_y_max, grid_spacing)
+
+        print(f'Projection: EPSG:{projection}')
+        print(f'Projection Extent: {epsg_bounds}')
+        print(f'grid_x_min:    {grid_x_min}')
+        print(f'grid_x_max:    {grid_x_max}')
+        print(f'grid_y_min:    {grid_y_min}')
+        print(f'grid_y_max:    {grid_y_max}')
+        print(f'aligned_x_min: {aligned_x_min}')
+        print(f'aligned_x_max: {aligned_x_max}')
+        print(f'aligned_y_min: {aligned_y_min}')
+        print(f'aligned_y_max: {aligned_y_max}')
 
         # Based on X/Y extends, mask original dataset
         mask_lon = (ds.x >= grid_x_min) & (ds.x <= grid_x_max)
@@ -74,7 +144,6 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         center_y = (grid_y_min + grid_y_max) / 2
 
         # Convert to lon/lat coordinates
-        projection = ds['mapping'].attrs['spatial_epsg']
         to_lon_lat_transformer = pyproj.Transformer.from_crs(f'EPSG:{projection}', 'EPSG:4326', always_xy=True)
 
         # Update centroid information for the granule
@@ -92,9 +161,9 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Compute chunking like AutoRIFT does:
         # https://github.com/ASFHyP3/hyp3-autorift/blob/develop/hyp3_autorift/vend/netcdf_output.py#L410-L411
-        dims = cropped_ds.dims
-        chunk_lines = np.min([np.ceil(8192 / dims['y']) * 128, dims['y']])
-        two_dim_chunks_settings = (chunk_lines, dims['x'])
+        # UPDATED - August 2025:
+        # Chunks are now fixed sizes so that they may be spatially aligned over time.
+        two_dim_chunks_settings = (CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
         for variable in ds.data_vars.keys():
