@@ -64,7 +64,8 @@ def get_aligned_min(dim_range, val, grid_spacing):
 
     difference = val - nearest
     pixel_misalignment = difference % PIXEL_SIZE
-    return val - (difference - pixel_misalignment)
+    padding = difference - pixel_misalignment
+    return val - padding, int(padding / 120)
 
 
 def get_aligned_max(dim_range, val, grid_spacing):
@@ -75,7 +76,8 @@ def get_aligned_max(dim_range, val, grid_spacing):
  
     difference = nearest - val
     pixel_misalignment = difference % PIXEL_SIZE
-    return val + (difference - pixel_misalignment)
+    padding = difference - pixel_misalignment
+    return val + padding, int(padding / 120)
 
 
 def get_extent_for_epsg(epsg):
@@ -87,6 +89,7 @@ def get_extent_for_epsg(epsg):
         raise NotImplementedError('Only EPSG:3413 and EPSG:3976 are currently supported.')
 
 
+# TODO: Move the chunking code to the correct place, if this is not it.
 def crop_netcdf_product(netcdf_file: Path) -> Path:
     """
 
@@ -110,10 +113,10 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         x_range = np.arange(epsg_bounds[0], epsg_bounds[2], grid_spacing)
         y_range = np.arange(epsg_bounds[1], epsg_bounds[3], grid_spacing)
 
-        aligned_x_min = get_aligned_min(x_range, grid_x_min, grid_spacing)
-        aligned_x_max = get_aligned_max(x_range, grid_x_max, grid_spacing)
-        aligned_y_min = get_aligned_min(y_range, grid_y_min, grid_spacing)
-        aligned_y_max = get_aligned_max(y_range, grid_y_max, grid_spacing)
+        grid_x_min, left_pad = get_aligned_min(x_range, grid_x_min, grid_spacing)
+        grid_x_max, right_pad = get_aligned_max(x_range, grid_x_max, grid_spacing)
+        grid_y_min, bottom_pad = get_aligned_min(y_range, grid_y_min, grid_spacing)
+        grid_y_max, top_pad = get_aligned_max(y_range, grid_y_max, grid_spacing)
 
         print(f'Projection: EPSG:{projection}')
         print(f'Projection Extent: {epsg_bounds}')
@@ -121,10 +124,9 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         print(f'grid_x_max:    {grid_x_max}')
         print(f'grid_y_min:    {grid_y_min}')
         print(f'grid_y_max:    {grid_y_max}')
-        print(f'aligned_x_min: {aligned_x_min}')
-        print(f'aligned_x_max: {aligned_x_max}')
-        print(f'aligned_y_min: {aligned_y_min}')
-        print(f'aligned_y_max: {aligned_y_max}')
+
+        x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
+        y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)
 
         # Based on X/Y extends, mask original dataset
         mask_lon = (ds.x >= grid_x_min) & (ds.x <= grid_x_max)
@@ -134,10 +136,16 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds = ds.where(mask).dropna(dim='x', how='all').dropna(dim='y', how='all')
         cropped_ds = cropped_ds.load()
 
+        cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode="constant", constant_values=-32767)
+        cropped_ds = cropped_ds.pad(y=(bottom_pad, top_pad), mode="constant", constant_values=-32767)
+
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
         cropped_ds['mapping'] = ds['mapping']
         cropped_ds['img_pair_info'] = ds['img_pair_info']
+
+        cropped_ds['x'] = x_values
+        cropped_ds['y'] = y_values
 
         # Compute centroid longitude/latitude
         center_x = (grid_x_min + grid_x_max) / 2
@@ -159,10 +167,6 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # It was decided to keep all values in GeoTransform center-based
         cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
 
-        # Compute chunking like AutoRIFT does:
-        # https://github.com/ASFHyP3/hyp3-autorift/blob/develop/hyp3_autorift/vend/netcdf_output.py#L410-L411
-        # UPDATED - August 2025:
-        # Chunks are now fixed sizes so that they may be spatially aligned over time.
         two_dim_chunks_settings = (CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
