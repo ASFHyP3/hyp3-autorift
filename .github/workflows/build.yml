@@ -20,7 +20,7 @@ jobs:
       version: ${{ steps.set_outputs.outputs.version }}
       version_tag: ${{ steps.set_outputs.outputs.version_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -47,7 +47,7 @@ jobs:
       group: ${{ needs.version-info.outputs.version_tag }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
