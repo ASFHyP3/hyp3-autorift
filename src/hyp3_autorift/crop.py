@@ -38,6 +38,57 @@ import xarray as xr
 
 
 ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
+CHUNK_SIZE = 512
+PIXEL_SIZE = 120
+
+
+#TODO: This can be replaced with a direct calculation.
+def binary_search(arr, val):
+    if len(arr) == 1:
+        return arr[0]
+
+    test_val = arr[len(arr) // 2]
+
+    if test_val == val:
+        return val
+    elif test_val > val:
+        return binary_search(arr[: len(arr) // 2], val)
+    else:
+        return binary_search(arr[len(arr) // 2 :], val)
+
+
+def get_aligned_min(dim_range, val, grid_spacing):
+    nearest = binary_search(dim_range, val)
+
+    if val < nearest:
+        nearest -= grid_spacing
+
+    difference = val - nearest
+    pixel_misalignment = difference % PIXEL_SIZE
+    padding = difference - pixel_misalignment
+    return val - padding, int(padding / 120)
+
+
+def get_aligned_max(dim_range, val, grid_spacing):
+    nearest = binary_search(dim_range, val)
+
+    if val > nearest:
+        nearest += grid_spacing
+
+    difference = nearest - val
+    pixel_misalignment = difference % PIXEL_SIZE
+    padding = difference - pixel_misalignment
+    return val + padding, int(padding / 120)
+
+
+# TODO: Support UTM
+def get_extent_for_epsg(epsg):
+    if epsg == 3413:
+        return [-3850000, -5350000, 3750000, 5850000]
+    elif epsg == 3976:
+        return [-3950000, -3950000, 3950000, 4350000]
+    else:
+        raise NotImplementedError('Only EPSG:3413 and EPSG:3976 are currently supported.')
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
@@ -61,20 +112,40 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         mask_lat = (ds.y >= grid_y_min) & (ds.y <= grid_y_max)
         mask = mask_lon & mask_lat
 
+        projection = ds['mapping'].attrs['spatial_epsg']
+        epsg_bounds = get_extent_for_epsg(projection)
+        grid_spacing = CHUNK_SIZE * PIXEL_SIZE
+
+        x_range = np.arange(epsg_bounds[0], epsg_bounds[2], grid_spacing)
+        y_range = np.arange(epsg_bounds[1], epsg_bounds[3], grid_spacing)
+
+        grid_x_min, left_pad = get_aligned_min(x_range, grid_x_min, grid_spacing)
+        grid_x_max, right_pad = get_aligned_max(x_range, grid_x_max, grid_spacing)
+        grid_y_min, bottom_pad = get_aligned_min(y_range, grid_y_min, grid_spacing)
+        grid_y_max, top_pad = get_aligned_max(y_range, grid_y_max, grid_spacing)
+
+        x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
+        y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
+
         cropped_ds = ds.where(mask).dropna(dim='x', how='all').dropna(dim='y', how='all')
         cropped_ds = cropped_ds.load()
+
+        cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode='constant', constant_values=-32767)
+        cropped_ds = cropped_ds.pad(y=(top_pad, bottom_pad), mode='constant', constant_values=-32767)
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
         cropped_ds['mapping'] = ds['mapping']
         cropped_ds['img_pair_info'] = ds['img_pair_info']
 
+        cropped_ds['x'] = x_values
+        cropped_ds['y'] = y_values
+
         # Compute centroid longitude/latitude
         center_x = (grid_x_min + grid_x_max) / 2
         center_y = (grid_y_min + grid_y_max) / 2
 
         # Convert to lon/lat coordinates
-        projection = ds['mapping'].attrs['spatial_epsg']
         to_lon_lat_transformer = pyproj.Transformer.from_crs(f'EPSG:{projection}', 'EPSG:4326', always_xy=True)
 
         # Update centroid information for the granule
@@ -90,11 +161,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # It was decided to keep all values in GeoTransform center-based
         cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
 
-        # Compute chunking like AutoRIFT does:
-        # https://github.com/ASFHyP3/hyp3-autorift/blob/develop/hyp3_autorift/vend/netcdf_output.py#L410-L411
-        dims = cropped_ds.dims
-        chunk_lines = np.min([np.ceil(8192 / dims['y']) * 128, dims['y']])
-        two_dim_chunks_settings = (chunk_lines, dims['x'])
+        two_dim_chunks_settings = (CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
         for variable in ds.data_vars.keys():
