@@ -42,53 +42,20 @@ CHUNK_SIZE = 512
 PIXEL_SIZE = 120
 
 
-#TODO: This can be replaced with a direct calculation.
-def binary_search(arr, val):
-    if len(arr) == 1:
-        return arr[0]
-
-    test_val = arr[len(arr) // 2]
-
-    if test_val == val:
-        return val
-    elif test_val > val:
-        return binary_search(arr[: len(arr) // 2], val)
-    else:
-        return binary_search(arr[len(arr) // 2 :], val)
-
-
-def get_aligned_min(dim_range, val, grid_spacing):
-    nearest = binary_search(dim_range, val)
-
-    if val < nearest:
-        nearest -= grid_spacing
-
+def get_aligned_min(val, grid_spacing):
+    nearest = np.floor(val / grid_spacing) * grid_spacing
     difference = val - nearest
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
     return val - padding, int(padding / 120)
 
 
-def get_aligned_max(dim_range, val, grid_spacing):
-    nearest = binary_search(dim_range, val)
-
-    if val > nearest:
-        nearest += grid_spacing
-
+def get_aligned_max(val, grid_spacing):
+    nearest = np.ceil(val / grid_spacing) * grid_spacing
     difference = nearest - val
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
     return val + padding, int(padding / 120)
-
-
-# TODO: Support UTM
-def get_extent_for_epsg(epsg):
-    if epsg == 3413:
-        return [-3850000, -5350000, 3750000, 5850000]
-    elif epsg == 3976:
-        return [-3950000, -3950000, 3950000, 4350000]
-    else:
-        raise NotImplementedError('Only EPSG:3413 and EPSG:3976 are currently supported.')
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
@@ -113,16 +80,12 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         mask = mask_lon & mask_lat
 
         projection = ds['mapping'].attrs['spatial_epsg']
-        epsg_bounds = get_extent_for_epsg(projection)
         grid_spacing = CHUNK_SIZE * PIXEL_SIZE
 
-        x_range = np.arange(epsg_bounds[0], epsg_bounds[2], grid_spacing)
-        y_range = np.arange(epsg_bounds[1], epsg_bounds[3], grid_spacing)
-
-        grid_x_min, left_pad = get_aligned_min(x_range, grid_x_min, grid_spacing)
-        grid_x_max, right_pad = get_aligned_max(x_range, grid_x_max, grid_spacing)
-        grid_y_min, bottom_pad = get_aligned_min(y_range, grid_y_min, grid_spacing)
-        grid_y_max, top_pad = get_aligned_max(y_range, grid_y_max, grid_spacing)
+        grid_x_min, left_pad = get_aligned_min(grid_x_min, grid_spacing)
+        grid_x_max, right_pad = get_aligned_max(grid_x_max, grid_spacing)
+        grid_y_min, bottom_pad = get_aligned_min(grid_y_min, grid_spacing)
+        grid_y_max, top_pad = get_aligned_max(grid_y_max, grid_spacing)
 
         x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
         y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
