@@ -110,6 +110,18 @@ def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
     ))
 
 
+# TODO: GeogridRadar expects a Sentinel-1 formatted orbit file.
+# Mocking the orbit file will probably be easier than re-writing GeogridRadar.
+def mock_s1_orbit_file(reference_path: str) -> str:
+    return ''
+
+
+# TODO: Equivalent to `gdal_translate -of GTIFF DERIVED_SUBDATASET:AMPLITUDE:reference.slc reference.tif`
+# NOTE: A `secondary.slc` is created by default, but not a `reference.slc` - that will need to be read from the H5 file.
+def create_amplitude_geotiffs(reference_isce3_path: str, secondary_isce3_path: str) -> None: 
+    pass
+
+
 # TODO: This main function should be replaced with an interface for `process.py`.
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -156,11 +168,17 @@ def main():
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
 
-    meta_r = loadMetadataRslc(reference_path)
+    # TODO: Get the correct product paths
+    create_amplitude_geotiffs(reference_isce3_path=None, secondary_isce3_path=None)
+    orbit_path = mock_s1_orbit_file(reference_path)
+
+    meta_r = loadMetadataRslc(reference_path, orbit_path=orbit_path)
     meta_temp = loadMetadataRslc(secondary_path)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
+
+    raise NotImplementedError('Need mocked S1 orbit file for Geogrid to work.')
 
     # TODO: GeoGrid will need to be modified to accept how NISAR's orbit information is handled.
     geogrid_info = runGeogrid(
@@ -173,6 +191,19 @@ def main():
 
     # Geogrid seems to De-register Drivers
     gdal.AllRegister()
+
+    netcdf_file = generateAutoriftProduct(
+        'reference.tif',
+        'secondary.tif',
+        nc_sensor='NISAR',  # TODO: Add this whereever needed. 
+        optical_flag=False,
+        ncname=None,
+        geogrid_run_info=geogrid_info,
+        **parameter_info['autorift'],
+        parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+    )
+
+    return netcdf_file
 
 
 if __name__ == '__main__':

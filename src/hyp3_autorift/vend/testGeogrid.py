@@ -216,7 +216,7 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None):
     return info
 
 
-def loadMetadataRslc(ref_rslc: str, buffer=0):
+def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
     """
     Input file.
     """
@@ -243,8 +243,8 @@ def loadMetadataRslc(ref_rslc: str, buffer=0):
     info.numberOfLines = metadata.lines
     info.numberOfSamples = metadata.samples
 
-    # TODO: This won't be what GeoGrid wants.
-    info.orbitname = None
+    # TODO: `orbit_path` needs to be a mock Sentinel-1 formatted orbit file.
+    info.orbitname = orbit_path
     info.orbit = rslc.getOrbit()
     info.orbitPassDirection = rslc.identification.orbitPassDirection
 
