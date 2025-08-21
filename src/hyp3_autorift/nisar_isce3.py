@@ -3,14 +3,21 @@ Prototyping the usage of NISAR data with autoRIFT
 """
 
 import argparse
+import copy
+import glob
+import math
+import os
+import shutil
+import subprocess
+from datetime import timedelta
 
 from hyp3lib.dem import prepare_dem_geotiff
 from nisar.workflows import geo2rdr, rdr2geo, resample_slc, stage_dem
-from osgeo import osr, ogr
+from osgeo import osr, ogr, gdal
 
 from hyp3_autorift import geometry, utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
+from hyp3_autorift.vend.testGeogrid import getPol, loadMetadataRslc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
@@ -132,7 +139,7 @@ def main():
     print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
 
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
+    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE, flip_point=False)
 
     print(f'Paramenter Info: {parameter_info}')
 
@@ -149,12 +156,24 @@ def main():
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
 
-    # TODO:
-    # meta_r = loadMetadataRslc(reference_path)
-    # meta_temp = loadMetadataRslc(secondary_path)
-    # meta_s = copy.copy(meta_r)
-    # meta_s.sensingStart = meta_temp.sensingStart
-    # meta_s.sensingStop = meta_temp.sensingStop
+    meta_r = loadMetadataRslc(reference_path)
+    meta_temp = loadMetadataRslc(secondary_path)
+    meta_s = copy.copy(meta_r)
+    meta_s.sensingStart = meta_temp.sensingStart
+    meta_s.sensingStop = meta_temp.sensingStop
+
+    # TODO: GeoGrid will need to be modified to accept how NISAR's orbit information is handled.
+    geogrid_info = runGeogrid(
+        info=meta_r,
+        info1=meta_s,
+        optical_flag=0,
+        epsg=parameter_info['epsg'],
+        **parameter_info['geogrid'],
+    )
+
+    # Geogrid seems to De-register Drivers
+    gdal.AllRegister()
+
 
 if __name__ == '__main__':
     main()
