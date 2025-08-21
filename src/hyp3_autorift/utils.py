@@ -38,13 +38,18 @@ def upload_file_to_s3_with_publish_access_keys(path_to_file: Path, bucket: str, 
     s3_client.put_object_tagging(Bucket=bucket, Key=key, Tagging=tag_set)
 
 
-def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
+def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str, flip_point: bool = True) -> dict:
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
     parameter_info = None
-    centroid = flip_point_coordinates(polygon.Centroid())
+    
+    if flip_point:
+        centroid = flip_point_coordinates(polygon.Centroid())
+    else:
+        centroid = polygon.Centroid()
     centroid = fix_point_for_antimeridian(centroid)
+
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
             parameter_info = {
