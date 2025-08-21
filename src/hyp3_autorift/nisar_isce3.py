@@ -103,6 +103,7 @@ def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
     ))
 
 
+# TODO: This main function should be replaced with an interface for `process.py`.
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('reference', help='Path to reference RSLC')
