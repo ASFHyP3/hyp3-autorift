@@ -50,10 +50,8 @@ def test_get_alignment_info():
                 ref1_x_min + x_offset, ref1_y_min + y_offset, ref1_x_max + x_offset, ref1_y_max + y_offset
             )
 
-            assert (ref1_aligned[0] - sec_aligned[0]) % CHUNK_SIZE == 0
-            assert (ref1_aligned[1] - sec_aligned[1]) % CHUNK_SIZE == 0
-            assert (ref1_aligned[2] - sec_aligned[2]) % CHUNK_SIZE == 0
-            assert (ref1_aligned[3] - sec_aligned[3]) % CHUNK_SIZE == 0
+            for ref, sec in zip(ref1_aligned, sec_aligned):
+                assert (ref - sec) % CHUNK_SIZE == 0
 
             assert np.all(ref1_x_values) == np.all(sec_x_values)
             assert np.all(ref1_y_values) == np.all(sec_y_values)
