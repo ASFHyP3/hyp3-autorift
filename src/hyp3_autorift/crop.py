@@ -43,6 +43,7 @@ PIXEL_SIZE = 120
 
 
 def get_aligned_min(val, grid_spacing):
+    """Align a value with the nearest grid posting less than it"""
     nearest = np.floor(val / grid_spacing) * grid_spacing
     difference = val - nearest
     pixel_misalignment = difference % PIXEL_SIZE
@@ -51,6 +52,7 @@ def get_aligned_min(val, grid_spacing):
 
 
 def get_aligned_max(val, grid_spacing):
+    """Align a value with the nearest grid posting greater than it"""
     nearest = np.ceil(val / grid_spacing) * grid_spacing
     difference = nearest - val
     pixel_misalignment = difference % PIXEL_SIZE
@@ -59,32 +61,50 @@ def get_aligned_max(val, grid_spacing):
 
 
 def get_alignment_info(
-    grid_x_min: float,
-    grid_y_min: float,
-    grid_x_max: float,
-    grid_y_max: float,
+    x_min: float,
+    y_min: float,
+    x_max: float,
+    y_max: float,
     grid_spacing: int = CHUNK_SIZE * PIXEL_SIZE,
 ) -> tuple[list[float], list[int], list[float], list[float]]:
-    """Get bounds and additional info necessary for chunk alignment"""
-    grid_x_min, left_pad = get_aligned_min(grid_x_min, grid_spacing)
-    grid_y_min, bottom_pad = get_aligned_min(grid_y_min, grid_spacing)
-    grid_x_max, right_pad = get_aligned_max(grid_x_max, grid_spacing)
-    grid_y_max, top_pad = get_aligned_max(grid_y_max, grid_spacing)
+    """Get the bounds and additional info necessary for chunk alignment
 
-    aligned_bounds = [grid_x_min, grid_y_min, grid_x_max, grid_y_max]
+    Args:
+        x_min: cropped minimum x coordinate
+        y_min: cropped minimum y coordinate
+        x_max: cropped maximum x coordinate
+        y_max: cropped maximum y coordinate
+        grid_spacing: width/height of the chunk in the units of the product's SRS
+
+    Returns:
+        1. aligned bounds
+        2. padding in pixels required to align
+        3. new range of x coordinates
+        4. new range of y coordinates
+    """
+    x_min, left_pad = get_aligned_min(x_min, grid_spacing)
+    y_min, bottom_pad = get_aligned_min(y_min, grid_spacing)
+    x_max, right_pad = get_aligned_max(x_max, grid_spacing)
+    y_max, top_pad = get_aligned_max(y_max, grid_spacing)
+
+    aligned_bounds = [x_min, y_min, x_max, y_max]
     aligned_padding = [left_pad, bottom_pad, right_pad, top_pad]
 
-    x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
-    y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
+    x_values = np.arange(x_min, x_max + PIXEL_SIZE, PIXEL_SIZE)
+    y_values = np.arange(y_min, y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
 
     return aligned_bounds, aligned_padding, x_values, y_values
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
-    """
+    """Crop the netCDF product to its valid extent and then pad it such that its
+    chunks will be aligned spatially with other products in the same frame.
 
     Args:
-        netcdf_file:
+        netcdf_file: Path to the netCDF file to crop and align
+
+    Returns:
+        The Path to the cropped netCDF file
     """
     with xr.open_dataset(netcdf_file) as ds:
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
