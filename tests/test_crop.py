@@ -7,7 +7,7 @@ from hyp3_autorift.crop import CHUNK_SIZE, PIXEL_SIZE
 # Equivalent to baseline differences in the range of -600m to 600m
 OFFSETS = np.arange(-5 * PIXEL_SIZE, 5 * PIXEL_SIZE, PIXEL_SIZE)
 GRID_SPACING = CHUNK_SIZE * PIXEL_SIZE
-TEST_VALS = [0, GRID_SPACING - 1203402.3, 320.5, 3125638.7]
+TEST_VALS = [0, GRID_SPACING, -1203402.3, 320.5, 3125638.7]
 
 
 def test_get_aligned_min():
