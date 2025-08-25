@@ -27,26 +27,42 @@ def test_get_aligned_max():
 
 
 def test_get_alignment_info():
-    ref_x_min = 491572.500
-    ref_y_min = 4362187.500
-    ref_x_max = 798772.500
-    ref_y_max = 4669387.500
+    ref1_x_min = 491572.500
+    ref1_y_min = 4362187.500
+    ref1_x_max = 798772.500
+    ref1_y_max = 4669387.500
 
-    ref_aligned, _, ref_x_values, ref_y_values = crop.get_alignment_info(ref_x_min, ref_y_min, ref_x_max, ref_y_max)
+    ref2_x_min = -3179707.5
+    ref2_y_min = 1058347.5
+    ref2_x_max = -2755267.5
+    ref2_y_max = 665107.5
 
-    # -600m to 600m
-    offsets = np.arange(-5 * PIXEL_SIZE, 5 * PIXEL_SIZE, PIXEL_SIZE)
+    ref1_aligned, _, ref1_x_values, ref1_y_values = crop.get_alignment_info(
+        ref1_x_min, ref1_y_min, ref1_x_max, ref1_y_max
+    )
+    ref2_aligned, _, ref2_x_values, ref2_y_values = crop.get_alignment_info(
+        ref2_x_min, ref2_y_min, ref2_x_max, ref2_y_max
+    )
 
-    for x_offset in offsets:
-        for y_offset in offsets:
+    for x_offset in OFFSETS:
+        for y_offset in OFFSETS:
             sec_aligned, _, sec_x_values, sec_y_values = crop.get_alignment_info(
-                ref_x_min + x_offset, ref_y_min + y_offset, ref_x_max + x_offset, ref_y_max + y_offset
+                ref1_x_min + x_offset, ref1_y_min + y_offset, ref1_x_max + x_offset, ref1_y_max + y_offset
             )
 
-            assert (ref_aligned[0] - sec_aligned[0]) % CHUNK_SIZE == 0
-            assert (ref_aligned[1] - sec_aligned[1]) % CHUNK_SIZE == 0
-            assert (ref_aligned[2] - sec_aligned[2]) % CHUNK_SIZE == 0
-            assert (ref_aligned[3] - sec_aligned[3]) % CHUNK_SIZE == 0
+            assert (ref1_aligned[0] - sec_aligned[0]) % CHUNK_SIZE == 0
+            assert (ref1_aligned[1] - sec_aligned[1]) % CHUNK_SIZE == 0
+            assert (ref1_aligned[2] - sec_aligned[2]) % CHUNK_SIZE == 0
+            assert (ref1_aligned[3] - sec_aligned[3]) % CHUNK_SIZE == 0
 
-            assert np.all(ref_x_values) == np.all(sec_x_values)
-            assert np.all(ref_y_values) == np.all(sec_y_values)
+            assert np.all(ref1_x_values) == np.all(sec_x_values)
+            assert np.all(ref1_y_values) == np.all(sec_y_values)
+
+            sec_aligned, _, sec_x_values, sec_y_values = crop.get_alignment_info(
+                ref2_x_min + x_offset, ref2_y_min + y_offset, ref2_x_max + x_offset, ref2_y_max + y_offset
+            )
+
+            assert ref2_aligned == sec_aligned
+
+            assert np.all(ref2_x_values) == np.all(sec_x_values)
+            assert np.all(ref2_y_values) == np.all(sec_y_values)
