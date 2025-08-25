@@ -58,6 +58,28 @@ def get_aligned_max(val, grid_spacing):
     return val + padding, int(padding / 120)
 
 
+def get_alignment_info(
+    grid_x_min: float,
+    grid_y_min: float,
+    grid_x_max: float,
+    grid_y_max: float,
+    grid_spacing: int = CHUNK_SIZE * PIXEL_SIZE,
+) -> tuple[list[float], list[int], list[float], list[float]]:
+    """Get bounds and additional info necessary for chunk alignment"""
+    grid_x_min, left_pad = get_aligned_min(grid_x_min, grid_spacing)
+    grid_y_min, bottom_pad = get_aligned_min(grid_y_min, grid_spacing)
+    grid_x_max, right_pad = get_aligned_max(grid_x_max, grid_spacing)
+    grid_y_max, top_pad = get_aligned_max(grid_y_max, grid_spacing)
+
+    aligned_bounds = [grid_x_min, grid_y_min, grid_x_max, grid_y_max]
+    aligned_padding = [left_pad, bottom_pad, right_pad, top_pad]
+
+    x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
+    y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
+
+    return aligned_bounds, aligned_padding, x_values, y_values
+
+
 def crop_netcdf_product(netcdf_file: Path) -> Path:
     """
 
@@ -79,19 +101,15 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         mask_lat = (ds.y >= grid_y_min) & (ds.y <= grid_y_max)
         mask = mask_lon & mask_lat
 
-        projection = ds['mapping'].attrs['spatial_epsg']
-        grid_spacing = CHUNK_SIZE * PIXEL_SIZE
-
-        grid_x_min, left_pad = get_aligned_min(grid_x_min, grid_spacing)
-        grid_x_max, right_pad = get_aligned_max(grid_x_max, grid_spacing)
-        grid_y_min, bottom_pad = get_aligned_min(grid_y_min, grid_spacing)
-        grid_y_max, top_pad = get_aligned_max(grid_y_max, grid_spacing)
-
-        x_values = np.arange(grid_x_min, grid_x_max + PIXEL_SIZE, PIXEL_SIZE)
-        y_values = np.arange(grid_y_min, grid_y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
-
         cropped_ds = ds.where(mask).dropna(dim='x', how='all').dropna(dim='y', how='all')
         cropped_ds = cropped_ds.load()
+
+        projection = ds['mapping'].attrs['spatial_epsg']
+
+        aligned_bounds, padding, x_values, y_values = get_alignment_info(grid_x_min, grid_y_min, grid_x_max, grid_y_max)
+
+        grid_x_min, grid_y_min, grid_x_max, grid_y_max = aligned_bounds
+        left_pad, bottom_pad, right_pad, top_pad = padding
 
         cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode='constant', constant_values=-32767)
         cropped_ds = cropped_ds.pad(y=(top_pad, bottom_pad), mode='constant', constant_values=-32767)
