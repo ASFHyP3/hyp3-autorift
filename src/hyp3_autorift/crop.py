@@ -30,6 +30,7 @@ The original script:
 https://github.com/nasa-jpl/its_live_production/blob/957e9aba627be2abafcc9601712a7f9c4dd87849/src/tools/crop_v2_granules.py
 """
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -92,7 +93,6 @@ def get_alignment_info(
 
     x_values = np.arange(x_min, x_max + PIXEL_SIZE, PIXEL_SIZE)
     y_values = np.arange(y_min, y_max + PIXEL_SIZE, PIXEL_SIZE)[::-1]
-
     return aligned_bounds, aligned_padding, x_values, y_values
 
 
@@ -179,3 +179,26 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', encoding=encoding)
 
     return cropped_file
+
+
+def main():
+    parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        'netcdf_file',
+        type=str,
+        help='Path to the netCDF product to crop and align',
+    )
+    args = parser.parse_args()
+
+    netcdf_file = Path(args.netcdf_file)
+
+    if not netcdf_file.exists():
+        print(f'{netcdf_file} does not exist.')
+
+    cropped = crop_netcdf_product(netcdf_file)
+
+    print(f'Saved the cropped and chunk-aligned product to {cropped}.')
+
+
+if __name__ == '__main__':
+    main()
