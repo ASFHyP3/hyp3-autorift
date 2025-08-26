@@ -45,9 +45,10 @@ from autoRIFT import autoRIFT
 from geogrid import GeogridOptical
 from osgeo import gdal
 from s1reader import load_bursts
+from nisar.products.readers import product
 
 import hyp3_autorift.vend.netcdf_output as no
-from hyp3_autorift.vend.testGeogrid import getPol
+from hyp3_autorift.vend.testGeogrid import getPol, loadMetadataRslc
 
 
 def get_topsinsar_config():
@@ -1093,6 +1094,145 @@ def generateAutoriftProduct(
                         'roi_valid_percentage': PPP,
                         'autoRIFT_software_version': version,
                     }
+                    error_vector = np.array(
+                        [
+                            [0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
+                            [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628],
+                        ]
+                    )
+
+                    netcdf_file = no.netCDF_packaging(
+                        VX,
+                        VY,
+                        DX,
+                        DY,
+                        INTERPMASK,
+                        CHIPSIZEX,
+                        CHIPSIZEY,
+                        SSM,
+                        SSM1,
+                        SX,
+                        SY,
+                        offset2vx_1,
+                        offset2vx_2,
+                        offset2vy_1,
+                        offset2vy_2,
+                        offset2vr,
+                        offset2va,
+                        scale_factor_1,
+                        scale_factor_2,
+                        MM,
+                        VXref,
+                        VYref,
+                        DXref,
+                        DYref,
+                        rangePixelSize,
+                        azimuthPixelSize,
+                        dt,
+                        epsg,
+                        srs,
+                        tran,
+                        out_nc_filename,
+                        pair_type,
+                        detection_method,
+                        coordinates,
+                        IMG_INFO_DICT,
+                        stable_count,
+                        stable_count1,
+                        stable_shift_applied,
+                        dx_mean_shift,
+                        dy_mean_shift,
+                        dx_mean_shift1,
+                        dy_mean_shift1,
+                        error_vector,
+                        parameter_file=kwargs['parameter_file'],
+                    )
+                if nc_sensor == 'NISAR':
+                    if geogrid_run_info is None:
+                        gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
+                        rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
+                        azimuthPixelSize = float(str.split(runCmd('fgrep "Azimuth pixel size:" testGeogrid.txt'))[3])
+                        dt = float(str.split(runCmd('fgrep "Repeat Time:" testGeogrid.txt'))[2])
+                        epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
+                    else:
+                        gridspacingx = geogrid_run_info['gridspacingx']
+                        rangePixelSize = geogrid_run_info['XPixelSize']
+                        azimuthPixelSize = geogrid_run_info['YPixelSize']
+                        dt = geogrid_run_info['dt']
+                        epsg = geogrid_run_info['epsg']
+
+                    # TODO: This will need to take into account NISAR's naming convention
+                    # to sort reference/secondary
+                    rslcs = glob.glob('*.h5')
+                    master_filename = rslcs[0]
+                    slave_filename = rslcs[1]
+                    assert len(rslcs) == 2
+                    master_meta = loadMetadataRslc(master_filename)
+                    slave_meta = loadMetadataRslc(slave_filename)
+
+                    master_dt = master_meta.sensingStart
+                    slave_dt = slave_meta.sensingStart
+                    master_split = str.split(master_filename, '_')
+                    slave_split = str.split(slave_filename, '_')
+
+                    pair_type = 'radar'
+                    detection_method = 'feature'
+                    coordinates = 'radar, map'
+                    if np.sum(SEARCHLIMITX != 0) != 0:
+                        roi_valid_percentage = (
+                            int(round(np.sum(CHIPSIZEX != 0) / np.sum(SEARCHLIMITX != 0) * 1000.0)) / 1000
+                        )
+                    else:
+                        raise Exception('Input search range is all zero everywhere, thus no search conducted')
+                    PPP = roi_valid_percentage * 100
+                    if ncname is None:
+                        if '.h5' in master_filename:
+                            out_nc_filename = (
+                                f'./{master_filename[0:-3]}_X_{slave_filename[0:-3]}'
+                                f'_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                            )
+                    else:
+                        out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                    CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                    date_dt_base = (slave_dt - master_dt).total_seconds() / timedelta(days=1).total_seconds()
+                    date_dt = np.float64(date_dt_base)
+                    if date_dt < 0:
+                        raise Exception('Input image 1 must be older than input image 2')
+
+                    date_ct = slave_dt + (master_dt - slave_dt) / 2
+                    date_center = date_ct.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+
+                    IMG_INFO_DICT = {
+                        'id_img1': master_filename.split('.')[0],
+                        'id_img2': slave_filename.split('.')[0],
+                        'absolute_orbit_number_img1': 'N/A',
+                        'absolute_orbit_number_img2': 'N/A',
+                        'acquisition_date_img1': str(master_dt),
+                        'acquisition_date_img2': str(slave_dt),
+                        'flight_direction_img1': master_meta.orbitPassDirection,
+                        'flight_direction_img2': slave_meta.orbitPassDirection,
+                        'mission_data_take_ID_img1': 'N/A',
+                        'mission_data_take_ID_img2': 'N/A',
+                        'mission_img1': 'N',
+                        'mission_img2': 'N',
+                        'product_unique_ID_img1': 'N/A',
+                        'product_unique_ID_img2': 'N/A',
+                        'satellite_img1': 'N/A',
+                        'satellite_img2': 'N/A',
+                        'sensor_img1': 'N/A',
+                        'sensor_img2': 'N/A',
+                        'time_standard_img1': 'UTC',
+                        'time_standard_img2': 'UTC',
+                        'date_center': date_center,
+                        'date_dt': date_dt,
+                        'latitude': cen_lat,
+                        'longitude': cen_lon,
+                        'roi_valid_percentage': PPP,
+                        'autoRIFT_software_version': version,
+                    }
+
+                    # TODO: Does this need to change for NISAR?
                     error_vector = np.array(
                         [
                             [0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
