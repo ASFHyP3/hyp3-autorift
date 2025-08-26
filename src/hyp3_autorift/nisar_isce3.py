@@ -10,9 +10,12 @@ import os
 import shutil
 import subprocess
 from datetime import timedelta
+from pathlib import Path
 
 from hyp3lib.dem import prepare_dem_geotiff
 from nisar.workflows import geo2rdr, rdr2geo, resample_slc, stage_dem
+from nisar.products.readers import product
+from numpy import datetime64, timedelta64
 from osgeo import osr, ogr, gdal
 
 from hyp3_autorift import geometry, utils
@@ -21,8 +24,6 @@ from hyp3_autorift.vend.testGeogrid import getPol, loadMetadataRslc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-# NOTE: There doesn't seem to be a YAML schema that works for these processes,
-# but we can just generate this dict and pass it directly to the workflows.
 def get_config(
     reference_path: str,
     secondary_path: str,
@@ -110,16 +111,67 @@ def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
     ))
 
 
-# TODO: GeogridRadar expects a Sentinel-1 formatted orbit file.
-# Mocking the orbit file will probably be easier than re-writing GeogridRadar.
 def mock_s1_orbit_file(reference_path: str) -> str:
-    return ''
+    orbit_path = Path(reference_path).with_suffix('.EOF')
+    ds = product.open_product(reference_path)
+    orbit = ds.getOrbit()
+    count = len(orbit.position)
+    ref_epoch = datetime64(orbit.reference_epoch, 'ns')
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n',
+        '<Earth_Explorer_File>\n',
+        '\t<Data_Block type="xml">\n',
+        f'\t\t<List_of_OSVs count="{count}">\n'
+    ]
+
+    for time, velocity, position in zip(orbit.time, orbit.velocity, orbit.position):
+        utc_time = ref_epoch + timedelta64(int(time * 1e9), 'ns')
+        lines.append('\t\t\t<OSV>\n')
+        lines.append(f'\t\t\t\t<UTC>UTC={utc_time}</UTC>\n')
+        lines.append(f'\t\t\t\t<X unit="m">{position[0]}</X>\n')
+        lines.append(f'\t\t\t\t<Y unit="m">{position[1]}</Y>\n')
+        lines.append(f'\t\t\t\t<Z unit="m">{position[2]}</Z>\n')
+        lines.append(f'\t\t\t\t<VX unit="m/s">{velocity[0]}</VX>\n')
+        lines.append(f'\t\t\t\t<VY unit="m/s">{velocity[1]}</VY>\n')
+        lines.append(f'\t\t\t\t<VZ unit="m/s">{velocity[2]}</VZ>\n')
+        lines.append('\t\t\t</OSV>\n')
+
+    lines.extend([
+        f'\t\t</List_of_OSVs>\n',
+        '\t</Data_Block>\n',
+        '</Earth_Explorer_File>\n',
+    ])
+
+    with open(orbit_path, 'w') as orbit_file:
+        orbit_file.writelines(lines)
+
+    return str(orbit_path)
 
 
-# TODO: Equivalent to `gdal_translate -of GTIFF DERIVED_SUBDATASET:AMPLITUDE:reference.slc reference.tif`
-# NOTE: A `secondary.slc` is created by default, but not a `reference.slc` - that will need to be read from the H5 file.
-def create_amplitude_geotiffs(reference_isce3_path: str, secondary_isce3_path: str) -> None: 
-    pass
+def create_amplitude_geotiffs(
+    reference_h5_path: str,
+    secondary_isce3_path: str,
+    reference_out_path: str = 'reference.tif',
+    secondary_out_path: str = 'secondary.tif'
+) -> None: 
+    cmd = [
+        'gdal_translate',
+        '-of',
+        'GTIFF',
+        f'DERIVED_SUBDATASET:AMPLITUDE:HDF5:{reference_h5_path}://science/LSAR/RSLC/swaths/frequencyA/HH',
+        f'{reference_out_path}'
+    ]
+    subprocess.call(" ".join(cmd), shell=True)
+
+    cmd = [
+        'gdal_translate',
+        '-of',
+        'GTIFF',
+        f'DERIVED_SUBDATASET:AMPLITUDE:{secondary_isce3_path}',
+        f'{secondary_out_path}'
+    ]
+    subprocess.call(" ".join(cmd), shell=True)
 
 
 # TODO: This main function should be replaced with an interface for `process.py`.
@@ -135,8 +187,8 @@ def main():
 
     reference_path=args.reference
     secondary_path=args.secondary
-    frequency = args.frequency
-    polarization = args.polarization
+    frequency = args.frequency.upper()
+    polarization = args.polarization.upper()
     resample_type = 'coarse'
 
     print(f'Reference RSLC: {reference_path}')
@@ -168,8 +220,9 @@ def main():
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
 
-    # TODO: Get the correct product paths
-    create_amplitude_geotiffs(reference_isce3_path=None, secondary_isce3_path=None)
+    secondary_isce3_path = f'scratch/coarse_resample_slc/freq{frequency}/{polarization}/coregistered_secondary.slc'
+
+    create_amplitude_geotiffs(reference_path, secondary_isce3_path)
     orbit_path = mock_s1_orbit_file(reference_path)
 
     meta_r = loadMetadataRslc(reference_path, orbit_path=orbit_path)
@@ -178,9 +231,6 @@ def main():
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
-    raise NotImplementedError('Need mocked S1 orbit file for Geogrid to work.')
-
-    # TODO: GeoGrid will need to be modified to accept how NISAR's orbit information is handled.
     geogrid_info = runGeogrid(
         info=meta_r,
         info1=meta_s,
@@ -195,7 +245,7 @@ def main():
     netcdf_file = generateAutoriftProduct(
         'reference.tif',
         'secondary.tif',
-        nc_sensor='NISAR',  # TODO: Add this whereever needed. 
+        nc_sensor='NISAR',
         optical_flag=False,
         ncname=None,
         geogrid_run_info=geogrid_info,
