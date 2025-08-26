@@ -67,7 +67,7 @@ def get_alignment_info(
     x_max: float,
     y_max: float,
     grid_spacing: int = CHUNK_SIZE * PIXEL_SIZE,
-) -> tuple[list[float], list[int], list[float], list[float]]:
+):
     """Get the bounds and additional info necessary for chunk alignment
 
     Args:
