@@ -11,6 +11,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * The netCDF products are now padded and chunked such that all products from the same frame should have aligned chunks, and the chunks now have a fixed size.
 
+### Fixed
+* The publication bucket (`--publish-bucket`) is saved in the `publish_info.json`, not the HyP3 content bucket (`--bucket`).
+
 ## [0.24.0]
 
 ### Added
