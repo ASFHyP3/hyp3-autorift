@@ -20,7 +20,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.25.0]
 
 ### Changed
-* The netCDF products are now padded and chunked such that all products from the same frame should have aligned chunks, and the chunks now have a fixed size.
+* `crop.py` will now ensure that the netCDF products will:
+  * be padded and chunked such that all products from the same frame should have aligned chunks, and the chunks now have a fixed size.
+  * have an unlimited time dimension with the center date as the (sole) value to allows stacking of products.
 
 ### Fixed
 * The publication bucket (`--publish-bucket`) is saved in the `publish_info.json`, not the HyP3 content bucket (`--bucket`).
