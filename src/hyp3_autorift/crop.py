@@ -36,7 +36,7 @@ from pathlib import Path
 import numpy as np
 import pyproj
 import xarray as xr
-
+from dateutil.parser import parse as parse_dt
 
 ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
 CHUNK_SIZE = 512
@@ -108,6 +108,11 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
     """
     with xr.open_dataset(netcdf_file, engine='h5netcdf') as ds:
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
+        if 'time' not in ds.coords:
+            date_center = parse_dt(ds['img_pair_info'].date_center)
+            ds = ds.assign_coords(time=date_center)
+            ds = ds.expand_dims(dim='time', axis=0)
+
         xy_ds = ds.where(ds.v.notnull()).dropna(dim='x', how='all').dropna(dim='y', how='all')
 
         x_values = xy_ds.x.values
@@ -165,7 +170,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # It was decided to keep all values in GeoTransform center-based
         cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
 
-        two_dim_chunks_settings = (CHUNK_SIZE, CHUNK_SIZE)
+        dim_chunks_settings = (1, CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
         for variable in ds.data_vars.keys():
@@ -176,10 +181,10 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         for _, attributes in encoding.items():
             if attributes['_FillValue'] is not None:
-                attributes['chunksizes'] = two_dim_chunks_settings
+                attributes['chunksizes'] = dim_chunks_settings
 
         cropped_file = netcdf_file.with_stem(f'{netcdf_file.stem}_cropped')
-        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', encoding=encoding)
+        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', unlimited_dims=['time'], encoding=encoding)
 
     return cropped_file
 
