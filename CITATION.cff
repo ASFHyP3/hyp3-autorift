@@ -1,0 +1,99 @@
+cff-version: 1.2.0
+title: A HyP3 plugin for feature tracking processing with AutoRIFT
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+license: Apache-2.0
+keywords:
+  -  feature tracking
+  -  optical
+  -  radar
+  -  satellite imagery
+  -  surface displacement
+  -  glacier velocity
+  -  earthquake displacement
+  -  landslide
+  -  remote sensing
+  -  ice displacement
+authors:
+  - given-names: Joseph
+    name-particle: H
+    family-names: Kennedy
+    orcid: 'https://orcid.org/0000-0002-9348-693X'
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Andrew
+    family-names: Player
+    orcid: 'https://orcid.org/0009-0008-9736-7314'
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Mario
+    family-names: Angarita
+    orcid: 'https://orcid.org/0000-0001-7455-2455'
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Johnston
+    family-names: Andrew
+    # orcid: ''
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Forrest
+    family-names: Williams
+    orcid: 'https://orcid.org/0000-0001-8721-6020'
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Jacquelyn
+    family-names: Smale
+    orcid: 'https://orcid.org/0000-0002-2749-5010'
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Jake
+    family-names: Herrmann
+    # orcid: ''
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Jiang
+    family-names: Zhu
+    # orcid: ''
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: James
+    family-names: Rine
+    # orcid: ''
+    affiliation: >-
+      Alaska Satellite Facility,
+      Geophysical Institute,
+      University of Alaska Fairbanks,
+      Fairbanks, AK 997775, USA
+  - given-names: Alex
+    family-names: Gardner
+    orcid: 'https://orcid.org/0000-0002-8394-8889'
+    affiliation: >-
+      Jet Propulsion Laboratory,
+      California Institute of Technology,
+      Pasadena, CA 91109, USA
