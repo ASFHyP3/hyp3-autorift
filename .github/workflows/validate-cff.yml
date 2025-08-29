@@ -8,6 +8,9 @@ on:
     paths:
       - CITATION.cff
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
