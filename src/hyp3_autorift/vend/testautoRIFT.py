@@ -1164,8 +1164,14 @@ def generateAutoriftProduct(
                     # TODO: This will need to take into account NISAR's naming convention
                     # to sort reference/secondary
                     rslcs = glob.glob('*.h5')
-                    master_filename = rslcs[0]
-                    slave_filename = rslcs[1]
+
+                    if int(str(rslcs[0]).split('-')[1]) < int(str(rslcs[1]).split('-')[1]):
+                        master_filename = rslcs[0]
+                        slave_filename = rslcs[1]
+                    else:
+                        master_filename = rslcs[1]
+                        slave_filename = rslcs[0]
+
                     assert len(rslcs) == 2
                     master_meta = loadMetadataRslc(master_filename)
                     slave_meta = loadMetadataRslc(slave_filename)
