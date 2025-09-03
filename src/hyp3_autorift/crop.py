@@ -147,6 +147,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             cropped_ds['time'].attrs = {
                 'standard_name': 'time_coordinate',
                 'description': 'mid date of the image pair aquisition dates',
+                'calendar': 'proleptic_gregorian',
             }
 
         cropped_ds['mapping'] = ds['mapping']
