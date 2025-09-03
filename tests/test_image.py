@@ -8,6 +8,7 @@ def test_make_browse(tmp_path):
     image_file = tmp_path / 'test.png'
     rng = np.random.default_rng(42)
     data = rng.uniform(0, 700, size=(10, 10))
+    data = np.asarray([data])
 
     out_file = image.make_browse(image_file, data)
     assert out_file == image_file
@@ -15,4 +16,4 @@ def test_make_browse(tmp_path):
 
     with Image.open(out_file) as img:
         assert img.format == 'PNG'
-        assert img.size == data.shape
+        assert img.size == data[0].shape
