@@ -114,7 +114,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             ds = ds.expand_dims(dim='time', axis=0)
             ds['time'].attrs = {
                 'standard_name': 'time_coordinate',
-                'description': 'mid date of the image pair aquisition dates'
+                'description': 'mid date of the image pair aquisition dates',
             }
 
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
