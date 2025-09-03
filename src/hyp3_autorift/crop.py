@@ -108,15 +108,6 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         The Path to the cropped netCDF file
     """
     with xr.open_dataset(netcdf_file, engine='h5netcdf') as ds:
-        if 'time' not in ds.coords:
-            date_center = parse_dt(ds['img_pair_info'].date_center)
-            ds = ds.assign_coords(time=date_center)
-            ds = ds.expand_dims(dim='time', axis=0)
-            ds['time'].attrs = {
-                'standard_name': 'time_coordinate',
-                'description': 'mid date of the image pair aquisition dates',
-            }
-
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
         xy_ds = ds.where(ds.v.notnull()).dropna(dim='x', how='all').dropna(dim='y', how='all')
 
@@ -146,8 +137,19 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
-        cropped_ds['mapping'] = ds['mapping']
         cropped_ds['img_pair_info'] = ds['img_pair_info']
+        cropped_ds.drop_vars('mapping')
+
+        if 'time' not in cropped_ds.coords:
+            date_center = parse_dt(cropped_ds['img_pair_info'].date_center)
+            cropped_ds = cropped_ds.assign_coords(time=date_center)
+            cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
+            cropped_ds['time'].attrs = {
+                'standard_name': 'time_coordinate',
+                'description': 'mid date of the image pair aquisition dates',
+            }
+
+        cropped_ds['mapping'] = ds['mapping']
 
         cropped_ds['x'] = x_values
         cropped_ds['y'] = y_values
