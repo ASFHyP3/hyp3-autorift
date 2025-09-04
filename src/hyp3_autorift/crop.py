@@ -142,6 +142,9 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds['x'] = x_values
         cropped_ds['y'] = y_values
 
+        cropped_ds['x'].attrs = ds['x'].attrs
+        cropped_ds['y'].attrs = ds['y'].attrs
+
         # Compute centroid longitude/latitude
         center_x = (grid_x_min + grid_x_max) / 2
         center_y = (grid_y_min + grid_y_max) / 2
