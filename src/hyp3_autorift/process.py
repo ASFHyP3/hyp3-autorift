@@ -652,6 +652,6 @@ def main():
         utils.upload_file_to_s3_with_publish_access_keys(browse_file, args.publish_bucket, prefix)
         utils.upload_file_to_s3_with_publish_access_keys(thumbnail_file, args.publish_bucket, prefix)
 
+        publish_info_file = save_publication_info(args.publish_bucket, prefix, product_file.name)
         if args.bucket:
-            publish_info_file = save_publication_info(args.bucket, prefix, product_file.name)
             upload_file_to_s3(publish_info_file, args.bucket, args.bucket_prefix)
