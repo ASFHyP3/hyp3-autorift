@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '++process',
-        choices=['hyp3_autorift'],
+        choices=['hyp3_autorift', 'crop_netcdf_product'],
         default='hyp3_autorift',
         help='Select the console_script entrypoint to use',  # as specified in `pyproject.toml`
     )

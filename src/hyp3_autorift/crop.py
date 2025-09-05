@@ -106,7 +106,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
     Returns:
         The Path to the cropped netCDF file
     """
-    with xr.open_dataset(netcdf_file) as ds:
+    with xr.open_dataset(netcdf_file, engine='h5netcdf') as ds:
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
         xy_ds = ds.where(ds.v.notnull()).dropna(dim='x', how='all').dropna(dim='y', how='all')
 
@@ -185,7 +185,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
 
 def main():
-    parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         'netcdf_file',
         type=str,
