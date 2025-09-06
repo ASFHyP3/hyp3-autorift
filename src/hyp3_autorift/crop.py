@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 import pyproj
 import xarray as xr
+from dateutil.parser import parse as parse_dt
 
 
 ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
@@ -136,8 +137,20 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
-        cropped_ds['mapping'] = ds['mapping']
         cropped_ds['img_pair_info'] = ds['img_pair_info']
+        cropped_ds.drop_vars('mapping')
+
+        if 'time' not in cropped_ds.coords:
+            date_center = parse_dt(cropped_ds['img_pair_info'].date_center)
+            cropped_ds = cropped_ds.assign_coords(time=date_center)
+            cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
+            cropped_ds['time'].attrs = {
+                'standard_name': 'time_coordinate',
+                'description': 'mid date of the image pair aquisition dates',
+                'calendar': 'proleptic_gregorian',
+            }
+
+        cropped_ds['mapping'] = ds['mapping']
 
         cropped_ds['x'] = x_values
         cropped_ds['y'] = y_values
@@ -165,7 +178,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # It was decided to keep all values in GeoTransform center-based
         cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
 
-        two_dim_chunks_settings = (CHUNK_SIZE, CHUNK_SIZE)
+        dim_chunks_settings = (1, CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
         for variable in ds.data_vars.keys():
@@ -176,10 +189,10 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         for _, attributes in encoding.items():
             if attributes['_FillValue'] is not None:
-                attributes['chunksizes'] = two_dim_chunks_settings
+                attributes['chunksizes'] = dim_chunks_settings
 
         cropped_file = netcdf_file.with_stem(f'{netcdf_file.stem}_cropped')
-        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', encoding=encoding)
+        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', unlimited_dims=['time'], encoding=encoding)
 
     return cropped_file
 
