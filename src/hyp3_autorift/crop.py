@@ -141,12 +141,14 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds.drop_vars('mapping')
 
         if 'time' not in cropped_ds.coords:
-            date_center = parse_dt(cropped_ds['img_pair_info'].date_center)
-            cropped_ds = cropped_ds.assign_coords(time=date_center)
+            date_center = np.datetime64(parse_dt(cropped_ds['img_pair_info'].date_center))
+            gps_epoch = np.datetime64('1980-01-06T00:00:00Z')
+            delta = (date_center - gps_epoch) / np.timedelta64(1, 's')
+            cropped_ds = cropped_ds.assign_coords(time=delta)
             cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
             cropped_ds['time'].attrs = {
                 'standard_name': 'time_coordinate',
-                'description': 'mid date of the image pair aquisition dates',
+                'description': 'mid-date of the aquisition in seconds since 1980-01-06 00:00:00Z',
                 'calendar': 'proleptic_gregorian',
             }
 
