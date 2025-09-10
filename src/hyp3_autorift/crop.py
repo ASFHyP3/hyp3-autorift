@@ -148,7 +148,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
             cropped_ds['time'].attrs = {
                 'standard_name': 'time_coordinate',
-                'description': 'mid-date of the aquisition in seconds since 1980-01-06 00:00:00Z',
+                'description': 'mid-date of the acquisitions in seconds since 1980-01-06 00:00:00Z',
                 'calendar': 'proleptic_gregorian',
             }
 
