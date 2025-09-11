@@ -24,6 +24,9 @@ The HyP3 autoRIFT plugin provides a set of workflows for feature tracking proces
 
     > [!TIP]
     > If you've done (4), you don't need to prefix commands with `pixi run`.
+5. (optional) Setup you IDE to work with pixi:
+   * PyCharm: https://pixi.sh/dev/integration/editor/jetbrains/
+   * VSCode: https://pixi.sh/dev/integration/editor/vscode/
 
 ## Usage
 

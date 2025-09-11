@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0]
+
+### Added
+* The `crop_netcdf_product` console script entrypoint is now also available via the `__main__` module entrypoint. 
+* `pixi-pycharm` was added to the conda-forge dependencies to support better development environment integration when using PyCharm.
+* A short description of setting up pixi in VS Code and Pycharm was added the to README
+
+### Fixed
+* The `crop_netcdf_product` console script entrypoint now uses `-` prefixed optional arguments instead of `+`.
+* `crop.py` now specifies the xarray engine when opening the netCDF prodcuts for cropping.
+
 ## [0.25.0]
 
 ### Changed
