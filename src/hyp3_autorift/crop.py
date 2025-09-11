@@ -31,6 +31,7 @@ https://github.com/nasa-jpl/its_live_production/blob/957e9aba627be2abafcc9601712
 """
 
 import argparse
+from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
@@ -43,6 +44,10 @@ ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_of
 CHUNK_SIZE = 512
 PIXEL_SIZE = 120
 
+# time constants
+GPS_EPOCH = '1980-01-06T00:00:00Z'
+TIME_UNITS = f'seconds since {GPS_EPOCH}'
+CALENDAR = 'proleptic_gregorian'
 
 def get_aligned_min(val, grid_spacing):
     """Align a value with the nearest grid posting less than it"""
@@ -141,15 +146,44 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds.drop_vars('mapping')
 
         if 'time' not in cropped_ds.coords:
-            date_center = np.datetime64(parse_dt(cropped_ds['img_pair_info'].date_center))
-            gps_epoch = '1980-01-06T00:00:00Z'
-            delta = (date_center - np.datetime64(gps_epoch)) / np.timedelta64(1, 's')
-            cropped_ds = cropped_ds.assign_coords(time=delta)
+            date_center = parse_dt(cropped_ds['img_pair_info'].date_center)
+
+            # When stacking products in a datacube, xarray and similar tools expect unique times for each array layer.
+            # For all missions, it's theoretically possible to have multiple pairs with the same center date.
+            # For example, for a mission with an 8-day repeat cycle, these pairs will all have a very close center date:
+            #     (0,-8), (+8, -16), (+24, -32), etc.
+            # For Landsat and Sentinel-1, we capture the acquisition time down to the microseconds, so collisions are
+            # unlikely, but for Sentinel-2, we only go down to the seconds. Further complicating things, Sentinel-2
+            # breaks acquisitions up into multiple tile-images, so we can have multiple pairs across S2 tiles with the
+            # exact same times. When building large cubes that cover multiple tiles, collisions are particularly likely.
+            # To prevent collisions, we've considered adding microseconds in these ways:
+            #     1. += 0.LLLAAA where LLL is the longitude and AAA is the latitude
+            #     2. += 0.YYMMDD where YY, MM, DD is the year, month, day of acquisition_date_img1
+            # The benefit of both these methods is that they are easily reversible from metadata in the granules.
+            # However (1) lat,lon isn't necessarily unique (possibly same for (0,-8), (+8, -16), (+24, -32), etc. pairs)
+            # and (2) isn't unique for S2 tiles.
+            #
+            # So, instead, let's just add microseconds from a uniform random sample of (0,1,000,000) and record the
+            # "jitter" in the time dimension description. Collisions should be improbable (1e-12 chance) though it's
+            # theoretically possible to have drawn the same value, or the jitter to unluckily align the center_dates.
+            rng = np.random.default_rng()
+            jitter = timedelta(microseconds=rng.integers(0, 1_000_000))
+
+            # time_units and calendar should be the same as TIME_UNITS and CALENDAR,
+            # but this ensures we use exactly what xarray encodes
+            # see: https://docs.xarray.dev/en/latest/internals/time-coding.html#cf-time-encoding
+            time, time_units, calendar = xr.coding.times.encode_cf_datetime(
+                date_center + jitter, TIME_UNITS, CALENDAR, dtype=np.float64
+            )
+
+            cropped_ds = cropped_ds.assign_coords(time=time)
             cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
             cropped_ds['time'].attrs = {
-                'standard_name': 'time_coordinate',
-                'description': f'mid-date of the acquisitions in seconds since {gps_epoch}',
-                'calendar': 'proleptic_gregorian',
+                'standard_name': 'time',
+                'description': f'mid-date between acquisition_date_img1 and acquisition_date_img2 with {jitter} '
+                               f'microseconds added to ensure uniqueness.',
+                'units': time_units,
+                'calendar': calendar,
             }
 
         cropped_ds['mapping'] = ds['mapping']
