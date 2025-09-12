@@ -114,7 +114,7 @@ def numeric_hash(data: Hashable, n_digits: int = 6) -> int:
     Returns:
         The numeric hash value
     """
-    return hash(data) % (10 ** n_digits)
+    return hash(data) % (10**n_digits)
 
 
 def crop_netcdf_product(netcdf_file: Path) -> Path:
@@ -200,7 +200,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
                 'units': time_units,
                 'calendar': calendar,
                 'microseconds_added': jitter,
-                'microseconds_added_description': '6-digit numeric hash of the filename.'
+                'microseconds_added_description': '6-digit numeric hash of the filename.',
             }
 
         cropped_ds['mapping'] = ds['mapping']
