@@ -33,6 +33,7 @@ https://github.com/nasa-jpl/its_live_production/blob/957e9aba627be2abafcc9601712
 import argparse
 from datetime import timedelta
 from pathlib import Path
+from typing import Hashable
 
 import numpy as np
 import pyproj
@@ -103,6 +104,19 @@ def get_alignment_info(
     return aligned_bounds, aligned_padding, x_values, y_values
 
 
+def numeric_hash(data: Hashable, n_digits: int = 6) -> int:
+    """Calculate a numeric hash value for any hashable data.
+
+    Args:
+        data: hashable data
+        n_digits: max number of digits of the computed hash
+
+    Returns:
+        The numeric hash value
+    """
+    return hash(data) % (10 ** n_digits)
+
+
 def crop_netcdf_product(netcdf_file: Path) -> Path:
     """Crop the netCDF product to its valid extent and then pad it such that its
     chunks will be aligned spatially with other products in the same frame.
@@ -164,11 +178,9 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             # However (1) lat,lon isn't necessarily unique (possibly same for (0,-8), (+8, -16), (+24, -32), etc. pairs)
             # and (2) isn't unique for S2 tiles.
             #
-            # So, instead, let's just add microseconds from a uniform random sample of (0,1,000,000) and record the
-            # "jitter" in the time dimension description. Collisions should be improbable (1e-12 chance) though it's
-            # theoretically possible to have drawn the same value, or the jitter to unluckily align the center_dates.
-            rng = np.random.default_rng()
-            jitter = int(rng.integers(0, 1_000_000))
+            # So, instead, let's add microseconds computed as a numeric hash of the input filename (will be unique) to
+            # "jitter" in the time dimension description.
+            jitter = numeric_hash(netcdf_file.name)
 
             # time_units and calendar should be the same as TIME_UNITS and CALENDAR,
             # but this ensures we use exactly what xarray encodes
@@ -182,11 +194,13 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             cropped_ds['time'].attrs = {
                 'standard_name': 'time',
                 'description': (
-                    f'mid-date between acquisition_date_img1 and acquisition_date_img2 with {jitter} '
-                    'microseconds added to ensure uniqueness.'
+                    'mid-date between acquisition_date_img1 and acquisition_date_img2 '
+                    'with microseconds added to ensure uniqueness.'
                 ),
                 'units': time_units,
                 'calendar': calendar,
+                'microseconds_added': jitter,
+                'microseconds_added_description': '6-digit numeric hash of the filename.'
             }
 
         cropped_ds['mapping'] = ds['mapping']
