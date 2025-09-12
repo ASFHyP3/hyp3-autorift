@@ -49,6 +49,7 @@ GPS_EPOCH = '1980-01-06T00:00:00Z'
 TIME_UNITS = f'seconds since {GPS_EPOCH}'
 CALENDAR = 'proleptic_gregorian'
 
+
 def get_aligned_min(val, grid_spacing):
     """Align a value with the nearest grid posting less than it"""
     nearest = np.floor(val / grid_spacing) * grid_spacing
@@ -180,8 +181,10 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
             cropped_ds['time'].attrs = {
                 'standard_name': 'time',
-                'description': f'mid-date between acquisition_date_img1 and acquisition_date_img2 with {jitter} '
-                               f'microseconds added to ensure uniqueness.',
+                'description': (
+                    f'mid-date between acquisition_date_img1 and acquisition_date_img2 with {jitter} '
+                    'microseconds added to ensure uniqueness.'
+                ),
                 'units': time_units,
                 'calendar': calendar,
             }
