@@ -167,13 +167,13 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             # "jitter" in the time dimension description. Collisions should be improbable (1e-12 chance) though it's
             # theoretically possible to have drawn the same value, or the jitter to unluckily align the center_dates.
             rng = np.random.default_rng()
-            jitter = timedelta(microseconds=rng.integers(0, 1_000_000))
+            jitter = int(rng.integers(0, 1_000_000))
 
             # time_units and calendar should be the same as TIME_UNITS and CALENDAR,
             # but this ensures we use exactly what xarray encodes
             # see: https://docs.xarray.dev/en/latest/internals/time-coding.html#cf-time-encoding
             time, time_units, calendar = xr.coding.times.encode_cf_datetime(
-                date_center + jitter, TIME_UNITS, CALENDAR, dtype=np.float64
+                date_center + timedelta(microseconds=jitter), TIME_UNITS, CALENDAR, dtype=np.float64
             )
 
             cropped_ds = cropped_ds.assign_coords(time=time)
