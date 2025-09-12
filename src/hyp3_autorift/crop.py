@@ -174,7 +174,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             # but this ensures we use exactly what xarray encodes
             # see: https://docs.xarray.dev/en/latest/internals/time-coding.html#cf-time-encoding
             time, time_units, calendar = xr.coding.times.encode_cf_datetime(
-                date_center + timedelta(microseconds=jitter), TIME_UNITS, CALENDAR, dtype=np.float64
+                date_center + timedelta(microseconds=jitter), TIME_UNITS, CALENDAR, dtype=np.dtype('float64')
             )
 
             cropped_ds = cropped_ds.assign_coords(time=time)
