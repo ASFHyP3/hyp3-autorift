@@ -13,6 +13,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * `pixi-pycharm` was added to the conda-forge dependencies to support better development environment integration when using PyCharm.
 * A short description of setting up pixi in VS Code and Pycharm was added the to README
 
+### Changed
+* `crop.py` will now ensure that the netCDF products will have an unlimited time dimension with the center date as the (sole) value to allows stacking of products.
+
 ### Fixed
 * The `crop_netcdf_product` console script entrypoint now uses `-` prefixed optional arguments instead of `+`.
 * `crop.py` now specifies the xarray engine when opening the netCDF prodcuts for cropping.
