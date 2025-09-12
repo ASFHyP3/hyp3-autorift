@@ -179,7 +179,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
             # and (2) isn't unique for S2 tiles.
             #
             # So, instead, let's add microseconds computed as a numeric hash of the input filename (will be unique) to
-            # "jitter" in the time dimension description.
+            # "jitter" the mid-date and record it in the time attributes.
             jitter = numeric_hash(netcdf_file.name)
 
             # time_units and calendar should be the same as TIME_UNITS and CALENDAR,
