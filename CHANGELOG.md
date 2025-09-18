@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.1]
+
+### Added
+* `--frame-id` optional argument to record the OPERA frame of a Sentinel-1 scene for the output product metadata.
+* The OPERA frame or OPERA burst ID will be recorded in `scene_1_frame` and `scene_2_frame` in the output product metadata for Sentinel-1 products.
+
 ## [0.26.0]
 
 ### Added
