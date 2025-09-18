@@ -186,7 +186,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_stati
         burst_ids_sec,
         static_files_bucket,
         use_static_files,
-        None
+        None,
     )
 
 
