@@ -370,6 +370,7 @@ def process(
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
     use_static_files: bool = True,
+    frame_id: str = '',
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
@@ -395,7 +396,7 @@ def process(
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files, frame_id)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
@@ -582,6 +583,11 @@ def main():
         default=True,
         help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
     )
+    parser.add_argument(
+        '--frame-id',
+        default='',
+        help='OPERA frame id to include in metadata for Sentinel-1 processing',
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -639,6 +645,7 @@ def main():
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
         use_static_files=args.use_static_files,
+        frame_id=args.frame_id,
     )
 
     if args.bucket:
