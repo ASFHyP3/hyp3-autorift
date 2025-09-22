@@ -6,6 +6,7 @@ import shutil
 import subprocess
 from datetime import timedelta
 
+import netCDF4
 import numpy as np
 import s1reader
 from burst2safe.burst2safe import burst2safe
@@ -30,7 +31,7 @@ from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files):
+def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files, frame_id):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
@@ -52,6 +53,7 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use
             burst_ids_sec,
             static_files_bucket,
             use_static_files,
+            frame_id,
             swaths,
         )
 
@@ -157,6 +159,11 @@ def process_burst(
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
 
+    with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
+        var = ds.variables['img_pair_info']
+        var.setncattr('scene_1_frame', burst_id_ref[1:])
+        var.setncattr('scene_2_frame', burst_id_sec[1:])
+
     return netcdf_file
 
 
@@ -179,6 +186,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_stati
         burst_ids_sec,
         static_files_bucket,
         use_static_files,
+        None,
     )
 
 
@@ -191,6 +199,7 @@ def process_slc(
     burst_ids_sec,
     static_files_bucket,
     use_static_files,
+    frame_id,
     swaths=(1, 2, 3),
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
@@ -268,6 +277,12 @@ def process_slc(
         **parameter_info['autorift'],
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
+
+    if frame_id:
+        with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
+            var = ds.variables['img_pair_info']
+            var.setncattr('scene_1_frame', frame_id)
+            var.setncattr('scene_2_frame', frame_id)
 
     return netcdf_file
 
