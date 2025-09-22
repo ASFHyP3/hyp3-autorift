@@ -586,7 +586,7 @@ def main():
     parser.add_argument(
         '--frame-id',
         default='',
-        help='OPERA frame id to include in metadata for Sentinel-1 processing',
+        help='Optional OPERA frame id to include in metadata for Sentinel-1 processing',
     )
     args = parser.parse_args()
 
