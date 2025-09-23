@@ -161,8 +161,8 @@ def process_burst(
 
     with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
         var = ds.variables['img_pair_info']
-        var.setncattr('scene_1_frame', burst_id_ref[1:])
-        var.setncattr('scene_2_frame', burst_id_sec[1:])
+        var.setncattr('frame_img1', burst_id_ref[1:])
+        var.setncattr('frame_img2', burst_id_sec[1:])
 
     return netcdf_file
 
@@ -281,8 +281,8 @@ def process_slc(
     if frame_id:
         with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
             var = ds.variables['img_pair_info']
-            var.setncattr('scene_1_frame', frame_id)
-            var.setncattr('scene_2_frame', frame_id)
+            var.setncattr('frame_img1', frame_id)
+            var.setncattr('frame_img2', frame_id)
 
     return netcdf_file
 
