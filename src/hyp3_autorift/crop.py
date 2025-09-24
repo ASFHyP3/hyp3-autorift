@@ -34,11 +34,16 @@ import argparse
 from datetime import timedelta
 from pathlib import Path
 from typing import Hashable
+from urllib.parse import urlparse
 
+import boto3
 import numpy as np
 import pyproj
 import xarray as xr
 from dateutil.parser import parse as parse_dt
+from hyp3lib.aws import upload_file_to_s3
+
+from hyp3_autorift import utils
 
 
 ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
@@ -255,18 +260,56 @@ def main():
     parser.add_argument(
         'netcdf_file',
         type=str,
-        help='Path to the netCDF product to crop and align',
+        help='Path or URI to the netCDF product to crop and align',
     )
+
+    hyp3_group = parser.add_argument_group(
+        'HyP3 content bucket',
+        'AWS S3 bucket and prefix to upload cropped product(s) to. Will also be used to find the input granule if '
+        '`netcdf_product` is not provided.',
+    )
+    hyp3_group.add_argument('--bucket')
+    hyp3_group.add_argument('--bucket-prefix', default='')
+
+    parser.add_argument(
+        '--publish-bucket',
+        type=utils.nullable_string,
+        default=None,
+        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
+        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+    )
+
     args = parser.parse_args()
 
-    netcdf_file = Path(args.netcdf_file)
+    if args.netcdf_file.endswith('_P000.nc'):
+        raise ValueError('Cannot crop product with no valid data')
 
-    if not netcdf_file.exists():
-        print(f'{netcdf_file} does not exist.')
+    if args.netcdf_file.startswith('s3://'):
+        parsed_uri = urlparse(args.netcdf_file)
+        netcdf_file = Path.cwd() / Path(parsed_uri.path).name
+
+        s3 = boto3.client('s3')
+        s3.download_file(Bucket=parsed_uri.netloc, Key=parsed_uri.path.lstrip('/'), Filename=netcdf_file)
+    else:
+        parsed_uri = None
+        netcdf_file = Path(args.netcdf_file)
 
     cropped = crop_netcdf_product(netcdf_file)
 
     print(f'Saved the cropped and chunk-aligned product to {cropped}.')
+
+    if args.bucket:
+        print(f'Uploaded the cropped and chunk-aligned product to s3://{args.bucket}/{args.bucket_prefix}.')
+        upload_file_to_s3(cropped, args.bucket, args.bucket_prefix)
+
+    if args.publish_bucket:
+        granule_prefix = utils.get_opendata_prefix(cropped)
+        print(
+            f'Publishing the cropped and chunk-aligned product to s3://{args.publish_bucket}/{granule_prefix}/{netcdf_file.name}.'
+        )
+        utils.upload_file_to_s3_with_publish_access_keys(
+            cropped, args.publish_bucket, granule_prefix, s3_name=netcdf_file.name
+        )
 
 
 if __name__ == '__main__':
