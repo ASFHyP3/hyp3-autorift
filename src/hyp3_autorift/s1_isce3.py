@@ -548,19 +548,21 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     return num_az_lines, num_rng_samples
 
 
-# FIXME: Docstring; is_slc could be handled by swaths?
+# FIXME: is_slc could be handled by swaths?
 def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
-    :param safe: Path to the Sentinel-1 SAFE zip archive
-    :param priority: Image priority, either 'reference' (default) or 'secondary'
-    :param polarization: Image polarization (default: 'hh')
-    :param orbits: Path to the orbital files (default: './Orbits')
-    :param epsg: Projection EPSG code (default: 4326)
+    Args:
+        safe: Path to the Sentinel-1 SAFE zip archive
+        orbit_file: Path to the Sentinel-1 orbit file
+        is_slc: Whether the SAFE archive contains a full SLC product or not
+        swaths: Swaths to include in the bounding box
+        epsg: Projection EPSG code
 
-    :return: lat_limits (list), lon_limits (list)
-        lat_limits: list containing the [minimum, maximum] latitudes
-        lat_limits: list containing the [minimum, maximum] longitudes
+    Returns:
+        lat_limits: List containing the [minimum, maximum] latitudes
+        lon_limits: List containing the [minimum, maximum] longitudes
+
     """
     from geogrid import GeogridRadar
 

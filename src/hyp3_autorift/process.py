@@ -590,7 +590,7 @@ def main():
         type=nullable_string,
         default=None,
         help='Optional OPERA frame ID to include in metadata for Sentinel-1 multi-burst processing, '
-             'and will be ignored otherwise.',
+        'and will be ignored otherwise.',
     )
     args = parser.parse_args()
 
