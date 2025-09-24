@@ -186,7 +186,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_stati
         burst_ids_sec,
         static_files_bucket,
         use_static_files,
-        None,
+        frame_id='N/A',
     )
 
 
@@ -278,11 +278,10 @@ def process_slc(
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
 
-    if frame_id:
-        with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
-            var = ds.variables['img_pair_info']
-            var.setncattr('frame_img1', frame_id)
-            var.setncattr('frame_img2', frame_id)
+    with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
+        var = ds.variables['img_pair_info']
+        var.setncattr('frame_img1', frame_id)
+        var.setncattr('frame_img2', frame_id)
 
     return netcdf_file
 

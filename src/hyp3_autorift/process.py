@@ -380,6 +380,8 @@ def process(
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         naming_scheme: Naming scheme to use for product files
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
+        use_static_files: Use pre-generated static topographic correction files if available
+        frame_id: OPERA frame ID to record in the img_pair_info variable in the autoRIFT product file
 
     Returns:
         the autoRIFT product file, browse image, thumbnail image
@@ -587,7 +589,8 @@ def main():
         '--frame-id',
         type=nullable_string,
         default=None,
-        help='Optional OPERA frame id to include in metadata for Sentinel-1 processing',
+        help='Optional OPERA frame ID to include in metadata for Sentinel-1 multi-burst processing, '
+             'and will be ignored otherwise.',
     )
     args = parser.parse_args()
 
