@@ -280,8 +280,8 @@ def process_slc(
 
     with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
         var = ds.variables['img_pair_info']
-        var.setncattr('frame_img1', frame_id)
-        var.setncattr('frame_img2', frame_id)
+        var.setncattr('frame_img1', str(frame_id))
+        var.setncattr('frame_img2', str(frame_id))
 
     return netcdf_file
 
