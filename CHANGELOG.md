@@ -17,10 +17,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * `crop.py` will now ensure that the netCDF products will have an unlimited time dimension with the center date as the (sole) value to allows stacking of products.
+* The `crop_netcdf_product` console script entrypoint now:
+  * accepts S3 URIs in addition to local file paths
+  * will upload cropped products to S3 using the new `--bucket` and (optional) `--bucket-prefix` arguments, if provided.
+  * will publish cropped products (without the `_cropped` suffix) to an additional publication bucket S3 using the new `--publish-bucket` argument and `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables, if provided.
 
 ### Fixed
 * The `crop_netcdf_product` console script entrypoint now uses `-` prefixed optional arguments instead of `+`.
-* `crop.py` now specifies the xarray engine when opening the netCDF prodcuts for cropping.
+* `crop.py` now specifies the xarray engine when opening the netCDF products for cropping.
 
 ## [0.25.0]
 
@@ -139,7 +143,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.15.0]
 ### Added
 * `--publish-bucket` option has been added to the HyP3 entry point to additionally publish products an AWS bucket, such as the ITS_LIVE AWS Open Data bucket, `s3://its-live-data`.
-* `upload_file_to_s3_with_publish_access_keys` to perform S3 uploads using credentials from the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment vairables.
+* `upload_file_to_s3_with_publish_access_keys` to perform S3 uploads using credentials from the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.
 
 ## [0.14.1]
 ### Changed

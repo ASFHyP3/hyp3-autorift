@@ -25,6 +25,7 @@ from osgeo import gdal
 
 from hyp3_autorift import geometry, image, utils
 from hyp3_autorift.crop import crop_netcdf_product
+from hyp3_autorift.utils import get_opendata_prefix, get_platform, save_publication_info
 
 
 log = logging.getLogger(__name__)
@@ -46,17 +47,6 @@ LANDSAT_SENSOR_MAPPING = {
 DEFAULT_PARAMETER_FILE = (
     '/vsicurl/https://its-live-data.s3.amazonaws.com/autorift_parameters/v001/autorift_landice_0120m.shp'
 )
-
-PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
-    'S1-SLC': 'sentinel1',
-    'S1-BURST': 'sentinel1',
-    'S2': 'sentinel2',
-    'L4': 'landsatOLI',
-    'L5': 'landsatOLI',
-    'L7': 'landsatOLI',
-    'L8': 'landsatOLI',
-    'L9': 'landsatOLI',
-}
 
 
 def get_lc2_stac_json_key(scene_name: str) -> str:
@@ -181,46 +171,12 @@ def s3_object_is_accessible(bucket, key):
     return True
 
 
-def parse_s3_url(s3_url: str) -> Tuple[str, str]:
-    s3_location = s3_url.replace('s3://', '').split('/')
-    bucket = s3_location[0]
-    key = '/'.join(s3_location[1:])
-    return bucket, key
-
-
 def least_precise_orbit_of(orbits):
     if any([orb is None for orb in orbits]):
         return 'O'
     if any(['RESORB' in orb for orb in orbits]):
         return 'R'
     return 'P'
-
-
-def get_datetime(scene_name):
-    if 'BURST' in scene_name:
-        return datetime.strptime(scene_name[14:29], '%Y%m%dT%H%M%S')
-    if scene_name.startswith('S1'):
-        return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
-    if scene_name.startswith('S2') and len(scene_name) > 25:  # ESA
-        return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
-    if scene_name.startswith('S2'):  # COG
-        return datetime.strptime(scene_name.split('_')[2], '%Y%m%d')
-    if scene_name.startswith('L'):
-        return datetime.strptime(scene_name[17:25], '%Y%m%d')
-
-    raise ValueError(f'Unsupported scene format: {scene_name}')
-
-
-def get_platform(scene: str) -> str:
-    if scene.startswith('S1'):
-        if 'BURST' in scene:
-            return 'S1-BURST'
-        return 'S1-SLC'
-    if scene.startswith('S2'):
-        return scene[0:2]
-    if scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
-        return scene[0] + scene[3]
-    raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
 def create_filtered_filepath(path: str) -> str:
@@ -310,57 +266,6 @@ def apply_landsat_filtering(reference_path: str, secondary_path: str) -> Tuple[s
     secondary_path, secondary_zero_path = _apply_filter_function(secondary_path, secondary_filter)
 
     return reference_path, reference_zero_path, secondary_path, secondary_zero_path
-
-
-def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
-    with Dataset(ncfile) as ds:
-        var = ds.variables['img_pair_info']
-        return var.latitude, var.longitude
-
-
-def point_to_region(lat: float, lon: float) -> str:
-    """
-    Returns a string (for example, N78W124) of a region name based on
-    granule center point lat,lon
-    """
-    nw_hemisphere = 'N' if lat >= 0.0 else 'S'
-    ew_hemisphere = 'E' if lon >= 0.0 else 'W'
-
-    region_lat = int(10 * np.trunc(np.abs(lat / 10.0)))
-    if region_lat == 90:  # if you are exactly at a pole, put in lat = 80 bin
-        region_lat = 80
-
-    region_lon = int(10 * np.trunc(np.abs(lon / 10.0)))
-
-    if region_lon >= 180:  # if you are at the dateline, back off to the 170 bin
-        region_lon = 170
-
-    return f'{nw_hemisphere}{region_lat:02d}{ew_hemisphere}{region_lon:03d}'
-
-
-def get_opendata_prefix(file: Path) -> str:
-    # filenames have form GRANULE1_X_GRANULE2
-    scene = file.name.split('_X_')[0]
-
-    platform_shortname = get_platform(scene)
-    lat, lon = get_lat_lon_from_ncfile(file)
-    region = point_to_region(lat, lon)
-
-    return '/'.join(['velocity_image_pair', PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname], 'v02', region])
-
-
-def save_publication_info(bucket: str, prefix: str, name: str) -> Path:
-    publish_info_file = Path.cwd() / 'publish_info.json'
-    publish_info_file.write_text(
-        json.dumps(
-            {
-                'bucket': bucket,
-                'prefix': prefix,
-                'name': name,
-            }
-        )
-    )
-    return publish_info_file
 
 
 def process(
@@ -516,30 +421,13 @@ def process(
     return product_file, browse_file, thumbnail_file
 
 
-def nullable_string(argument_string: str) -> str | None:
-    argument_string = argument_string.replace('None', '').strip()
-    return argument_string if argument_string else None
-
-
-def nullable_granule_list(granule_string: str) -> list[str]:
-    granule_string = granule_string.replace('None', '').strip()
-    granule_list = [granule for granule in granule_string.split(' ') if granule]
-    return granule_list
-
-
-def sort_ref_sec(reference: list[str], secondary: list[str]) -> tuple[list[str], list[str]]:
-    if get_datetime(reference[0]) > get_datetime(secondary[0]):
-        return secondary, reference
-    return reference, secondary
-
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bucket', help='AWS bucket to upload product files to')
     parser.add_argument('--bucket-prefix', default='', help='AWS prefix (location in bucket) to add to product files')
     parser.add_argument(
         '--publish-bucket',
-        type=nullable_string,
+        type=utils.nullable_string,
         default=None,
         help='Additionally, publish products to this bucket. Necessary credentials must be provided '
         'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
@@ -558,14 +446,14 @@ def main():
     )
     parser.add_argument(
         'granules',
-        type=nullable_granule_list,
+        type=utils.nullable_granule_list,
         nargs='*',
         help='Pair of Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) to '
         'process. Cannot be used with the `--reference` or `--secondary` arguments.',
     )
     parser.add_argument(
         '--reference',
-        type=nullable_granule_list,
+        type=utils.nullable_granule_list,
         default=[],
         nargs='+',
         help='List of reference Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
@@ -573,7 +461,7 @@ def main():
     )
     parser.add_argument(
         '--secondary',
-        type=nullable_granule_list,
+        type=utils.nullable_granule_list,
         default=[],
         nargs='+',
         help='List of secondary Sentinel-1, Sentinel-1 Burst, Sentinel-2, or Landsat-8 Collection 2 granules (scenes) '
@@ -587,7 +475,7 @@ def main():
     )
     parser.add_argument(
         '--frame-id',
-        type=nullable_string,
+        type=utils.nullable_string,
         default=None,
         help='Optional OPERA frame ID to include in metadata for Sentinel-1 multi-burst processing, '
         'and will be ignored otherwise.',
@@ -620,11 +508,11 @@ def main():
             DeprecationWarning,
         )
 
-        granules_sorted = sort_ref_sec([granules[0]], [granules[1]])
+        granules_sorted = utils.sort_ref_sec([granules[0]], [granules[1]])
         reference = granules_sorted[0]
         secondary = granules_sorted[1]
     else:
-        reference, secondary = sort_ref_sec(reference, secondary)
+        reference, secondary = utils.sort_ref_sec(reference, secondary)
 
     if len(reference) != len(secondary):
         parser.error('Must provide the same number of reference and secondary scenes.')

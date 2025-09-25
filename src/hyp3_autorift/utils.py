@@ -1,13 +1,17 @@
 """Helper utilities for autoRIFT"""
 
+import json
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Union
 
 import boto3
+import numpy as np
 from hyp3lib import DemError
 from hyp3lib.aws import get_content_type, get_tag_set
+from netCDF4 import Dataset
 from osgeo import gdal, ogr, osr
 
 from hyp3_autorift.geometry import fix_point_for_antimeridian, flip_point_coordinates
@@ -16,7 +20,9 @@ from hyp3_autorift.geometry import fix_point_for_antimeridian, flip_point_coordi
 log = logging.getLogger(__name__)
 
 
-def upload_file_to_s3_with_publish_access_keys(path_to_file: Path, bucket: str, prefix: str = ''):
+def upload_file_to_s3_with_publish_access_keys(
+    path_to_file: Path, bucket: str, prefix: str = '', s3_name: str | None = None
+):
     try:
         access_key_id = os.environ['PUBLISH_ACCESS_KEY_ID']
         access_key_secret = os.environ['PUBLISH_SECRET_ACCESS_KEY']
@@ -27,7 +33,11 @@ def upload_file_to_s3_with_publish_access_keys(path_to_file: Path, bucket: str, 
         )
 
     s3_client = boto3.client('s3', aws_access_key_id=access_key_id, aws_secret_access_key=access_key_secret)
-    key = str(Path(prefix) / path_to_file.name)
+
+    if s3_name is None:
+        s3_name = path_to_file.name
+    key = str(Path(prefix) / s3_name)
+
     extra_args = {'ContentType': get_content_type(key)}
 
     logging.info(f'Uploading s3://{bucket}/{key}')
@@ -165,3 +175,110 @@ def ensure_same_projection(reference_path: Union[str, Path], secondary_path: Uni
     )
 
     return reprojected_reference, reprojected_secondary
+
+
+def nullable_string(argument_string: str) -> str | None:
+    argument_string = argument_string.replace('None', '').strip()
+    return argument_string if argument_string else None
+
+
+def nullable_granule_list(granule_string: str) -> list[str]:
+    granule_string = granule_string.replace('None', '').strip()
+    granule_list = [granule for granule in granule_string.split(' ') if granule]
+    return granule_list
+
+
+def sort_ref_sec(reference: list[str], secondary: list[str]) -> tuple[list[str], list[str]]:
+    if get_datetime(reference[0]) > get_datetime(secondary[0]):
+        return secondary, reference
+    return reference, secondary
+
+
+def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
+    with Dataset(ncfile) as ds:
+        var = ds.variables['img_pair_info']
+        return var.latitude, var.longitude
+
+
+def point_to_region(lat: float, lon: float) -> str:
+    """
+    Returns a string (for example, N78W124) of a region name based on
+    granule center point lat,lon
+    """
+    nw_hemisphere = 'N' if lat >= 0.0 else 'S'
+    ew_hemisphere = 'E' if lon >= 0.0 else 'W'
+
+    region_lat = int(10 * np.trunc(np.abs(lat / 10.0)))
+    if region_lat == 90:  # if you are exactly at a pole, put in lat = 80 bin
+        region_lat = 80
+
+    region_lon = int(10 * np.trunc(np.abs(lon / 10.0)))
+
+    if region_lon >= 180:  # if you are at the dateline, back off to the 170 bin
+        region_lon = 170
+
+    return f'{nw_hemisphere}{region_lat:02d}{ew_hemisphere}{region_lon:03d}'
+
+
+def get_opendata_prefix(file: Path) -> str:
+    # filenames have form GRANULE1_X_GRANULE2
+    scene = file.name.split('_X_')[0]
+
+    platform_shortname = get_platform(scene)
+    lat, lon = get_lat_lon_from_ncfile(file)
+    region = point_to_region(lat, lon)
+
+    return '/'.join(['velocity_image_pair', PLATFORM_SHORTNAME_LONGNAME_MAPPING[platform_shortname], 'v02', region])
+
+
+def save_publication_info(bucket: str, prefix: str, name: str) -> Path:
+    publish_info_file = Path.cwd() / 'publish_info.json'
+    publish_info_file.write_text(
+        json.dumps(
+            {
+                'bucket': bucket,
+                'prefix': prefix,
+                'name': name,
+            }
+        )
+    )
+    return publish_info_file
+
+
+PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
+    'S1-SLC': 'sentinel1',
+    'S1-BURST': 'sentinel1',
+    'S2': 'sentinel2',
+    'L4': 'landsatOLI',
+    'L5': 'landsatOLI',
+    'L7': 'landsatOLI',
+    'L8': 'landsatOLI',
+    'L9': 'landsatOLI',
+}
+
+
+def get_datetime(scene_name):
+    if 'BURST' in scene_name:
+        return datetime.strptime(scene_name[14:29], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S1'):
+        return datetime.strptime(scene_name[17:32], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S2') and len(scene_name) > 25:  # ESA
+        return datetime.strptime(scene_name[11:26], '%Y%m%dT%H%M%S')
+    if scene_name.startswith('S2'):  # COG
+        return datetime.strptime(scene_name.split('_')[2], '%Y%m%d')
+    if scene_name.startswith('L'):
+        return datetime.strptime(scene_name[17:25], '%Y%m%d')
+
+    raise ValueError(f'Unsupported scene format: {scene_name}')
+
+
+def get_platform(scene: str) -> str:
+    if scene.startswith('S1'):
+        if 'BURST' in scene:
+            return 'S1-BURST'
+        return 'S1-SLC'
+    if scene.startswith('S2'):
+        return scene[0:2]
+    if scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
+        return scene[0] + scene[3]
+    raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')

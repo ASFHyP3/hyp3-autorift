@@ -173,6 +173,7 @@ pysolid = "*"
 # For PyCharm IDE integration
 pixi-pycharm = ">=0.0.8,<0.0.9"
 
+
 [tool.pixi.target.linux-64.dependencies]
 pyre = "*"
 
