@@ -296,16 +296,16 @@ def main():
 
     cropped = crop_netcdf_product(netcdf_file)
 
-    print(f'Saved the cropped and chunk-aligned product to {cropped}.')
+    print(f'Saved the cropped and chunk-aligned product to {cropped}')
 
     if args.bucket:
-        print(f'Uploaded the cropped and chunk-aligned product to s3://{args.bucket}/{args.bucket_prefix}.')
+        print(f'Uploaded the cropped and chunk-aligned product to s3://{args.bucket}/{args.bucket_prefix}')
         upload_file_to_s3(cropped, args.bucket, args.bucket_prefix)
 
     if args.publish_bucket:
         granule_prefix = utils.get_opendata_prefix(cropped)
         print(
-            f'Publishing the cropped and chunk-aligned product to s3://{args.publish_bucket}/{granule_prefix}/{netcdf_file.name}.'
+            f'Publishing the cropped and chunk-aligned product to s3://{args.publish_bucket}/{granule_prefix}/{netcdf_file.name}'
         )
         utils.upload_file_to_s3_with_publish_access_keys(
             cropped, args.publish_bucket, granule_prefix, s3_name=netcdf_file.name
