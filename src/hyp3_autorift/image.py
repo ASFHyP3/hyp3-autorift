@@ -42,7 +42,7 @@ COLOR_MAP = np.array(
 def make_browse(
     out_file: Path, data: np.ndarray, min_value: Optional[float] = None, max_value: Optional[float] = 625.0
 ) -> Path:
-    data = data[0]
+    data = np.squeeze(data)
 
     data_values = COLOR_MAP[:, 0]
     pchip = PchipInterpolator(data_values, np.linspace(0, 1, len(data_values)))
