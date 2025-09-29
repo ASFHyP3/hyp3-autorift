@@ -6,6 +6,7 @@ import shutil
 import subprocess
 from datetime import timedelta
 
+import netCDF4
 import numpy as np
 import s1reader
 from burst2safe.burst2safe import burst2safe
@@ -30,7 +31,7 @@ from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files):
+def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files, frame_id):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
@@ -52,6 +53,7 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use
             burst_ids_sec,
             static_files_bucket,
             use_static_files,
+            frame_id,
             swaths,
         )
 
@@ -157,6 +159,11 @@ def process_burst(
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
 
+    with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
+        var = ds.variables['img_pair_info']
+        var.setncattr('frame_img1', burst_id_ref[1:])
+        var.setncattr('frame_img2', burst_id_sec[1:])
+
     return netcdf_file
 
 
@@ -179,6 +186,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_stati
         burst_ids_sec,
         static_files_bucket,
         use_static_files,
+        frame_id='N/A',
     )
 
 
@@ -191,6 +199,7 @@ def process_slc(
     burst_ids_sec,
     static_files_bucket,
     use_static_files,
+    frame_id,
     swaths=(1, 2, 3),
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
@@ -268,6 +277,11 @@ def process_slc(
         **parameter_info['autorift'],
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
     )
+
+    with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
+        var = ds.variables['img_pair_info']
+        var.setncattr('frame_img1', str(frame_id))
+        var.setncattr('frame_img2', str(frame_id))
 
     return netcdf_file
 
@@ -534,19 +548,21 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     return num_az_lines, num_rng_samples
 
 
-# FIXME: Docstring; is_slc could be handled by swaths?
+# FIXME: is_slc could be handled by swaths?
 def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
-    :param safe: Path to the Sentinel-1 SAFE zip archive
-    :param priority: Image priority, either 'reference' (default) or 'secondary'
-    :param polarization: Image polarization (default: 'hh')
-    :param orbits: Path to the orbital files (default: './Orbits')
-    :param epsg: Projection EPSG code (default: 4326)
+    Args:
+        safe: Path to the Sentinel-1 SAFE zip archive
+        orbit_file: Path to the Sentinel-1 orbit file
+        is_slc: Whether the SAFE archive contains a full SLC product or not
+        swaths: Swaths to include in the bounding box
+        epsg: Projection EPSG code
 
-    :return: lat_limits (list), lon_limits (list)
-        lat_limits: list containing the [minimum, maximum] latitudes
-        lat_limits: list containing the [minimum, maximum] longitudes
+    Returns:
+        lat_limits: List containing the [minimum, maximum] latitudes
+        lon_limits: List containing the [minimum, maximum] longitudes
+
     """
     from geogrid import GeogridRadar
 

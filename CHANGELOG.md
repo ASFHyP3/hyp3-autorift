@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0]
+
+### Added
+* The `crop_netcdf_product` console script entrypoint is now also available via the `__main__` module entrypoint. 
+* `pixi-pycharm` was added to the conda-forge dependencies to support better development environment integration when using PyCharm.
+* A short description of setting up pixi in VS Code and Pycharm was added to the README
+* `--frame-id` optional argument to specify the frame ID to record output product metadata for sentinel-1 products.
+*  `frame_img1` and `frame_img2` attributes were added to the `img_pair_info` variable in the output product metadata for Sentinel-1 products, which will contain the burst ID for burst products, or the `--frame-id` for multi-burst products, and "N/A" for SLC products.
+
+### Changed
+* `crop.py` will now ensure that the netCDF products will have an unlimited time dimension with the center date as the (sole) value to allows stacking of products.
+* The `crop_netcdf_product` console script entrypoint now:
+  * accepts S3 URIs in addition to local file paths
+  * will upload cropped products to S3 using the new `--bucket` and (optional) `--bucket-prefix` arguments, if provided.
+  * will publish cropped products (without the `_cropped` suffix) to an additional publication bucket S3 using the new `--publish-bucket` argument and `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables, if provided.
+
+### Fixed
+* The `crop_netcdf_product` console script entrypoint now uses `-` prefixed optional arguments instead of `+`.
+* `crop.py` now specifies the xarray engine when opening the netCDF products for cropping.
+
 ## [0.25.0]
 
 ### Changed
@@ -123,7 +143,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.15.0]
 ### Added
 * `--publish-bucket` option has been added to the HyP3 entry point to additionally publish products an AWS bucket, such as the ITS_LIVE AWS Open Data bucket, `s3://its-live-data`.
-* `upload_file_to_s3_with_publish_access_keys` to perform S3 uploads using credentials from the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment vairables.
+* `upload_file_to_s3_with_publish_access_keys` to perform S3 uploads using credentials from the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.
 
 ## [0.14.1]
 ### Changed

@@ -31,16 +31,29 @@ https://github.com/nasa-jpl/its_live_production/blob/957e9aba627be2abafcc9601712
 """
 
 import argparse
+from datetime import timedelta
 from pathlib import Path
+from typing import Hashable
+from urllib.parse import urlparse
 
+import boto3
 import numpy as np
 import pyproj
 import xarray as xr
+from dateutil.parser import parse as parse_dt
+from hyp3lib.aws import upload_file_to_s3
+
+from hyp3_autorift import utils
 
 
 ENCODING_ATTRS = ['_FillValue', 'dtype', 'zlib', 'complevel', 'shuffle', 'add_offset', 'scale_factor']
 CHUNK_SIZE = 512
 PIXEL_SIZE = 120
+
+# time constants
+GPS_EPOCH = '1980-01-06T00:00:00Z'
+TIME_UNITS = f'seconds since {GPS_EPOCH}'
+CALENDAR = 'proleptic_gregorian'
 
 
 def get_aligned_min(val, grid_spacing):
@@ -96,6 +109,19 @@ def get_alignment_info(
     return aligned_bounds, aligned_padding, x_values, y_values
 
 
+def numeric_hash(data: Hashable, n_digits: int = 6) -> int:
+    """Calculate a numeric hash value for any hashable data.
+
+    Args:
+        data: hashable data
+        n_digits: max number of digits of the computed hash
+
+    Returns:
+        The numeric hash value
+    """
+    return hash(data) % (10**n_digits)
+
+
 def crop_netcdf_product(netcdf_file: Path) -> Path:
     """Crop the netCDF product to its valid extent and then pad it such that its
     chunks will be aligned spatially with other products in the same frame.
@@ -106,7 +132,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
     Returns:
         The Path to the cropped netCDF file
     """
-    with xr.open_dataset(netcdf_file) as ds:
+    with xr.open_dataset(netcdf_file, engine='h5netcdf') as ds:
         # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
         xy_ds = ds.where(ds.v.notnull()).dropna(dim='x', how='all').dropna(dim='y', how='all')
 
@@ -136,8 +162,53 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
-        cropped_ds['mapping'] = ds['mapping']
         cropped_ds['img_pair_info'] = ds['img_pair_info']
+        cropped_ds.drop_vars('mapping')
+
+        if 'time' not in cropped_ds.coords:
+            date_center = parse_dt(cropped_ds['img_pair_info'].date_center)
+
+            # When stacking products in a datacube, xarray and similar tools expect unique times for each array layer.
+            # For all missions, it's theoretically possible to have multiple pairs with the same center date.
+            # For example, for a mission with an 8-day repeat cycle, these pairs will all have a very close center date:
+            #     (0,-8), (+8, -16), (+24, -32), etc.
+            # For Landsat and Sentinel-1, we capture the acquisition time down to the microseconds, so collisions are
+            # unlikely, but for Sentinel-2, we only go down to the seconds. Further complicating things, Sentinel-2
+            # breaks acquisitions up into multiple tile-images, so we can have multiple pairs across S2 tiles with the
+            # exact same times. When building large cubes that cover multiple tiles, collisions are particularly likely.
+            # To prevent collisions, we've considered adding microseconds in these ways:
+            #     1. += 0.LLLAAA where LLL is the longitude and AAA is the latitude
+            #     2. += 0.YYMMDD where YY, MM, DD is the year, month, day of acquisition_date_img1
+            # The benefit of both these methods is that they are easily reversible from metadata in the granules.
+            # However (1) lat,lon isn't necessarily unique (possibly same for (0,-8), (+8, -16), (+24, -32), etc. pairs)
+            # and (2) isn't unique for S2 tiles.
+            #
+            # So, instead, let's add microseconds computed as a numeric hash of the input filename (will be unique) to
+            # "jitter" the mid-date and record it in the time attributes.
+            jitter = numeric_hash(netcdf_file.name)
+
+            # time_units and calendar should be the same as TIME_UNITS and CALENDAR,
+            # but this ensures we use exactly what xarray encodes
+            # see: https://docs.xarray.dev/en/latest/internals/time-coding.html#cf-time-encoding
+            time, time_units, calendar = xr.coding.times.encode_cf_datetime(
+                date_center + timedelta(microseconds=jitter), TIME_UNITS, CALENDAR, dtype=np.dtype('float64')
+            )
+
+            cropped_ds = cropped_ds.assign_coords(time=time)
+            cropped_ds = cropped_ds.expand_dims(dim='time', axis=0)
+            cropped_ds['time'].attrs = {
+                'standard_name': 'time',
+                'description': (
+                    'mid-date between acquisition_date_img1 and acquisition_date_img2 '
+                    'with microseconds added to ensure uniqueness.'
+                ),
+                'units': time_units,
+                'calendar': calendar,
+                'microseconds_added': jitter,
+                'microseconds_added_description': '6-digit numeric hash of the filename.',
+            }
+
+        cropped_ds['mapping'] = ds['mapping']
 
         cropped_ds['x'] = x_values
         cropped_ds['y'] = y_values
@@ -165,7 +236,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         # It was decided to keep all values in GeoTransform center-based
         cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
 
-        two_dim_chunks_settings = (CHUNK_SIZE, CHUNK_SIZE)
+        dim_chunks_settings = (1, CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
         for variable in ds.data_vars.keys():
@@ -176,31 +247,69 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         for _, attributes in encoding.items():
             if attributes['_FillValue'] is not None:
-                attributes['chunksizes'] = two_dim_chunks_settings
+                attributes['chunksizes'] = dim_chunks_settings
 
         cropped_file = netcdf_file.with_stem(f'{netcdf_file.stem}_cropped')
-        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', encoding=encoding)
+        cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', unlimited_dims=['time'], encoding=encoding)
 
     return cropped_file
 
 
 def main():
-    parser = argparse.ArgumentParser(prefix_chars='+', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         'netcdf_file',
         type=str,
-        help='Path to the netCDF product to crop and align',
+        help='Path or URI to the netCDF product to crop and align',
     )
+
+    hyp3_group = parser.add_argument_group(
+        'HyP3 content bucket',
+        'AWS S3 bucket and prefix to upload cropped product(s) to. Will also be used to find the input granule if '
+        '`netcdf_product` is not provided.',
+    )
+    hyp3_group.add_argument('--bucket')
+    hyp3_group.add_argument('--bucket-prefix', default='')
+
+    parser.add_argument(
+        '--publish-bucket',
+        type=utils.nullable_string,
+        default=None,
+        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
+        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+    )
+
     args = parser.parse_args()
 
-    netcdf_file = Path(args.netcdf_file)
+    if args.netcdf_file.endswith('_P000.nc'):
+        raise ValueError('Cannot crop product with no valid data')
 
-    if not netcdf_file.exists():
-        print(f'{netcdf_file} does not exist.')
+    if args.netcdf_file.startswith('s3://'):
+        parsed_uri = urlparse(args.netcdf_file)
+        netcdf_file = Path.cwd() / Path(parsed_uri.path).name
+
+        s3 = boto3.client('s3')
+        s3.download_file(Bucket=parsed_uri.netloc, Key=parsed_uri.path.lstrip('/'), Filename=netcdf_file)
+    else:
+        parsed_uri = None
+        netcdf_file = Path(args.netcdf_file)
 
     cropped = crop_netcdf_product(netcdf_file)
 
-    print(f'Saved the cropped and chunk-aligned product to {cropped}.')
+    print(f'Saved the cropped and chunk-aligned product to {cropped}')
+
+    if args.bucket:
+        print(f'Uploaded the cropped and chunk-aligned product to s3://{args.bucket}/{args.bucket_prefix}')
+        upload_file_to_s3(cropped, args.bucket, args.bucket_prefix)
+
+    if args.publish_bucket:
+        granule_prefix = utils.get_opendata_prefix(cropped)
+        print(
+            f'Publishing the cropped and chunk-aligned product to s3://{args.publish_bucket}/{granule_prefix}/{netcdf_file.name}'
+        )
+        utils.upload_file_to_s3_with_publish_access_keys(
+            cropped, args.publish_bucket, granule_prefix, s3_name=netcdf_file.name
+        )
 
 
 if __name__ == '__main__':
