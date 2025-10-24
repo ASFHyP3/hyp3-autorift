@@ -238,7 +238,7 @@ def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
     info.aztime = float((isce3.core.DateTime(info.sensingStart) -  metadata.ref_epoch).total_seconds())
     info.sensingStop = datetime.strptime(str(rslc.identification.zdEndTime)[:-3], "%Y-%m-%dT%H:%M:%S.%f")
 
-    info.lookSide = isce3.core.LookSide.Right
+    info.lookSide = isce3.core.LookSide.Left
 
     info.numberOfLines = metadata.lines
     info.numberOfSamples = metadata.samples

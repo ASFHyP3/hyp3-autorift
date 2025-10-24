@@ -107,7 +107,7 @@ def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
         output_name=dem_path,
         geometry=scene_poly,
         epsg_code=4326,
-        pixel_size=0.0001,
+        pixel_size=0.001,
     ))
 
 
