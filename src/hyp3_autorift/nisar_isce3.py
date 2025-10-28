@@ -163,7 +163,7 @@ def create_amplitude_geotiffs(
             'gdal_translate',
             '-of',
             'GTIFF',
-            f'DERIVED_SUBDATASET:AMPLITUDE:HDF5:{in_path}://science/LSAR/RSLC/swaths/frequencyA/HH',
+            f'DERIVED_SUBDATASET:AMPLITUDE:{in_path}',
             f'{out_path}'
         ]
         subprocess.call(" ".join(cmd), shell=True)
@@ -241,9 +241,10 @@ def main():
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
 
+    reference_data_path = f'HDF5:{reference_path}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
     secondary_isce3_path = f'scratch/coarse_resample_slc/freq{frequency}/{polarization}/coregistered_secondary.slc'
 
-    create_amplitude_geotiffs(reference_path, secondary_isce3_path)
+    create_amplitude_geotiffs(reference_data_path, secondary_isce3_path)
     orbit_path = mock_s1_orbit_file(reference_path)
 
     meta_r = loadMetadataRslc(reference_path, orbit_path=orbit_path)
