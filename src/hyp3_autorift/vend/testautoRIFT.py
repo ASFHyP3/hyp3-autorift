@@ -1167,7 +1167,7 @@ def generateAutoriftProduct(
                     # to sort reference/secondary
                     rslcs = glob.glob('*.h5')
 
-                    if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11]):
+                    if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11][:8]):
                         master_filename = rslcs[0]
                         slave_filename = rslcs[1]
                     else:
