@@ -235,12 +235,16 @@ class Dummy(object):
     pass
 
 
-def loadProduct(filename):
+def loadProduct(filename, nisar_flag):
     ds = gdal.Open(filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
-    img = band.ReadAsArray().astype(np.float32)
-    del band
-    del ds
+
+    if nisar_flag:
+        img = band.ReadAsArray().astype(np.uint8)
+    else:
+        img = band.ReadAsArray().astype(np.float32)
+
+    del band, ds
 
     return img
 
@@ -285,6 +289,7 @@ def runAutorift(
     optflag,
     nodata,
     mpflag,
+    nisar_flag = False,
     geogrid_run_info=None,
     preprocessing_methods=('hps', 'hps'),
     preprocessing_filter_width=5,
@@ -298,17 +303,14 @@ def runAutorift(
     obj.WallisFilterWidth = preprocessing_filter_width
     print(f'Setting Wallis Filter Width to {preprocessing_filter_width}')
 
-    # uncomment if starting from preprocessed images
-    # I1 = I1.astype(np.uint8)
-    # I2 = I2.astype(np.uint8)
-
     obj.MultiThread = mpflag
 
+    # Radar images are loaded during uniform datatype processing to save memory
     if optflag == 1:
         obj.I1, obj.I2 = loadProductOptical(indir_m, indir_s)
     else:
-        obj.I1 = loadProduct(indir_m)
-        obj.I2 = loadProduct(indir_s)
+        obj.I1 = loadProduct(indir_m, nisar_flag)
+        obj.I2 = loadProduct(indir_s, nisar_flag)
 
     # create the grid if it does not exist
     if xGrid is None:
@@ -330,7 +332,8 @@ def runAutorift(
     #        and prevents autoRIFT from looking at large parts of the images, but untangling the logic here
     #        has proved too difficult, so lets just turn it off if `wallis_fill` preprocessing is going to be used.
     #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
-    # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
+    #        generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
+    # TODO: Is this necessary for radar images?
     if 'wallis_fill' not in preprocessing_methods:
         for ii in range(obj.xGrid.shape[0]):
             for jj in range(obj.xGrid.shape[1]):
@@ -345,20 +348,12 @@ def runAutorift(
                 if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
                     noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
 
-    # mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
-
     if SRx0 is None:
-        # uncomment to customize SearchLimit based on velocity distribution (i.e. Dx0 must not be None)
-        # obj.SearchLimitX = np.int32(4+(25-4)/(np.max(np.abs(Dx0[np.logical_not(noDataMask)]))-np.min(np.abs(Dx0[np.logical_not(noDataMask)])))*(np.abs(Dx0)-np.min(np.abs(Dx0[np.logical_not(noDataMask)]))))
-        # obj.SearchLimitY = 5
         obj.SearchLimitX = obj.SearchLimitX * np.logical_not(noDataMask)
         obj.SearchLimitY = obj.SearchLimitY * np.logical_not(noDataMask)
     else:
         obj.SearchLimitX = SRx0
         obj.SearchLimitY = SRy0
-        # add buffer to search range
-        # obj.SearchLimitX[obj.SearchLimitX!=0] = obj.SearchLimitX[obj.SearchLimitX!=0] + 2
-        # obj.SearchLimitY[obj.SearchLimitY!=0] = obj.SearchLimitY[obj.SearchLimitY!=0] + 2
 
     if CSMINx0 is not None:
         obj.ChipSizeMaxX = CSMAXx0
@@ -411,75 +406,80 @@ def runAutorift(
     if optflag == 0:
         obj.Dy0 = -1 * obj.Dy0
 
-    # preprocessing
-    t1 = time.time()
-    print('Pre-process Start!!!')
-    print(f'Using Wallis Filter Width: {obj.WallisFilterWidth}')
+    # NISAR data is preprocessed and converted to uint8 prior to being passed to autoRIFT
+    if not nisar_flag:
+        # preprocessing
+        t1 = time.time()
+        print('Pre-process Start!!!')
+        print(f'Using Wallis Filter Width: {obj.WallisFilterWidth}')
 
-    # TODO: Allow different filters to be applied images independently; default to most stringent filtering
-    if 'wallis_fill' in preprocessing_methods:
-        # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
-        #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
-        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
-                      UserWarning)
-        obj.zeroMask = zero_mask
-        # obj.preprocess_filt_wal_nodata_fill()
-    elif 'wallis' in preprocessing_methods:
-        # FIXME: Ensuring landsat 7 images are projected correctly requires wallis filtering and then reprojecting the
-        #       secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
-        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
-                      UserWarning)
-        obj.zeroMask = zero_mask
-        # obj.preprocess_filt_wal()
-    elif 'fft' in preprocessing_methods:
-        # FIXME: Ensuring landsat 7 images are projected correctly requires fft filtering and then reprojecting the
-        #        secondary scene before processing with Geogrid or autoRIFT. Furthermore, the Landsat 4/5 FFT
-        #        preprocessor looks for the image corners to determine the scene rotation, but Geogrid + autoRIFT round
-        #        corners when co-registering and chop the non-overlapping corners when subsetting to the common image
-        #        overlap. FFT filer needs to  be applied to the native images before they are processed by Geogrid or
-        #        autoRIFT; this now occurs in hyp3-autorift/process.py
-        # obj.preprocess_filt_wal()
-        # obj.preprocess_filt_fft()
-        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
-                      UserWarning)
-    else:
-        obj.preprocess_filt_hps()
-    print('Pre-process Done!!!')
-    print(time.time() - t1)
+        # TODO: Allow different filters to be applied images independently; default to most stringent filtering
+        if 'wallis_fill' in preprocessing_methods:
+            # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
+            #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
+            warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
+                        UserWarning)
+            obj.zeroMask = zero_mask
+            # obj.preprocess_filt_wal_nodata_fill()
+        elif 'wallis' in preprocessing_methods:
+            # FIXME: Ensuring landsat 7 images are projected correctly requires wallis filtering and then reprojecting the
+            #       secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
+            warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
+                        UserWarning)
+            obj.zeroMask = zero_mask
+            # obj.preprocess_filt_wal()
+        elif 'fft' in preprocessing_methods:
+            # FIXME: Ensuring landsat 7 images are projected correctly requires fft filtering and then reprojecting the
+            #        secondary scene before processing with Geogrid or autoRIFT. Furthermore, the Landsat 4/5 FFT
+            #        preprocessor looks for the image corners to determine the scene rotation, but Geogrid + autoRIFT round
+            #        corners when co-registering and chop the non-overlapping corners when subsetting to the common image
+            #        overlap. FFT filer needs to  be applied to the native images before they are processed by Geogrid or
+            #        autoRIFT; this now occurs in hyp3-autorift/process.py
+            # obj.preprocess_filt_wal()
+            # obj.preprocess_filt_fft()
+            warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
+                        UserWarning)
+        else:
+            obj.preprocess_filt_hps()
+        
+        
+        print('Pre-process Done!!!')
+        print(time.time() - t1)
 
-    t1 = time.time()
+        t1 = time.time()
 
-    if obj.zeroMask is not None:
-        validData = np.isfinite(obj.I1)
-        S1 = np.std(obj.I1[validData]) * np.sqrt(obj.I1[validData].size / (obj.I1[validData].size - 1.0))
-        M1 = np.mean(obj.I1[validData])
-    else:
-        S1 = np.std(obj.I1) * np.sqrt(obj.I1.size / (obj.I1.size - 1.0))
-        M1 = np.mean(obj.I1)
+        if obj.zeroMask is not None:
+            validData = np.isfinite(obj.I1)
+            S1 = np.std(obj.I1[validData]) * np.sqrt(obj.I1[validData].size / (obj.I1[validData].size - 1.0))
+            M1 = np.mean(obj.I1[validData])
+        else:
+            S1 = np.std(obj.I1) * np.sqrt(obj.I1.size / (obj.I1.size - 1.0))
+            M1 = np.mean(obj.I1)
 
-    obj.I1 = (obj.I1 - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
-    del S1, M1
-    obj.I1 = np.round(np.clip(obj.I1, 0, 255)).astype(np.uint8)
+        obj.I1 = (obj.I1 - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
+        del S1, M1
+        obj.I1 = np.round(np.clip(obj.I1, 0, 255)).astype(np.uint8)
 
-    if obj.zeroMask is not None:
-        validData = np.isfinite(obj.I2)
-        S2 = np.std(obj.I2[validData]) * np.sqrt(obj.I2[validData].size / (obj.I2[validData].size - 1.0))
-        M2 = np.mean(obj.I2[validData])
-    else:
-        S2 = np.std(obj.I2) * np.sqrt(obj.I2.size / (obj.I2.size - 1.0))
-        M2 = np.mean(obj.I2)
+        if obj.zeroMask is not None:
+            validData = np.isfinite(obj.I2)
+            S2 = np.std(obj.I2[validData]) * np.sqrt(obj.I2[validData].size / (obj.I2[validData].size - 1.0))
+            M2 = np.mean(obj.I2[validData])
+        else:
+            S2 = np.std(obj.I2) * np.sqrt(obj.I2.size / (obj.I2.size - 1.0))
+            M2 = np.mean(obj.I2)
 
-    obj.I2 = (obj.I2 - (M2 - 3 * S2)) / (6 * S2) * (2**8 - 0)
-    del S2, M2
-    obj.I2 = np.round(np.clip(obj.I2, 0, 255)).astype(np.uint8)
+        obj.I2 = (obj.I2 - (M2 - 3 * S2)) / (6 * S2) * (2**8 - 0)
+        del S2, M2
+        obj.I2 = np.round(np.clip(obj.I2, 0, 255)).astype(np.uint8)
+
+        print('Uniform Data Type Done!!!')
+        print(time.time() - t1)
 
     if obj.zeroMask is not None:
         obj.I1[obj.zeroMask] = 0
         obj.I2[obj.zeroMask] = 0
         obj.zeroMask = None
 
-    print('Uniform Data Type Done!!!')
-    print(time.time() - t1)
 
     obj.OverSampleRatio = 64
     # OverSampleRatio can be assigned as a scalar (such as the above line) or as a Python dictionary below for
@@ -693,6 +693,7 @@ def generateAutoriftProduct(
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 
+        nisar_flag = nc_sensor == 'NISAR'
         (
             Dx,
             Dy,
@@ -721,6 +722,7 @@ def generateAutoriftProduct(
             optical_flag,
             nodata,
             mpflag,
+            nisar_flag=nisar_flag,
             geogrid_run_info=geogrid_run_info,
             preprocessing_methods=preprocessing_methods,
             preprocessing_filter_width=preprocessing_filter_width,
@@ -1165,7 +1167,7 @@ def generateAutoriftProduct(
                     # to sort reference/secondary
                     rslcs = glob.glob('*.h5')
 
-                    if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11][:8]):
+                    if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11]):
                         master_filename = rslcs[0]
                         slave_filename = rslcs[1]
                     else:
