@@ -4,13 +4,11 @@ Prototyping the usage of NISAR data with autoRIFT
 
 import argparse
 import copy
-import glob
-import math
-import os
-import shutil
 import subprocess
-from datetime import timedelta
 from pathlib import Path
+
+import cv2
+import numpy as np
 
 from hyp3lib.dem import prepare_dem_geotiff
 from nisar.workflows import geo2rdr, rdr2geo, resample_slc, stage_dem
@@ -18,9 +16,9 @@ from nisar.products.readers import product
 from numpy import datetime64, timedelta64
 from osgeo import osr, ogr, gdal
 
-from hyp3_autorift import geometry, utils
+from hyp3_autorift import utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
-from hyp3_autorift.vend.testGeogrid import getPol, loadMetadataRslc, runGeogrid
+from hyp3_autorift.vend.testGeogrid import loadMetadataRslc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
@@ -155,23 +153,46 @@ def create_amplitude_geotiffs(
     reference_out_path: str = 'reference.tif',
     secondary_out_path: str = 'secondary.tif'
 ) -> None: 
-    cmd = [
-        'gdal_translate',
-        '-of',
-        'GTIFF',
-        f'DERIVED_SUBDATASET:AMPLITUDE:HDF5:{reference_h5_path}://science/LSAR/RSLC/swaths/frequencyA/HH',
-        f'{reference_out_path}'
-    ]
-    subprocess.call(" ".join(cmd), shell=True)
+    paths = [(reference_h5_path, reference_out_path), (secondary_isce3_path, secondary_out_path)]
 
-    cmd = [
-        'gdal_translate',
-        '-of',
-        'GTIFF',
-        f'DERIVED_SUBDATASET:AMPLITUDE:{secondary_isce3_path}',
-        f'{secondary_out_path}'
-    ]
-    subprocess.call(" ".join(cmd), shell=True)
+    for in_path, out_path in paths:
+        # This must be used, as opposed to the Python bindings (gdal.Open + np.abs), as the 
+        # images get read in as Python's 128 bit complex datatype (even when using .astype(np.complex64)) 
+        # which requires >64GB memory usage.
+        cmd = [
+            'gdal_translate',
+            '-of',
+            'GTIFF',
+            f'DERIVED_SUBDATASET:AMPLITUDE:HDF5:{in_path}://science/LSAR/RSLC/swaths/frequencyA/HH',
+            f'{out_path}'
+        ]
+        subprocess.call(" ".join(cmd), shell=True)
+
+        convert_to_uint8(out_path)
+
+
+def convert_to_uint8(filename, wallis_filter_width=5):
+    ds = gdal.Open(filename, gdal.GA_ReadOnly)
+    band = ds.GetRasterBand(1)
+    img = band.ReadAsArray().astype(np.float32)
+    del band, ds
+
+    # Preprocess with HPS Filter
+    kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
+    kernel[int((wallis_filter_width - 1) / 2), int((wallis_filter_width - 1) / 2)] = kernel.size - 1
+    kernel = kernel / kernel.size
+    img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+
+    # Scale values to 0-255
+    S1 = np.std(img) * np.sqrt(img.size / (img.size - 1.0))
+    M1 = np.mean(img)
+    img[:] = (img - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
+    del S1, M1
+    img[:] = np.round(np.clip(img, 0, 255)).astype(np.uint8)
+
+    driver = gdal.GetDriverByName('GTIFF')
+    ds = driver.Create(filename, xsize=img.shape[1], ysize=img.shape[0], bands=1, eType=gdal.GDT_Byte)
+    ds.GetRasterBand(1).WriteArray(img)
 
 
 # TODO: This main function should be replaced with an interface for `process.py`.
