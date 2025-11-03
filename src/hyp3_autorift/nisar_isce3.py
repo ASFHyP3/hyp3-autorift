@@ -168,14 +168,16 @@ def create_amplitude_geotiffs(
         ]
         subprocess.call(" ".join(cmd), shell=True)
 
-        convert_to_uint8(out_path)
+        convert_amplitude_to_uint8(out_path)
 
 
-def convert_to_uint8(filename, wallis_filter_width=5):
+def convert_amplitude_to_uint8(filename, wallis_filter_width=21):
     ds = gdal.Open(filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
     img = band.ReadAsArray().astype(np.float32)
     del band, ds
+
+    valid_data = img != 0
 
     # Preprocess with HPS Filter
     kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
@@ -183,12 +185,14 @@ def convert_to_uint8(filename, wallis_filter_width=5):
     kernel = kernel / kernel.size
     img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
 
-    # Scale values to 0-255
-    S1 = np.std(img) * np.sqrt(img.size / (img.size - 1.0))
-    M1 = np.mean(img)
+    # Scale values to [0, 255]
+    S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
+    M1 = np.mean(img[valid_data])
     img[:] = (img - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
     del S1, M1
     img[:] = np.round(np.clip(img, 0, 255)).astype(np.uint8)
+
+    img[~valid_data] = 0
 
     driver = gdal.GetDriverByName('GTIFF')
     ds = driver.Create(filename, xsize=img.shape[1], ysize=img.shape[0], bands=1, eType=gdal.GDT_Byte)

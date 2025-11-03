@@ -216,6 +216,8 @@ def get_platform(scene: str) -> str:
         if 'BURST' in scene:
             return 'S1-BURST'
         return 'S1-SLC'
+    if scene.startswith('NISAR'):
+        return 'NISAR'
     if scene.startswith('S2'):
         return scene[0:2]
     if scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
@@ -402,6 +404,10 @@ def process(
 
         netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files)
 
+    elif platform == 'NISAR':
+        from hyp3_autorift.nisar_isce3 import process_nisar
+
+        netcdf_file = process_nisar(reference, secondary)
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')

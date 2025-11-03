@@ -475,11 +475,14 @@ def runAutorift(
         print('Uniform Data Type Done!!!')
         print(time.time() - t1)
 
-    if obj.zeroMask is not None:
-        obj.I1[obj.zeroMask] = 0
-        obj.I2[obj.zeroMask] = 0
-        obj.zeroMask = None
+        if obj.zeroMask is not None:
+            obj.I1[obj.zeroMask] = 0
+            obj.I2[obj.zeroMask] = 0
+            obj.zeroMask = None
 
+    if nisar_flag:
+        obj.I1[obj.I1 == 0] = 128
+        obj.I2[obj.I2 == 0] = 128
 
     obj.OverSampleRatio = 64
     # OverSampleRatio can be assigned as a scalar (such as the above line) or as a Python dictionary below for
