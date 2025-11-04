@@ -2,7 +2,6 @@
 Prototyping the usage of NISAR data with autoRIFT
 """
 
-import argparse
 import copy
 import subprocess
 from pathlib import Path
@@ -10,12 +9,11 @@ from pathlib import Path
 import asf_search as asf
 import cv2
 import numpy as np
-
 from hyp3lib.dem import prepare_dem_geotiff
-from nisar.workflows import geo2rdr, rdr2geo, resample_slc, stage_dem
 from nisar.products.readers import product
+from nisar.workflows import geo2rdr, rdr2geo, resample_slc, stage_dem
 from numpy import datetime64, timedelta64
-from osgeo import osr, ogr, gdal
+from osgeo import gdal, ogr, osr
 
 from hyp3_autorift import utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
@@ -29,23 +27,15 @@ def get_config(
     dem_path: str = 'dem.tif',
     resample_type: str = 'coarse',
     frequency: str = 'A',
-    polarization: str = 'HH'
+    polarization: str = 'HH',
 ):
     return {
-        'input_file_group': {
-            'reference_rslc_file': reference_path,
-            'secondary_rslc_file': secondary_path
-        },
+        'input_file_group': {'reference_rslc_file': reference_path, 'secondary_rslc_file': secondary_path},
         'dynamic_ancillary_file_group': {
             'dem_file': dem_path,
-            'orbit_files': {
-                'reference_orbit_file': None,
-                'secondary_orbit_file': None
-            }
+            'orbit_files': {'reference_orbit_file': None, 'secondary_orbit_file': None},
         },
-        'product_path_group': {
-            'scratch_path': 'scratch'
-        },
+        'product_path_group': {'scratch_path': 'scratch'},
         'processing': {
             'rdr2geo': {
                 'threshold': 1e-8,
@@ -75,17 +65,9 @@ def get_config(
                 'lines_per_tile': 1000,
                 'flatten': False,
             },
-            'input_subset': {
-                'list_of_frequencies': {
-                    frequency: [polarization]
-                }
-            }
+            'input_subset': {'list_of_frequencies': {frequency: [polarization]}},
         },
-        'worker': {
-            'internet_access': True,
-            'gpu_enabled': False,
-            'gpu_id': 0
-        }
+        'worker': {'internet_access': True, 'gpu_enabled': False, 'gpu_id': 0},
     }
 
 
@@ -102,12 +84,14 @@ def get_scene_polygon(reference_path: str, epsg_code: int = 4326) -> ogr.Geometr
 
 
 def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
-    return str(prepare_dem_geotiff(
-        output_name=dem_path,
-        geometry=scene_poly,
-        epsg_code=4326,
-        pixel_size=0.001,
-    ))
+    return str(
+        prepare_dem_geotiff(
+            output_name=dem_path,
+            geometry=scene_poly,
+            epsg_code=4326,
+            pixel_size=0.001,
+        )
+    )
 
 
 def mock_s1_orbit_file(reference_path: str) -> str:
@@ -121,7 +105,7 @@ def mock_s1_orbit_file(reference_path: str) -> str:
         '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n',
         '<Earth_Explorer_File>\n',
         '\t<Data_Block type="xml">\n',
-        f'\t\t<List_of_OSVs count="{count}">\n'
+        f'\t\t<List_of_OSVs count="{count}">\n',
     ]
 
     for time, velocity, position in zip(orbit.time, orbit.velocity, orbit.position):
@@ -136,11 +120,13 @@ def mock_s1_orbit_file(reference_path: str) -> str:
         lines.append(f'\t\t\t\t<VZ unit="m/s">{velocity[2]}</VZ>\n')
         lines.append('\t\t\t</OSV>\n')
 
-    lines.extend([
-        f'\t\t</List_of_OSVs>\n',
-        '\t</Data_Block>\n',
-        '</Earth_Explorer_File>\n',
-    ])
+    lines.extend(
+        [
+            '\t\t</List_of_OSVs>\n',
+            '\t</Data_Block>\n',
+            '</Earth_Explorer_File>\n',
+        ]
+    )
 
     with open(orbit_path, 'w') as orbit_file:
         orbit_file.writelines(lines)
@@ -152,22 +138,16 @@ def create_amplitude_geotiffs(
     reference_h5_path: str,
     secondary_isce3_path: str,
     reference_out_path: str = 'reference.tif',
-    secondary_out_path: str = 'secondary.tif'
-) -> None: 
+    secondary_out_path: str = 'secondary.tif',
+) -> None:
     paths = [(reference_h5_path, reference_out_path), (secondary_isce3_path, secondary_out_path)]
 
     for in_path, out_path in paths:
-        # This must be used, as opposed to the Python bindings (gdal.Open + np.abs), as the 
-        # images get read in as Python's 128 bit complex datatype (even when using .astype(np.complex64)) 
+        # This must be used, as opposed to the Python bindings (gdal.Open + np.abs), as the
+        # images get read in as Python's 128 bit complex datatype (even when using .astype(np.complex64))
         # which requires >64GB memory usage.
-        cmd = [
-            'gdal_translate',
-            '-of',
-            'GTIFF',
-            f'DERIVED_SUBDATASET:AMPLITUDE:{in_path}',
-            f'{out_path}'
-        ]
-        subprocess.call(" ".join(cmd), shell=True)
+        cmd = ['gdal_translate', '-of', 'GTIFF', f'DERIVED_SUBDATASET:AMPLITUDE:{in_path}', f'{out_path}']
+        subprocess.call(' '.join(cmd), shell=True)
 
         convert_amplitude_to_uint8(out_path)
 
@@ -209,12 +189,7 @@ def download_rslc(granule_name: str):
     res.download(path='.')
 
 
-def process_nisar_rslc(
-    reference: str,
-    secondary: str,
-    frequency: str = 'A',
-    polarization: str = 'HH'
-):
+def process_nisar_rslc(reference: str, secondary: str, frequency: str = 'A', polarization: str = 'HH'):
     download_rslc(reference)
     download_rslc(secondary)
 
@@ -239,10 +214,7 @@ def process_nisar_rslc(
     print(f'Paramenter Info: {parameter_info}')
 
     run_cfg = get_config(
-        reference_path=reference,
-        secondary_path=secondary,
-        dem_path=dem_path,
-        resample_type=resample_type
+        reference_path=reference, secondary_path=secondary, dem_path=dem_path, resample_type=resample_type
     )
 
     print(f'ISCE3 Config: {run_cfg}')

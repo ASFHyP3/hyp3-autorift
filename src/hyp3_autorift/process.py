@@ -409,7 +409,7 @@ def process(
     elif platform == 'NISAR':
         from hyp3_autorift.nisar_isce3 import process_nisar_rslc
 
-        netcdf_file = process_nisar_rslc(reference, secondary)
+        netcdf_file = process_nisar_rslc(reference[0], secondary[0])
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')

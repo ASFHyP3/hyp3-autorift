@@ -43,7 +43,7 @@ def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str, flip_poi
     shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
     parameter_info = None
-    
+
     if flip_point:
         centroid = flip_point_coordinates(polygon.Centroid())
     else:
