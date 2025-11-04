@@ -35,6 +35,7 @@ dependencies = [
     'numpy>=1.20',
     'pandas>=1.4',
     'pyproj>=3.3',
+    'python-dateutil',
     'requests>=2.0',
     'scipy>=1.0',
     'xarray',
@@ -56,6 +57,7 @@ develop = [
 
 [project.scripts]
 hyp3_autorift = "hyp3_autorift.process:main"
+crop_netcdf_product = "hyp3_autorift.crop:main"
 
 [project.urls]
 Homepage = "https://github.com/ASFHyP3/hyp3-autorift"
@@ -149,6 +151,7 @@ numpy = "==1.26.0"
 opencv = "*"
 pandas = ">=1.4"
 pyproj = ">=3.3"
+python-dateutil = "*"
 requests = ">=2.0"
 scipy = ">=1.0"
 xarray = "*"
@@ -167,6 +170,9 @@ ruamel = "*"
 yamale = "*"
 backoff = "*"
 pysolid = "*"
+# For PyCharm IDE integration
+pixi-pycharm = ">=0.0.8,<0.0.9"
+
 
 [tool.pixi.target.linux-64.dependencies]
 pyre = "*"

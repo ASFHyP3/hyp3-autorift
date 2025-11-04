@@ -24,6 +24,9 @@ The HyP3 autoRIFT plugin provides a set of workflows for feature tracking proces
 
     > [!TIP]
     > If you've done (4), you don't need to prefix commands with `pixi run`.
+5. (optional) Setup you IDE to work with pixi:
+   * PyCharm: https://pixi.sh/dev/integration/editor/jetbrains/
+   * VSCode: https://pixi.sh/dev/integration/editor/vscode/
 
 ## Usage
 
@@ -193,7 +196,7 @@ Contributions to the HyP3 autoRIFT plugin are welcome! If you would like to cont
 Want to talk about HyP3 autoRIFT? We would love to hear from you!
 
 Found a bug? Want to request a feature?
-[open an issue](https://github.com/ASFHyP3/asf_tools/issues/new)
+[open an issue](https://github.com/ASFHyP3/hyp3-autorift/issues/new)
 
 General questions? Suggestions? Or just want to talk to the team?
 [Open a discussion](https://github.com/ASFHyP3/hyp3-autorift/discussions)
