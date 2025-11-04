@@ -196,7 +196,7 @@ Contributions to the HyP3 autoRIFT plugin are welcome! If you would like to cont
 Want to talk about HyP3 autoRIFT? We would love to hear from you!
 
 Found a bug? Want to request a feature?
-[open an issue](https://github.com/ASFHyP3/asf_tools/issues/new)
+[open an issue](https://github.com/ASFHyP3/hyp3-autorift/issues/new)
 
 General questions? Suggestions? Or just want to talk to the team?
 [Open a discussion](https://github.com/ASFHyP3/hyp3-autorift/discussions)
