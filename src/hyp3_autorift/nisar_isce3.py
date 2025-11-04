@@ -7,6 +7,7 @@ import copy
 import subprocess
 from pathlib import Path
 
+import asf_search as asf
 import cv2
 import numpy as np
 
@@ -199,30 +200,35 @@ def convert_amplitude_to_uint8(filename, wallis_filter_width=21):
     ds.GetRasterBand(1).WriteArray(img)
 
 
-# TODO: This main function should be replaced with an interface for `process.py`.
-def main():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('reference', help='Path to reference RSLC')
-    parser.add_argument('secondary', help='Path to secondary RSLC')
-    # TODO: Will A and B be the values in the final products?
-    parser.add_argument('--frequency', default='A', help='Desired frequency band to process - A or B')
-    # TODO: What will the possible pol codes be in the final products?
-    parser.add_argument('--polarization', default='HH', help='Desired polarization - HH or VV')
-    args = parser.parse_args()
+def download_rslc(granule_name: str):
+    res = asf.granule_search([granule_name])
 
-    reference_path=args.reference
-    secondary_path=args.secondary
-    frequency = args.frequency.upper()
-    polarization = args.polarization.upper()
+    if len(res) == 0:
+        raise ValueError(f'`asf_search` was unable to find {granule_name}')
+
+    res.download(path='.')
+
+
+def process_nisar_rslc(
+    reference: str,
+    secondary: str,
+    frequency: str = 'A',
+    polarization: str = 'HH'
+):
+    download_rslc(reference)
+    download_rslc(secondary)
+
+    reference += '.h5'
+    secondary += '.h5'
     resample_type = 'coarse'
 
-    print(f'Reference RSLC: {reference_path}')
-    print(f'Secondary RSLC: {secondary_path}')
+    print(f'Reference RSLC: {reference}')
+    print(f'Secondary RSLC: {secondary}')
     print(f'Frequency: {frequency}')
     print(f'Polarization: {polarization}')
     print(f'Resample type: {resample_type}')
 
-    scene_poly = get_scene_polygon(reference_path)
+    scene_poly = get_scene_polygon(reference)
     dem_path = get_dem(scene_poly)
 
     print(f'Scene Polygon: {scene_poly}')
@@ -233,8 +239,8 @@ def main():
     print(f'Paramenter Info: {parameter_info}')
 
     run_cfg = get_config(
-        reference_path=reference_path,
-        secondary_path=secondary_path,
+        reference_path=reference,
+        secondary_path=secondary,
         dem_path=dem_path,
         resample_type=resample_type
     )
@@ -245,14 +251,14 @@ def main():
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
 
-    reference_data_path = f'HDF5:{reference_path}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
+    reference_data_path = f'HDF5:{reference}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
     secondary_isce3_path = f'scratch/coarse_resample_slc/freq{frequency}/{polarization}/coregistered_secondary.slc'
 
     create_amplitude_geotiffs(reference_data_path, secondary_isce3_path)
-    orbit_path = mock_s1_orbit_file(reference_path)
+    orbit_path = mock_s1_orbit_file(reference)
 
-    meta_r = loadMetadataRslc(reference_path, orbit_path=orbit_path)
-    meta_temp = loadMetadataRslc(secondary_path)
+    meta_r = loadMetadataRslc(reference, orbit_path=orbit_path)
+    meta_temp = loadMetadataRslc(secondary)
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
@@ -280,7 +286,3 @@ def main():
     )
 
     return netcdf_file
-
-
-if __name__ == '__main__':
-    main()

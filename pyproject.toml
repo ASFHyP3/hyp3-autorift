@@ -56,7 +56,6 @@ develop = [
 
 [project.scripts]
 hyp3_autorift = "hyp3_autorift.process:main"
-nisar_autorift = "hyp3_autorift.nisar_isce3:main"
 
 [project.urls]
 Homepage = "https://github.com/ASFHyP3/hyp3-autorift"

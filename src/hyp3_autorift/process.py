@@ -207,6 +207,8 @@ def get_datetime(scene_name):
         return datetime.strptime(scene_name.split('_')[2], '%Y%m%d')
     if scene_name.startswith('L'):
         return datetime.strptime(scene_name[17:25], '%Y%m%d')
+    if scene_name.startswith('N'):
+        return datetime.strptime(scene_name.split('_')[11][:8], '%Y%m%d')
 
     raise ValueError(f'Unsupported scene format: {scene_name}')
 
@@ -405,9 +407,9 @@ def process(
         netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files)
 
     elif platform == 'NISAR':
-        from hyp3_autorift.nisar_isce3 import process_nisar
+        from hyp3_autorift.nisar_isce3 import process_nisar_rslc
 
-        netcdf_file = process_nisar(reference, secondary)
+        netcdf_file = process_nisar_rslc(reference, secondary)
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
         gdal.SetConfigOption('GDAL_DISABLE_READDIR_ON_OPEN', 'EMPTY_DIR')
