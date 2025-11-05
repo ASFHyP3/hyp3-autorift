@@ -3,7 +3,7 @@ Prototyping the usage of NISAR data with autoRIFT
 """
 
 import copy
-import subprocess
+import time
 from pathlib import Path
 
 import asf_search as asf
@@ -134,29 +134,29 @@ def mock_s1_orbit_file(reference_path: str) -> str:
     return str(orbit_path)
 
 
-def create_amplitude_geotiffs(
-    reference_h5_path: str,
-    secondary_isce3_path: str,
-    reference_out_path: str = 'reference.tif',
-    secondary_out_path: str = 'secondary.tif',
-) -> None:
-    paths = [(reference_h5_path, reference_out_path), (secondary_isce3_path, secondary_out_path)]
-
-    for in_path, out_path in paths:
-        # This must be used, as opposed to the Python bindings (gdal.Open + np.abs), as the
-        # images get read in as Python's 128 bit complex datatype (even when using .astype(np.complex64))
-        # which requires >64GB memory usage.
-        cmd = ['gdal_translate', '-of', 'GTIFF', f'DERIVED_SUBDATASET:AMPLITUDE:{in_path}', f'{out_path}']
-        subprocess.call(' '.join(cmd), shell=True)
-
-        convert_amplitude_to_uint8(out_path)
-
-
-def convert_amplitude_to_uint8(filename, wallis_filter_width=21):
-    ds = gdal.Open(filename, gdal.GA_ReadOnly)
+def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21):
+    """Convert CFloat32 rslc image to uint8 amplitude data, and write it to a GeoTIFF file."""
+    ds = gdal.Open(in_filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
-    img = band.ReadAsArray().astype(np.float32)
-    del band, ds
+    num_rows = band.YSize
+    num_cols = band.XSize
+    block_size = 10000
+    img = np.zeros((num_rows, num_cols), dtype=np.float32)
+
+    # Read RSLC data progressively to avoid memory issues
+    for row in range(0, num_rows, block_size):
+        if row + block_size > num_rows:
+            block_size = num_rows - row
+        encoded = band.ReadRaster(
+            xoff=0,
+            yoff=row,
+            xsize=num_cols,
+            ysize=block_size,
+            buf_xsize=num_cols*block_size,
+            buf_ysize=1,
+            buf_type=gdal.GDT_CFloat32
+        )
+        img[row:row+block_size] = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols))
 
     valid_data = img != 0
 
@@ -176,7 +176,7 @@ def convert_amplitude_to_uint8(filename, wallis_filter_width=21):
     img[~valid_data] = 0
 
     driver = gdal.GetDriverByName('GTIFF')
-    ds = driver.Create(filename, xsize=img.shape[1], ysize=img.shape[0], bands=1, eType=gdal.GDT_Byte)
+    ds = driver.Create(out_filename, xsize=num_cols, ysize=num_rows, bands=1, eType=gdal.GDT_Byte)
     ds.GetRasterBand(1).WriteArray(img)
 
 
@@ -223,12 +223,20 @@ def process_nisar_rslc(reference: str, secondary: str, frequency: str = 'A', pol
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
 
-    reference_data_path = f'HDF5:{reference}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
+    reference_h5_path = f'HDF5:{reference}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
     secondary_isce3_path = f'scratch/coarse_resample_slc/freq{frequency}/{polarization}/coregistered_secondary.slc'
+    ref_amplitude_path = 'reference.tif'
+    sec_amplitude_path = 'secondary.tif'
 
-    create_amplitude_geotiffs(reference_data_path, secondary_isce3_path)
+    paths = [(reference_h5_path, ref_amplitude_path), (secondary_isce3_path, sec_amplitude_path)]
+    for in_path, out_path in paths:
+        print(f'Creating {out_path} from {in_path}')
+        start_time = time.time()    
+        convert_rslc_to_uint8_amplitude(in_path, out_path)
+        end_time = time.time()
+        print(f'Creating {out_path} took {end_time - start_time}s')
+
     orbit_path = mock_s1_orbit_file(reference)
-
     meta_r = loadMetadataRslc(reference, orbit_path=orbit_path)
     meta_temp = loadMetadataRslc(secondary)
     meta_s = copy.copy(meta_r)
@@ -247,8 +255,8 @@ def process_nisar_rslc(reference: str, secondary: str, frequency: str = 'A', pol
     gdal.AllRegister()
 
     netcdf_file = generateAutoriftProduct(
-        'reference.tif',
-        'secondary.tif',
+        ref_amplitude_path,
+        sec_amplitude_path,
         nc_sensor='NISAR',
         optical_flag=False,
         ncname=None,
