@@ -108,8 +108,8 @@ def mock_s1_orbit_file(reference_path: str) -> str:
         f'\t\t<List_of_OSVs count="{count}">\n',
     ]
 
-    for time, velocity, position in zip(orbit.time, orbit.velocity, orbit.position):
-        utc_time = ref_epoch + timedelta64(int(time * 1e9), 'ns')
+    for t, velocity, position in zip(orbit.time, orbit.velocity, orbit.position):
+        utc_time = ref_epoch + timedelta64(int(t * 1e9), 'ns')
         lines.append('\t\t\t<OSV>\n')
         lines.append(f'\t\t\t\t<UTC>UTC={utc_time}</UTC>\n')
         lines.append(f'\t\t\t\t<X unit="m">{position[0]}</X>\n')
@@ -152,11 +152,11 @@ def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_
             yoff=row,
             xsize=num_cols,
             ysize=block_size,
-            buf_xsize=num_cols*block_size,
+            buf_xsize=num_cols * block_size,
             buf_ysize=1,
-            buf_type=gdal.GDT_CFloat32
+            buf_type=gdal.GDT_CFloat32,
         )
-        img[row:row+block_size] = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols))
+        img[row : row + block_size] = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols))
 
     valid_data = img != 0
 
@@ -231,7 +231,7 @@ def process_nisar_rslc(reference: str, secondary: str, frequency: str = 'A', pol
     paths = [(reference_h5_path, ref_amplitude_path), (secondary_isce3_path, sec_amplitude_path)]
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
-        start_time = time.time()    
+        start_time = time.time()
         convert_rslc_to_uint8_amplitude(in_path, out_path)
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
