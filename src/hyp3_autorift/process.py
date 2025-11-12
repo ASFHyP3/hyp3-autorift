@@ -272,6 +272,7 @@ def process(
     reference: list[str],
     secondary: list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
+    chip_size: int | None = None,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
     use_static_files: bool = True,
@@ -283,6 +284,7 @@ def process(
         reference: Name of the reference Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         secondary: Name of the secondary Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
+        chip_size: (Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach and uses a static chip size value.
         naming_scheme: Naming scheme to use for product files
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
         use_static_files: Use pre-generated static topographic correction files if available
@@ -303,12 +305,12 @@ def process(
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files, frame_id)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files, frame_id, chip_size=chip_size)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
-        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files)
+        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files, chip_size=chip_size)
 
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -364,6 +366,16 @@ def process(
 
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
+
+        if chip_size is not None:
+            # Add static chipSize to parameter_info geogrid params
+            parameter_info['geogrid']['ChipSizeX'] = chip_size
+            parameter_info['geogrid']['ChipSizeY'] = chip_size
+            # Add static chipSize to parameter_info autorift params and remove tif-file parameters
+            parameter_info['autorift']['ChipSizeX'] = chip_size
+            parameter_info['autorift']['ChipSizeY'] = chip_size
+            parameter_info['autorift']['chip_size_min'] = None
+            parameter_info['autorift']['chip_size_max'] = None
 
         from hyp3_autorift.vend.testGeogrid import coregisterLoadMetadata, runGeogrid
 
@@ -438,6 +450,14 @@ def main():
         help='Shapefile for determining the correct search parameters by geographic location. '
         'Path to shapefile must be understood by GDAL',
     )
+
+    parser.add_argument(
+        '--chip-size',
+        type=utils.nullable_int,
+        default=None,
+        help='(Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach.',
+    )
+
     parser.add_argument(
         '--naming-scheme',
         default='ITS_LIVE_OD',
@@ -534,6 +554,7 @@ def main():
         reference,
         secondary,
         parameter_file=args.parameter_file,
+        chip_size=args.chip_size,
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
         use_static_files=args.use_static_files,

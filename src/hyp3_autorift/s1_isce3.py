@@ -4,6 +4,7 @@ import math
 import os
 import shutil
 import subprocess
+import logging
 from datetime import timedelta
 
 import netCDF4
@@ -31,7 +32,9 @@ from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 
-def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files, frame_id):
+log = logging.getLogger(__name__)
+
+def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files, frame_id, chip_size: int | None = None):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
@@ -55,6 +58,7 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use
             use_static_files,
             frame_id,
             swaths,
+            chip_size,
         )
 
     reference = reference[0]
@@ -73,6 +77,7 @@ def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use
         burst_id_sec,
         static_files_bucket,
         use_static_files,
+        chip_size,
     )
 
 
@@ -86,6 +91,7 @@ def process_burst(
     burst_id_sec,
     static_files_bucket,
     use_static_files,
+    chip_size: int | None = None
 ):
     swath = int(granule_ref.split('_')[2][2])
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
@@ -137,6 +143,19 @@ def process_burst(
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
+    if chip_size is not None:
+        log.info(f"Overriding chip size with user-defined value: {chip_size}") # Add this log
+        
+        # Modify geogrid params (sends ChipSizeX to runGeogrid)
+        parameter_info['geogrid']['ChipSizeX'] = chip_size
+        parameter_info['geogrid']['ChipSizeY'] = chip_size
+        
+        # Modify autorift params (sends ChipSizeX to generateAutoriftProduct/runAutorift)
+        parameter_info['autorift']['ChipSizeX'] = chip_size
+        parameter_info['autorift']['ChipSizeY'] = chip_size
+        parameter_info['autorift']['chip_size_min'] = None
+        parameter_info['autorift']['chip_size_max'] = None
+
     geogrid_info = runGeogrid(
         info=meta_r,
         info1=meta_s,
@@ -167,7 +186,7 @@ def process_burst(
     return netcdf_file
 
 
-def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_static_files):
+def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_static_files, chip_size: int | None = None):
     safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
     safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
 
@@ -187,6 +206,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_stati
         static_files_bucket,
         use_static_files,
         frame_id='N/A',
+        chip_size=chip_size,
     )
 
 
@@ -201,6 +221,7 @@ def process_slc(
     use_static_files,
     frame_id,
     swaths=(1, 2, 3),
+    chip_size: int | None = None
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
@@ -255,6 +276,19 @@ def process_slc(
     meta_s = copy.copy(meta_r)
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
+
+    if chip_size is not None:
+        log.info(f"Overriding chip size with user-defined value: {chip_size}") # Add this log
+        
+        # Modify geogrid params (sends ChipSizeX to runGeogrid)
+        parameter_info['geogrid']['ChipSizeX'] = chip_size
+        parameter_info['geogrid']['ChipSizeY'] = chip_size
+        
+        # Modify autorift params (sends ChipSizeX to generateAutoriftProduct/runAutorift)
+        parameter_info['autorift']['ChipSizeX'] = chip_size
+        parameter_info['autorift']['ChipSizeY'] = chip_size
+        parameter_info['autorift']['chip_size_min'] = None
+        parameter_info['autorift']['chip_size_max'] = None
 
     geogrid_info = runGeogrid(
         info=meta_r,

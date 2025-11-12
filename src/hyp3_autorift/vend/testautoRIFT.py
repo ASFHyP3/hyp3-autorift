@@ -646,6 +646,42 @@ def generateAutoriftProduct(
         band = None
         ds = None
 
+    if chip_size_min is None and 'ChipSizeX' in kwargs:
+        print(f"Using static chip size {kwargs['ChipSizeX']} from kwargs (creating arrays manually).")
+
+        if xGrid is None:
+            raise Exception("Cannot set static chip size: grid_location (xGrid) is not loaded.")
+
+        # Get the static chip size value
+        static_chip_x = int(kwargs['ChipSizeX'])
+        static_chip_y = int(kwargs.get('ChipSizeY', static_chip_x))  # Default to square
+
+        # 1. Create the constant arrays that gdal.Open() *would* have
+        CSMINx0 = np.full(xGrid.shape, static_chip_x, dtype=np.int32)
+        CSMINy0 = np.full(xGrid.shape, static_chip_y, dtype=np.int32)
+        CSMAXx0 = np.full(xGrid.shape, static_chip_x, dtype=np.int32)
+        CSMAXy0 = np.full(xGrid.shape, static_chip_y, dtype=np.int32)
+
+        # 2. (Optional) Write these arrays to TIFs for confirmation
+        #    This will prove the static value is being used.
+        try:
+            print("Writing debug chip_size_min.tif")
+            driver = gdal.GetDriverByName('GTiff')
+            outRaster = driver.Create('chip_size_min.tif', xGrid.shape[1], xGrid.shape[0], 2, gdal.GDT_Int32)
+            outRaster.GetRasterBand(1).WriteArray(CSMINx0)
+            outRaster.GetRasterBand(2).WriteArray(CSMINy0)
+            outRaster.FlushCache()
+            del outRaster
+
+            print("Writing debug chip_size_max.tif")
+            outRaster = driver.Create('chip_size_max.tif', xGrid.shape[1], xGrid.shape[0], 2, gdal.GDT_Int32)
+            outRaster.GetRasterBand(1).WriteArray(CSMAXx0)
+            outRaster.GetRasterBand(2).WriteArray(CSMAXy0)
+            outRaster.FlushCache()
+            del outRaster
+        except Exception as e:
+            print(f"Warning: Could not write debug chip size TIFs: {e}")
+
     intermediate_nc_file = 'autoRIFT_intermediate.nc'
 
     if os.path.exists(intermediate_nc_file):
