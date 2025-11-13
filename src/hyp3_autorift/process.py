@@ -158,6 +158,33 @@ def get_s2_metadata(scene_name):
     }
 
 
+def _create_mosaic_metadata(metas: list[dict]) -> dict:
+    """Creates a union metadata object from a list of granule metadata"""
+    log.info(f"Creating union metadata for {len(metas)} granules.")
+    
+    # Use first granule as base for properties (like projection)
+    mosaic_meta = metas[0].copy()
+    
+    # Create a union of all bounding boxes
+    try:
+        min_lon = min(m['bbox'][0] for m in metas)
+        min_lat = min(m['bbox'][1] for m in metas)
+        max_lon = max(m['bbox'][2] for m in metas)
+        max_lat = max(m['bbox'][3] for m in metas)
+        union_bbox = [min_lon, min_lat, max_lon, max_lat]
+    except KeyError:
+        # Fallback if 'bbox' isn't present for some reason
+        log.warning("Could not find 'bbox' in metadata. Using bbox from first granule only.")
+        union_bbox = metas[0].get('bbox', [-180, -90, 180, 90])
+
+    mosaic_meta['bbox'] = union_bbox
+    # Overwrite ID to show it's a mosaic
+    mosaic_meta['id'] = f"{metas[0].get('id', 'MOSAIC')}_AND_{len(metas)-1}_MORE" 
+    
+    log.info(f"Mosaic union BBOX: {union_bbox}")
+    return mosaic_meta
+
+
 def s3_object_is_accessible(bucket, key):
     try:
         S3_CLIENT.head_object(Bucket=bucket, Key=key)
@@ -320,24 +347,60 @@ def process(
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
         os.environ['AWS_REGION'] = 'us-west-2'
 
-        if platform == 'S2':
-            reference_metadata = get_s2_metadata(reference[0])
-            reference_path = reference_metadata['path']
+        # Initialize lists used for mosaicking multiple scenes (if applicable)
+        ref_metas = []
+        ref_paths = []
+        sec_metas = []
+        sec_paths = []
 
-            secondary_metadata = get_s2_metadata(secondary[0])
-            secondary_path = secondary_metadata['path']
+        if platform == 'S2':
+            log.info(f"Processing {len(reference)} reference S2 granules.")
+            for granule in reference:
+                meta = get_s2_metadata(granule)
+                ref_metas.append(meta)
+                ref_paths.append(meta['path'])
+            log.info(f"Processing {len(secondary)} secondary S2 granules.")
+            for granule in secondary:
+                meta = get_s2_metadata(granule)
+                sec_metas.append(meta)
+                sec_paths.append(meta['path'])
 
         elif 'L' in platform:
             # Set config and env for new CXX threads in Geogrid/autoRIFT
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
             os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-            reference_metadata = get_lc2_metadata(reference[0])
-            reference_path = get_lc2_path(reference_metadata)
+            log.info(f"Processing {len(reference)} reference Landsat Collection 2 granules.")
+            for granule in reference:
+                meta = get_lc2_metadata(granule)
+                ref_metas.append(meta)
+                ref_paths.append(get_lc2_path(meta))
+            log.info(f"Processing {len(secondary)} secondary Landsat Collection 2 granules.")
+            for granule in secondary:
+                meta = get_lc2_metadata(granule)
+                sec_metas.append(meta)
+                sec_paths.append(get_lc2_path(meta))
 
-            secondary_metadata = get_lc2_metadata(secondary[0])
-            secondary_path = get_lc2_path(secondary_metadata)
+        # Handle mosaicking/metadata if multiple scenes were provided, otherwise just get metadata from the single scene        
+        if len(ref_paths) > 1:
+            reference_path = f'{reference[0]}.vrt'
+            log.info(f"Creating VRT mosaic: {reference_path}")
+            gdal.BuildVRT(reference_path, ref_paths)
+            reference_metadata = _create_mosaic_metadata(ref_metas)
+        else:
+            reference_path = ref_paths[0]
+            reference_metadata = ref_metas[0]
+        
+        if len(sec_paths) > 1:
+            secondary_path = f'{secondary[0]}.vrt'
+            log.info(f"Creating VRT mosaic: {secondary_path}")
+            gdal.BuildVRT(secondary_path, sec_paths)
+            secondary_metadata = _create_mosaic_metadata(sec_metas)
+        else:
+            secondary_path = sec_paths[0]
+            secondary_metadata = sec_metas[0]
 
+        if 'L' in platform:
             filter_platform = min([platform, get_platform(secondary[0])])
             if filter_platform in ('L4', 'L5', 'L7'):
                 # Log path here before we transform it
