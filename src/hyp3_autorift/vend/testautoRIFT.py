@@ -656,31 +656,35 @@ def generateAutoriftProduct(
         static_chip_x = int(kwargs['ChipSizeX'])
         static_chip_y = int(kwargs.get('ChipSizeY', static_chip_x))  # Default to square
 
-        # 1. Create the constant arrays that gdal.Open() *would* have
+        # Create the constant arrays for CSMIN and CSMAX
         CSMINx0 = np.full(xGrid.shape, static_chip_x, dtype=np.int32)
         CSMINy0 = np.full(xGrid.shape, static_chip_y, dtype=np.int32)
         CSMAXx0 = np.full(xGrid.shape, static_chip_x, dtype=np.int32)
         CSMAXy0 = np.full(xGrid.shape, static_chip_y, dtype=np.int32)
 
-        # 2. (Optional) Write these arrays to TIFs for confirmation
-        #    This will prove the static value is being used.
-        try:
-            print("Writing debug chip_size_min.tif")
-            driver = gdal.GetDriverByName('GTiff')
-            outRaster = driver.Create('chip_size_min.tif', xGrid.shape[1], xGrid.shape[0], 2, gdal.GDT_Int32)
-            outRaster.GetRasterBand(1).WriteArray(CSMINx0)
-            outRaster.GetRasterBand(2).WriteArray(CSMINy0)
-            outRaster.FlushCache()
-            del outRaster
+    # Static Search Range Override
+    if 'SearchLimitX' in kwargs and kwargs['SearchLimitX'] is not None:
+        print(f"Using static Search Range {kwargs['SearchLimitX']} from kwargs.")
+        
+        if xGrid is None:
+             raise Exception("Cannot set static search range: grid_location (xGrid) is not loaded.")
 
-            print("Writing debug chip_size_max.tif")
-            outRaster = driver.Create('chip_size_max.tif', xGrid.shape[1], xGrid.shape[0], 2, gdal.GDT_Int32)
-            outRaster.GetRasterBand(1).WriteArray(CSMAXx0)
-            outRaster.GetRasterBand(2).WriteArray(CSMAXy0)
-            outRaster.FlushCache()
-            del outRaster
-        except Exception as e:
-            print(f"Warning: Could not write debug chip size TIFs: {e}")
+        search_limit = int(kwargs['SearchLimitX'])
+        
+        # Overwrite the SRx0/SRy0 arrays with a constant array of our desired search range.
+        SRx0 = np.full(xGrid.shape, search_limit, dtype=np.float32)
+        SRy0 = np.full(xGrid.shape, search_limit, dtype=np.float32)
+
+    # Null Reference Velocity 
+    if kwargs.get('NullReferenceVelocity') is True:
+        print("Nullifying reference velocities to zero for unbiased search.")
+        
+        if xGrid is None:
+             raise Exception("Cannot reset reference velocities: grid_location (xGrid) is not loaded.")
+
+        # Overwrite Dx0 and Dy0 with zeros
+        Dx0 = np.zeros(xGrid.shape, dtype=np.float32)
+        Dy0 = np.zeros(xGrid.shape, dtype=np.float32)
 
     intermediate_nc_file = 'autoRIFT_intermediate.nc'
 

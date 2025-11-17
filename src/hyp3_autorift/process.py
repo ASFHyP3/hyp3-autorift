@@ -300,6 +300,7 @@ def process(
     secondary: list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
     chip_size: int | None = None,
+    search_range: int | None = None,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
     use_static_files: bool = True,
@@ -312,6 +313,7 @@ def process(
         secondary: Name of the secondary Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
         chip_size: (Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach and uses a static chip size value.
+        search_range: (Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.
         naming_scheme: Naming scheme to use for product files
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
         use_static_files: Use pre-generated static topographic correction files if available
@@ -440,6 +442,14 @@ def process(
             parameter_info['autorift']['chip_size_min'] = None
             parameter_info['autorift']['chip_size_max'] = None
 
+        if search_range is not None:
+            log.info(f"Overriding search range with user-defined value: {search_range}")
+            # Inject user-specified search_range into 'autorift' dictionary
+            parameter_info['autorift']['SearchLimitX'] = search_range
+            parameter_info['autorift']['SearchLimitY'] = search_range
+            # Nullify Reference Velocity for non-glacier applications
+            parameter_info['autorift']['NullReferenceVelocity'] = True
+
         from hyp3_autorift.vend.testGeogrid import coregisterLoadMetadata, runGeogrid
 
         meta_r, meta_s = coregisterLoadMetadata(
@@ -522,6 +532,13 @@ def main():
     )
 
     parser.add_argument(
+        '--search-range',
+        type=utils.nullable_int,
+        default=None,
+        help='(Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.',
+    )
+
+    parser.add_argument(
         '--naming-scheme',
         default='ITS_LIVE_OD',
         choices=['ITS_LIVE_OD', 'ITS_LIVE_PROD'],
@@ -596,28 +613,31 @@ def main():
         secondary = granules_sorted[1]
     else:
         reference, secondary = utils.sort_ref_sec(reference, secondary)
-
-    if len(reference) != len(secondary):
-        parser.error('Must provide the same number of reference and secondary scenes.')
-
+    
     try:
         ref_platforms = {get_platform(scene) for scene in reference}
         sec_platforms = {get_platform(scene) for scene in secondary}
     except NotImplementedError as e:
         parser.error(str(e))
 
-    if len(reference) > 1 and ref_platforms != {'S1-BURST'}:
-        parser.error('Only Sentinel-1 bursts support multiple reference scenes.')
+    allowed_multi_platforms = {'S1-BURST', 'S2', 'L4', 'L5', 'L7', 'L8', 'L9'}
+    if len(reference) > 1 and not ref_platforms.issubset(allowed_multi_platforms):
+        parser.error('Only Sentinel-1 bursts, Sentinel-2, and Landsat support multiple reference scenes.')
 
     landsat_missions = {'L4', 'L5', 'L7', 'L8', 'L9'}
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
         parser.error('all scenes must be of the same type.')
+
+    is_optical = ref_platforms.issubset({'S2'} | landsat_missions)
+    if not is_optical and len(reference) != len(secondary):
+        parser.error('Must provide the same number of reference and secondary scenes.')
 
     product_file, browse_file, thumbnail_file = process(
         reference,
         secondary,
         parameter_file=args.parameter_file,
         chip_size=args.chip_size,
+        search_range=args.search_range,
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
         use_static_files=args.use_static_files,

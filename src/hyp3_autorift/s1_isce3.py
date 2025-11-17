@@ -34,7 +34,8 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 
 log = logging.getLogger(__name__)
 
-def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files, frame_id, chip_size: int | None = None):
+def process_sentinel1_burst_isce3(reference, secondary, static_files_bucket, use_static_files,
+                                  frame_id, chip_size: int | None = None, search_range: int | None = None):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
@@ -91,7 +92,8 @@ def process_burst(
     burst_id_sec,
     static_files_bucket,
     use_static_files,
-    chip_size: int | None = None
+    chip_size: int | None = None,
+    search_range: int | None = None,
 ):
     swath = int(granule_ref.split('_')[2][2])
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
@@ -155,6 +157,14 @@ def process_burst(
         parameter_info['autorift']['ChipSizeY'] = chip_size
         parameter_info['autorift']['chip_size_min'] = None
         parameter_info['autorift']['chip_size_max'] = None
+    
+    if search_range is not None:
+        log.info(f"Overriding search range with user-defined value: {search_range}")
+        # Inject user-specified search_range into 'autorift' dictionary
+        parameter_info['autorift']['SearchLimitX'] = search_range
+        parameter_info['autorift']['SearchLimitY'] = search_range
+        # Nullify Reference Velocity for non-glacier applications
+        parameter_info['autorift']['NullReferenceVelocity'] = True
 
     geogrid_info = runGeogrid(
         info=meta_r,
@@ -186,7 +196,8 @@ def process_burst(
     return netcdf_file
 
 
-def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_static_files, chip_size: int | None = None):
+def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_static_files,
+                                chip_size: int | None = None, search_range: int | None = None):
     safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
     safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
 
@@ -207,6 +218,7 @@ def process_sentinel1_slc_isce3(slc_ref, slc_sec, static_files_bucket, use_stati
         use_static_files,
         frame_id='N/A',
         chip_size=chip_size,
+        search_range=search_range,
     )
 
 
@@ -221,7 +233,8 @@ def process_slc(
     use_static_files,
     frame_id,
     swaths=(1, 2, 3),
-    chip_size: int | None = None
+    chip_size: int | None = None,
+    search_range: int | None = None,
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
@@ -289,6 +302,14 @@ def process_slc(
         parameter_info['autorift']['ChipSizeY'] = chip_size
         parameter_info['autorift']['chip_size_min'] = None
         parameter_info['autorift']['chip_size_max'] = None
+
+    if search_range is not None:
+        log.info(f"Overriding search range with user-defined value: {search_range}")
+        # Inject user-specified search_range into 'autorift' dictionary
+        parameter_info['autorift']['SearchLimitX'] = search_range
+        parameter_info['autorift']['SearchLimitY'] = search_range
+        # Nullify Reference Velocity for non-glacier applications
+        parameter_info['autorift']['NullReferenceVelocity'] = True
 
     geogrid_info = runGeogrid(
         info=meta_r,
