@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+* Support for processing multiple reference and secondary granules for optical data (Sentinel-2 and Landsat) by creating VRT mosaics in `process.py`
+* A `--chip-size` argument to override the chip size specified in `DEFAULT_PARAMETER_FILE`. This includes updates to `testGeogrid.py` to skip intermediate TIF generation and `testautoRIFT.py` to manually construct static grid arrays when `--chip-size` is specified.
+* A `--search-range` argument to override the parameter file's search limit. This includes updates to `testautoRIFT.py` to manually overwrite search grid arrays, enabling processing of non-glacial terrain where default parameters are masked.
+* Logic to zero out reference displacement velocities in `testautoRIFT.py` when parameter overrides are used.
+
+### Changed
+* Refactored the optical workflow in `process.py` to accept list inputs and calculate union metadata for mosaicked inputs
+* Updated `apply_landsat_filtering` in `process.py` to accept an explicit platform argument, fixing platform detection for VRT filenames
+* Propagated chip size and search range arguments through Sentinel-1 ISCE3 workflows in `s1_isce3.py`
+
 ## [0.26.0]
 
 ### Added
