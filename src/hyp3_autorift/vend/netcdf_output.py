@@ -17,6 +17,7 @@ def get_satellite_attribute(info):
     mission_mapping = {
         'L': 'Landsat ',
         'S': 'Sentinel-',
+        'N': 'NISAR'
     }
 
     satellite_1 = f'{mission_mapping[info["mission_img1"]]}{info["satellite_img1"]}'
@@ -432,6 +433,8 @@ def netCDF_packaging(
         source += f' using ISCE3 version {isce3.__version__}'
     if IMG_INFO_DICT['mission_img1'].startswith('S'):
         source += f'. Contains modified Copernicus Sentinel data {IMG_INFO_DICT["date_center"][0:4]}, processed by ESA'
+    if IMG_INFO_DICT['mission_img1'].startswith('N'):
+        source += f'. Contains modified NISAR data, processed by NASA'
     if IMG_INFO_DICT['mission_img1'].startswith('L'):
         source += f'. Landsat-{IMG_INFO_DICT["satellite_img1"]} images courtesy of the U.S. Geological Survey'
 

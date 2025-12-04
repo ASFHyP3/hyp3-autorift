@@ -48,12 +48,17 @@ def upload_file_to_s3_with_publish_access_keys(
     s3_client.put_object_tagging(Bucket=bucket, Key=key, Tagging=tag_set)
 
 
-def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str) -> dict:
+def find_jpl_parameter_info(polygon: ogr.Geometry, parameter_file: str, flip_point: bool = True) -> dict:
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shapes = driver.Open(parameter_file, gdal.GA_ReadOnly)
 
     parameter_info = None
-    centroid = flip_point_coordinates(polygon.Centroid())
+
+    if flip_point:
+        centroid = flip_point_coordinates(polygon.Centroid())
+    else:
+        centroid = polygon.Centroid()
+
     centroid = fix_point_for_antimeridian(centroid)
     for feature in shapes.GetLayer(0):
         if feature.geometry().Contains(centroid):
@@ -268,7 +273,8 @@ def get_datetime(scene_name):
         return datetime.strptime(scene_name.split('_')[2], '%Y%m%d')
     if scene_name.startswith('L'):
         return datetime.strptime(scene_name[17:25], '%Y%m%d')
-
+    if scene_name.startswith('N'):
+        return datetime.strptime(scene_name.split('_')[11][:8], '%Y%m%d')
     raise ValueError(f'Unsupported scene format: {scene_name}')
 
 
@@ -281,4 +287,6 @@ def get_platform(scene: str) -> str:
         return scene[0:2]
     if scene.startswith('L') and scene[3] in ('4', '5', '7', '8', '9'):
         return scene[0] + scene[3]
+    if scene.startswith('NISAR'):
+        return 'NISAR'
     raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')

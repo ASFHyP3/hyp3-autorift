@@ -45,9 +45,10 @@ from autoRIFT import autoRIFT
 from geogrid import GeogridOptical
 from osgeo import gdal
 from s1reader import load_bursts
+from nisar.products.readers import product
 
 import hyp3_autorift.vend.netcdf_output as no
-from hyp3_autorift.vend.testGeogrid import getPol
+from hyp3_autorift.vend.testGeogrid import getPol, loadMetadataRslc
 
 
 def get_topsinsar_config():
@@ -234,12 +235,16 @@ class Dummy(object):
     pass
 
 
-def loadProduct(filename):
+def loadProduct(filename, nisar_flag):
     ds = gdal.Open(filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
-    img = band.ReadAsArray().astype(np.float32)
-    del band
-    del ds
+
+    if nisar_flag:
+        img = band.ReadAsArray().astype(np.uint8)
+    else:
+        img = band.ReadAsArray().astype(np.float32)
+
+    del band, ds
 
     return img
 
@@ -284,6 +289,7 @@ def runAutorift(
     optflag,
     nodata,
     mpflag,
+    nisar_flag = False,
     geogrid_run_info=None,
     preprocessing_methods=('hps', 'hps'),
     preprocessing_filter_width=5,
@@ -297,17 +303,14 @@ def runAutorift(
     obj.WallisFilterWidth = preprocessing_filter_width
     print(f'Setting Wallis Filter Width to {preprocessing_filter_width}')
 
-    # uncomment if starting from preprocessed images
-    # I1 = I1.astype(np.uint8)
-    # I2 = I2.astype(np.uint8)
-
     obj.MultiThread = mpflag
 
+    # Radar images are loaded during uniform datatype processing to save memory
     if optflag == 1:
         obj.I1, obj.I2 = loadProductOptical(indir_m, indir_s)
     else:
-        obj.I1 = loadProduct(indir_m)
-        obj.I2 = loadProduct(indir_s)
+        obj.I1 = loadProduct(indir_m, nisar_flag)
+        obj.I2 = loadProduct(indir_s, nisar_flag)
 
     # create the grid if it does not exist
     if xGrid is None:
@@ -329,7 +332,8 @@ def runAutorift(
     #        and prevents autoRIFT from looking at large parts of the images, but untangling the logic here
     #        has proved too difficult, so lets just turn it off if `wallis_fill` preprocessing is going to be used.
     #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
-    # generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
+    #        generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
+    # TODO: Is this necessary for radar images?
     if 'wallis_fill' not in preprocessing_methods:
         for ii in range(obj.xGrid.shape[0]):
             for jj in range(obj.xGrid.shape[1]):
@@ -344,20 +348,12 @@ def runAutorift(
                 if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
                     noDataMask[ii, jj] = zero_mask[obj.yGrid[ii,jj]-1,obj.xGrid[ii,jj]-1]
 
-    # mask out nodata to skip the offset searching using the nodata mask (by setting SearchLimit to be 0)
-
     if SRx0 is None:
-        # uncomment to customize SearchLimit based on velocity distribution (i.e. Dx0 must not be None)
-        # obj.SearchLimitX = np.int32(4+(25-4)/(np.max(np.abs(Dx0[np.logical_not(noDataMask)]))-np.min(np.abs(Dx0[np.logical_not(noDataMask)])))*(np.abs(Dx0)-np.min(np.abs(Dx0[np.logical_not(noDataMask)]))))
-        # obj.SearchLimitY = 5
         obj.SearchLimitX = obj.SearchLimitX * np.logical_not(noDataMask)
         obj.SearchLimitY = obj.SearchLimitY * np.logical_not(noDataMask)
     else:
         obj.SearchLimitX = SRx0
         obj.SearchLimitY = SRy0
-        # add buffer to search range
-        # obj.SearchLimitX[obj.SearchLimitX!=0] = obj.SearchLimitX[obj.SearchLimitX!=0] + 2
-        # obj.SearchLimitY[obj.SearchLimitY!=0] = obj.SearchLimitY[obj.SearchLimitY!=0] + 2
 
     if CSMINx0 is not None:
         obj.ChipSizeMaxX = CSMAXx0
@@ -410,75 +406,83 @@ def runAutorift(
     if optflag == 0:
         obj.Dy0 = -1 * obj.Dy0
 
-    # preprocessing
-    t1 = time.time()
-    print('Pre-process Start!!!')
-    print(f'Using Wallis Filter Width: {obj.WallisFilterWidth}')
+    # NISAR data is preprocessed and converted to uint8 prior to being passed to autoRIFT
+    if not nisar_flag:
+        # preprocessing
+        t1 = time.time()
+        print('Pre-process Start!!!')
+        print(f'Using Wallis Filter Width: {obj.WallisFilterWidth}')
 
-    # TODO: Allow different filters to be applied images independently; default to most stringent filtering
-    if 'wallis_fill' in preprocessing_methods:
-        # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
-        #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
-        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
-                      UserWarning)
-        obj.zeroMask = zero_mask
-        # obj.preprocess_filt_wal_nodata_fill()
-    elif 'wallis' in preprocessing_methods:
-        # FIXME: Ensuring landsat 7 images are projected correctly requires wallis filtering and then reprojecting the
-        #       secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
-        warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
-                      UserWarning)
-        obj.zeroMask = zero_mask
-        # obj.preprocess_filt_wal()
-    elif 'fft' in preprocessing_methods:
-        # FIXME: Ensuring landsat 7 images are projected correctly requires fft filtering and then reprojecting the
-        #        secondary scene before processing with Geogrid or autoRIFT. Furthermore, the Landsat 4/5 FFT
-        #        preprocessor looks for the image corners to determine the scene rotation, but Geogrid + autoRIFT round
-        #        corners when co-registering and chop the non-overlapping corners when subsetting to the common image
-        #        overlap. FFT filer needs to  be applied to the native images before they are processed by Geogrid or
-        #        autoRIFT; this now occurs in hyp3-autorift/process.py
-        # obj.preprocess_filt_wal()
-        # obj.preprocess_filt_fft()
-        warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
-                      UserWarning)
-    else:
-        obj.preprocess_filt_hps()
-    print('Pre-process Done!!!')
-    print(time.time() - t1)
+        # TODO: Allow different filters to be applied images independently; default to most stringent filtering
+        if 'wallis_fill' in preprocessing_methods:
+            # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
+            #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
+            warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
+                        UserWarning)
+            obj.zeroMask = zero_mask
+            # obj.preprocess_filt_wal_nodata_fill()
+        elif 'wallis' in preprocessing_methods:
+            # FIXME: Ensuring landsat 7 images are projected correctly requires wallis filtering and then reprojecting the
+            #       secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
+            warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
+                        UserWarning)
+            obj.zeroMask = zero_mask
+            # obj.preprocess_filt_wal()
+        elif 'fft' in preprocessing_methods:
+            # FIXME: Ensuring landsat 7 images are projected correctly requires fft filtering and then reprojecting the
+            #        secondary scene before processing with Geogrid or autoRIFT. Furthermore, the Landsat 4/5 FFT
+            #        preprocessor looks for the image corners to determine the scene rotation, but Geogrid + autoRIFT round
+            #        corners when co-registering and chop the non-overlapping corners when subsetting to the common image
+            #        overlap. FFT filer needs to  be applied to the native images before they are processed by Geogrid or
+            #        autoRIFT; this now occurs in hyp3-autorift/process.py
+            # obj.preprocess_filt_wal()
+            # obj.preprocess_filt_fft()
+            warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
+                        UserWarning)
+        else:
+            obj.preprocess_filt_hps()
+        
+        
+        print('Pre-process Done!!!')
+        print(time.time() - t1)
 
-    t1 = time.time()
+        t1 = time.time()
 
-    if obj.zeroMask is not None:
-        validData = np.isfinite(obj.I1)
-        S1 = np.std(obj.I1[validData]) * np.sqrt(obj.I1[validData].size / (obj.I1[validData].size - 1.0))
-        M1 = np.mean(obj.I1[validData])
-    else:
-        S1 = np.std(obj.I1) * np.sqrt(obj.I1.size / (obj.I1.size - 1.0))
-        M1 = np.mean(obj.I1)
+        if obj.zeroMask is not None:
+            validData = np.isfinite(obj.I1)
+            S1 = np.std(obj.I1[validData]) * np.sqrt(obj.I1[validData].size / (obj.I1[validData].size - 1.0))
+            M1 = np.mean(obj.I1[validData])
+        else:
+            S1 = np.std(obj.I1) * np.sqrt(obj.I1.size / (obj.I1.size - 1.0))
+            M1 = np.mean(obj.I1)
 
-    obj.I1 = (obj.I1 - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
-    del S1, M1
-    obj.I1 = np.round(np.clip(obj.I1, 0, 255)).astype(np.uint8)
+        obj.I1 = (obj.I1 - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
+        del S1, M1
+        obj.I1 = np.round(np.clip(obj.I1, 0, 255)).astype(np.uint8)
 
-    if obj.zeroMask is not None:
-        validData = np.isfinite(obj.I2)
-        S2 = np.std(obj.I2[validData]) * np.sqrt(obj.I2[validData].size / (obj.I2[validData].size - 1.0))
-        M2 = np.mean(obj.I2[validData])
-    else:
-        S2 = np.std(obj.I2) * np.sqrt(obj.I2.size / (obj.I2.size - 1.0))
-        M2 = np.mean(obj.I2)
+        if obj.zeroMask is not None:
+            validData = np.isfinite(obj.I2)
+            S2 = np.std(obj.I2[validData]) * np.sqrt(obj.I2[validData].size / (obj.I2[validData].size - 1.0))
+            M2 = np.mean(obj.I2[validData])
+        else:
+            S2 = np.std(obj.I2) * np.sqrt(obj.I2.size / (obj.I2.size - 1.0))
+            M2 = np.mean(obj.I2)
 
-    obj.I2 = (obj.I2 - (M2 - 3 * S2)) / (6 * S2) * (2**8 - 0)
-    del S2, M2
-    obj.I2 = np.round(np.clip(obj.I2, 0, 255)).astype(np.uint8)
+        obj.I2 = (obj.I2 - (M2 - 3 * S2)) / (6 * S2) * (2**8 - 0)
+        del S2, M2
+        obj.I2 = np.round(np.clip(obj.I2, 0, 255)).astype(np.uint8)
 
-    if obj.zeroMask is not None:
-        obj.I1[obj.zeroMask] = 0
-        obj.I2[obj.zeroMask] = 0
-        obj.zeroMask = None
+        print('Uniform Data Type Done!!!')
+        print(time.time() - t1)
 
-    print('Uniform Data Type Done!!!')
-    print(time.time() - t1)
+        if obj.zeroMask is not None:
+            obj.I1[obj.zeroMask] = 0
+            obj.I2[obj.zeroMask] = 0
+            obj.zeroMask = None
+
+    if nisar_flag:
+        obj.I1[obj.I1 == 0] = 128
+        obj.I2[obj.I2 == 0] = 128
 
     obj.OverSampleRatio = 64
     # OverSampleRatio can be assigned as a scalar (such as the above line) or as a Python dictionary below for
@@ -692,6 +696,7 @@ def generateAutoriftProduct(
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 
+        nisar_flag = nc_sensor == 'NISAR'
         (
             Dx,
             Dy,
@@ -720,6 +725,7 @@ def generateAutoriftProduct(
             optical_flag,
             nodata,
             mpflag,
+            nisar_flag=nisar_flag,
             geogrid_run_info=geogrid_run_info,
             preprocessing_methods=preprocessing_methods,
             preprocessing_filter_width=preprocessing_filter_width,
@@ -1093,6 +1099,151 @@ def generateAutoriftProduct(
                         'roi_valid_percentage': PPP,
                         'autoRIFT_software_version': version,
                     }
+                    error_vector = np.array(
+                        [
+                            [0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
+                            [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628],
+                        ]
+                    )
+
+                    netcdf_file = no.netCDF_packaging(
+                        VX,
+                        VY,
+                        DX,
+                        DY,
+                        INTERPMASK,
+                        CHIPSIZEX,
+                        CHIPSIZEY,
+                        SSM,
+                        SSM1,
+                        SX,
+                        SY,
+                        offset2vx_1,
+                        offset2vx_2,
+                        offset2vy_1,
+                        offset2vy_2,
+                        offset2vr,
+                        offset2va,
+                        scale_factor_1,
+                        scale_factor_2,
+                        MM,
+                        VXref,
+                        VYref,
+                        DXref,
+                        DYref,
+                        rangePixelSize,
+                        azimuthPixelSize,
+                        dt,
+                        epsg,
+                        srs,
+                        tran,
+                        out_nc_filename,
+                        pair_type,
+                        detection_method,
+                        coordinates,
+                        IMG_INFO_DICT,
+                        stable_count,
+                        stable_count1,
+                        stable_shift_applied,
+                        dx_mean_shift,
+                        dy_mean_shift,
+                        dx_mean_shift1,
+                        dy_mean_shift1,
+                        error_vector,
+                        parameter_file=kwargs['parameter_file'],
+                    )
+                if nc_sensor == 'NISAR':
+                    if geogrid_run_info is None:
+                        gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
+                        rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
+                        azimuthPixelSize = float(str.split(runCmd('fgrep "Azimuth pixel size:" testGeogrid.txt'))[3])
+                        dt = float(str.split(runCmd('fgrep "Repeat Time:" testGeogrid.txt'))[2])
+                        epsg = float(str.split(runCmd('fgrep "EPSG:" testGeogrid.txt'))[1])
+                    else:
+                        gridspacingx = geogrid_run_info['gridspacingx']
+                        rangePixelSize = geogrid_run_info['XPixelSize']
+                        azimuthPixelSize = geogrid_run_info['YPixelSize']
+                        dt = geogrid_run_info['dt']
+                        epsg = geogrid_run_info['epsg']
+
+                    # TODO: This will need to take into account NISAR's naming convention
+                    # to sort reference/secondary
+                    rslcs = glob.glob('*.h5')
+
+                    if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11][:8]):
+                        master_filename = rslcs[0]
+                        slave_filename = rslcs[1]
+                    else:
+                        master_filename = rslcs[1]
+                        slave_filename = rslcs[0]
+
+                    assert len(rslcs) == 2
+                    master_meta = loadMetadataRslc(master_filename)
+                    slave_meta = loadMetadataRslc(slave_filename)
+
+                    master_dt = master_meta.sensingStart
+                    slave_dt = slave_meta.sensingStart
+                    master_split = str.split(master_filename, '_')
+                    slave_split = str.split(slave_filename, '_')
+
+                    pair_type = 'radar'
+                    detection_method = 'feature'
+                    coordinates = 'radar, map'
+                    if np.sum(SEARCHLIMITX != 0) != 0:
+                        roi_valid_percentage = (
+                            int(round(np.sum(CHIPSIZEX != 0) / np.sum(SEARCHLIMITX != 0) * 1000.0)) / 1000
+                        )
+                    else:
+                        raise Exception('Input search range is all zero everywhere, thus no search conducted')
+                    PPP = roi_valid_percentage * 100
+                    if ncname is None:
+                        if '.h5' in master_filename:
+                            out_nc_filename = (
+                                f'./{master_filename[0:-3]}_X_{slave_filename[0:-3]}'
+                                f'_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                            )
+                    else:
+                        out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                    CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
+
+                    date_dt_base = (slave_dt - master_dt).total_seconds() / timedelta(days=1).total_seconds()
+                    date_dt = np.float64(date_dt_base)
+                    if date_dt < 0:
+                        raise Exception('Input image 1 must be older than input image 2')
+
+                    date_ct = slave_dt + (master_dt - slave_dt) / 2
+                    date_center = date_ct.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+
+                    IMG_INFO_DICT = {
+                        'id_img1': master_filename.split('.')[0],
+                        'id_img2': slave_filename.split('.')[0],
+                        'absolute_orbit_number_img1': 'N/A',
+                        'absolute_orbit_number_img2': 'N/A',
+                        'acquisition_date_img1': str(master_dt),
+                        'acquisition_date_img2': str(slave_dt),
+                        'flight_direction_img1': master_meta.orbitPassDirection,
+                        'flight_direction_img2': slave_meta.orbitPassDirection,
+                        'mission_data_take_ID_img1': 'N/A',
+                        'mission_data_take_ID_img2': 'N/A',
+                        'mission_img1': 'N',
+                        'mission_img2': 'N',
+                        'product_unique_ID_img1': 'N/A',
+                        'product_unique_ID_img2': 'N/A',
+                        'satellite_img1': 'N/A',
+                        'satellite_img2': 'N/A',
+                        'sensor_img1': 'N/A',
+                        'sensor_img2': 'N/A',
+                        'time_standard_img1': 'UTC',
+                        'time_standard_img2': 'UTC',
+                        'date_center': date_center,
+                        'date_dt': date_dt,
+                        'latitude': cen_lat,
+                        'longitude': cen_lon,
+                        'roi_valid_percentage': PPP,
+                        'autoRIFT_software_version': version,
+                    }
+
+                    # TODO: Does this need to change for NISAR?
                     error_vector = np.array(
                         [
                             [0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
