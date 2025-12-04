@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.1]
+
+### Fixed
+* The `id_img1` and `id_img2` attributes of `img_pair_info` for Sentinel-1 multi-burst scenes will no longer have a trailing `.`.  
+
 ## [0.26.0]
 
 ### Added
