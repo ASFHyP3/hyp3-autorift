@@ -158,6 +158,33 @@ def get_s2_metadata(scene_name):
     }
 
 
+def _create_mosaic_metadata(metas: list[dict]) -> dict:
+    """Creates a union metadata object from a list of granule metadata"""
+    log.info(f"Creating union metadata for {len(metas)} granules.")
+    
+    # Use first granule as base for properties (like projection)
+    mosaic_meta = metas[0].copy()
+    
+    # Create a union of all bounding boxes
+    try:
+        min_lon = min(m['bbox'][0] for m in metas)
+        min_lat = min(m['bbox'][1] for m in metas)
+        max_lon = max(m['bbox'][2] for m in metas)
+        max_lat = max(m['bbox'][3] for m in metas)
+        union_bbox = [min_lon, min_lat, max_lon, max_lat]
+    except KeyError:
+        # Fallback if 'bbox' isn't present for some reason
+        log.warning("Could not find 'bbox' in metadata. Using bbox from first granule only.")
+        union_bbox = metas[0].get('bbox', [-180, -90, 180, 90])
+
+    mosaic_meta['bbox'] = union_bbox
+    # Overwrite ID to show it's a mosaic
+    mosaic_meta['id'] = f"{metas[0].get('id', 'MOSAIC')}_AND_{len(metas)-1}_MORE" 
+    
+    log.info(f"Mosaic union BBOX: {union_bbox}")
+    return mosaic_meta
+
+
 def s3_object_is_accessible(bucket, key):
     try:
         S3_CLIENT.head_object(Bucket=bucket, Key=key)
@@ -272,6 +299,8 @@ def process(
     reference: list[str],
     secondary: list[str],
     parameter_file: str = DEFAULT_PARAMETER_FILE,
+    chip_size: int | None = None,
+    search_range: int | None = None,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
     use_static_files: bool = True,
@@ -283,6 +312,8 @@ def process(
         reference: Name of the reference Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         secondary: Name of the secondary Sentinel-1 (or list of bursts), Sentinel-2, or Landsat-8 Collection 2 scene
         parameter_file: Shapefile for determining the correct search parameters by geographic location
+        chip_size: (Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach and uses a static chip size value.
+        search_range: (Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.
         naming_scheme: Naming scheme to use for product files
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
         use_static_files: Use pre-generated static topographic correction files if available
@@ -303,12 +334,12 @@ def process(
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files, frame_id)
+        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files, frame_id, chip_size=chip_size)
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
-        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files)
+        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files, chip_size=chip_size)
 
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -318,24 +349,60 @@ def process(
         gdal.SetConfigOption('AWS_REGION', 'us-west-2')
         os.environ['AWS_REGION'] = 'us-west-2'
 
-        if platform == 'S2':
-            reference_metadata = get_s2_metadata(reference[0])
-            reference_path = reference_metadata['path']
+        # Initialize lists used for mosaicking multiple scenes (if applicable)
+        ref_metas = []
+        ref_paths = []
+        sec_metas = []
+        sec_paths = []
 
-            secondary_metadata = get_s2_metadata(secondary[0])
-            secondary_path = secondary_metadata['path']
+        if platform == 'S2':
+            log.info(f"Processing {len(reference)} reference S2 granules.")
+            for granule in reference:
+                meta = get_s2_metadata(granule)
+                ref_metas.append(meta)
+                ref_paths.append(meta['path'])
+            log.info(f"Processing {len(secondary)} secondary S2 granules.")
+            for granule in secondary:
+                meta = get_s2_metadata(granule)
+                sec_metas.append(meta)
+                sec_paths.append(meta['path'])
 
         elif 'L' in platform:
             # Set config and env for new CXX threads in Geogrid/autoRIFT
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
             os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-            reference_metadata = get_lc2_metadata(reference[0])
-            reference_path = get_lc2_path(reference_metadata)
+            log.info(f"Processing {len(reference)} reference Landsat Collection 2 granules.")
+            for granule in reference:
+                meta = get_lc2_metadata(granule)
+                ref_metas.append(meta)
+                ref_paths.append(get_lc2_path(meta))
+            log.info(f"Processing {len(secondary)} secondary Landsat Collection 2 granules.")
+            for granule in secondary:
+                meta = get_lc2_metadata(granule)
+                sec_metas.append(meta)
+                sec_paths.append(get_lc2_path(meta))
 
-            secondary_metadata = get_lc2_metadata(secondary[0])
-            secondary_path = get_lc2_path(secondary_metadata)
+        # Handle mosaicking/metadata if multiple scenes were provided, otherwise just get metadata from the single scene        
+        if len(ref_paths) > 1:
+            reference_path = f'{reference[0]}.vrt'
+            log.info(f"Creating VRT mosaic: {reference_path}")
+            gdal.BuildVRT(reference_path, ref_paths)
+            reference_metadata = _create_mosaic_metadata(ref_metas)
+        else:
+            reference_path = ref_paths[0]
+            reference_metadata = ref_metas[0]
+        
+        if len(sec_paths) > 1:
+            secondary_path = f'{secondary[0]}.vrt'
+            log.info(f"Creating VRT mosaic: {secondary_path}")
+            gdal.BuildVRT(secondary_path, sec_paths)
+            secondary_metadata = _create_mosaic_metadata(sec_metas)
+        else:
+            secondary_path = sec_paths[0]
+            secondary_metadata = sec_metas[0]
 
+        if 'L' in platform:
             filter_platform = min([platform, get_platform(secondary[0])])
             if filter_platform in ('L4', 'L5', 'L7'):
                 # Log path here before we transform it
@@ -364,6 +431,24 @@ def process(
 
         scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
         parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file)
+
+        if chip_size is not None:
+            # Add static chipSize to parameter_info geogrid params
+            parameter_info['geogrid']['ChipSizeX'] = chip_size
+            parameter_info['geogrid']['ChipSizeY'] = chip_size
+            # Add static chipSize to parameter_info autorift params and remove tif-file parameters
+            parameter_info['autorift']['ChipSizeX'] = chip_size
+            parameter_info['autorift']['ChipSizeY'] = chip_size
+            parameter_info['autorift']['chip_size_min'] = None
+            parameter_info['autorift']['chip_size_max'] = None
+
+        if search_range is not None:
+            log.info(f"Overriding search range with user-defined value: {search_range}")
+            # Inject user-specified search_range into 'autorift' dictionary
+            parameter_info['autorift']['SearchLimitX'] = search_range
+            parameter_info['autorift']['SearchLimitY'] = search_range
+            # Nullify Reference Velocity for non-glacier applications
+            parameter_info['autorift']['NullReferenceVelocity'] = True
 
         from hyp3_autorift.vend.testGeogrid import coregisterLoadMetadata, runGeogrid
 
@@ -438,6 +523,21 @@ def main():
         help='Shapefile for determining the correct search parameters by geographic location. '
         'Path to shapefile must be understood by GDAL',
     )
+
+    parser.add_argument(
+        '--chip-size',
+        type=utils.nullable_int,
+        default=None,
+        help='(Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach.',
+    )
+
+    parser.add_argument(
+        '--search-range',
+        type=utils.nullable_int,
+        default=None,
+        help='(Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.',
+    )
+
     parser.add_argument(
         '--naming-scheme',
         default='ITS_LIVE_OD',
@@ -513,27 +613,31 @@ def main():
         secondary = granules_sorted[1]
     else:
         reference, secondary = utils.sort_ref_sec(reference, secondary)
-
-    if len(reference) != len(secondary):
-        parser.error('Must provide the same number of reference and secondary scenes.')
-
+    
     try:
         ref_platforms = {get_platform(scene) for scene in reference}
         sec_platforms = {get_platform(scene) for scene in secondary}
     except NotImplementedError as e:
         parser.error(str(e))
 
-    if len(reference) > 1 and ref_platforms != {'S1-BURST'}:
-        parser.error('Only Sentinel-1 bursts support multiple reference scenes.')
+    allowed_multi_platforms = {'S1-BURST', 'S2', 'L4', 'L5', 'L7', 'L8', 'L9'}
+    if len(reference) > 1 and not ref_platforms.issubset(allowed_multi_platforms):
+        parser.error('Only Sentinel-1 bursts, Sentinel-2, and Landsat support multiple reference scenes.')
 
     landsat_missions = {'L4', 'L5', 'L7', 'L8', 'L9'}
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
         parser.error('all scenes must be of the same type.')
 
+    is_optical = ref_platforms.issubset({'S2'} | landsat_missions)
+    if not is_optical and len(reference) != len(secondary):
+        parser.error('Must provide the same number of reference and secondary scenes.')
+
     product_file, browse_file, thumbnail_file = process(
         reference,
         secondary,
         parameter_file=args.parameter_file,
+        chip_size=args.chip_size,
+        search_range=args.search_range,
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
         use_static_files=args.use_static_files,
