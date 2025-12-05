@@ -5,7 +5,7 @@ on: push
 jobs:
   call-secrets-analysis-workflow:
     # Docs: https://github.com/ASFHyP3/actions
-    uses: ASFHyP3/actions/.github/workflows/reusable-secrets-analysis.yml@v0.20.0
+    uses: ASFHyP3/actions/.github/workflows/reusable-secrets-analysis.yml@v0.21.0
     permissions:
       contents: read
 
@@ -14,9 +14,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
           activate-environment: true
 
@@ -35,9 +35,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
           activate-environment: true
 

@@ -1023,8 +1023,8 @@ def generateAutoriftProduct(
                         epsg = geogrid_run_info['epsg']
 
                     conts = get_topsinsar_config()
-                    master_filename = conts['reference_filename']
-                    slave_filename = conts['secondary_filename']
+                    master_filename = Path(conts['reference_filename']).stem
+                    slave_filename = Path(conts['secondary_filename']).stem
                     master_dt = conts['reference_dt']
                     slave_dt = conts['secondary_dt']
                     master_split = str.split(master_filename, '_')
@@ -1041,18 +1041,9 @@ def generateAutoriftProduct(
                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
-                        if '.zip' in master_filename:
-                            out_nc_filename = (
-                                f'./{master_filename[0:-4]}_X_{slave_filename[0:-4]}'
-                                f'_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
-                            )
-                        elif '.SAFE' in master_filename:
-                            out_nc_filename = (
-                                f'./{master_filename[0:-5]}_X_{slave_filename[0:-5]}'
-                                f'_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
-                            )
-                    else:
-                        out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                        ncname = f'./{master_filename}_X_{slave_filename}'
+
+                    out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
                     d0 = datetime.strptime(master_dt, '%Y%m%dT%H:%M:%S.%f')
@@ -1066,8 +1057,8 @@ def generateAutoriftProduct(
                     date_center = date_ct.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
                     IMG_INFO_DICT = {
-                        'id_img1': master_filename[0:-4],
-                        'id_img2': slave_filename[0:-4],
+                        'id_img1': master_filename,
+                        'id_img2': slave_filename,
                         'absolute_orbit_number_img1': master_split[7],
                         'absolute_orbit_number_img2': slave_split[7],
                         'acquisition_date_img1': master_dt,
@@ -1078,8 +1069,8 @@ def generateAutoriftProduct(
                         'mission_data_take_ID_img2': slave_split[8],
                         'mission_img1': master_split[0][0],
                         'mission_img2': slave_split[0][0],
-                        'product_unique_ID_img1': master_split[9][0:4],
-                        'product_unique_ID_img2': slave_split[9][0:4],
+                        'product_unique_ID_img1': master_split[9],
+                        'product_unique_ID_img2': slave_split[9],
                         'satellite_img1': master_split[0][1:3],
                         'satellite_img2': slave_split[0][1:3],
                         'sensor_img1': 'C',
