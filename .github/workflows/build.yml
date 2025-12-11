@@ -76,7 +76,7 @@ jobs:
           echo "Building docker container for ${{ matrix.arch }}: ${{ env.IMAGE }}"
           docker build -t ${{ env.IMAGE }} \
             --label CI_JOB_TIMESTAMP=${{ env.CI_JOB_TIMESTAMP }} \
-            --label version=${{ needs.version_info.outputs.version_tag }} \
+            --label version=${{ needs.version-info.outputs.version_tag }} \
             --label revision=${{ github.sha }} \
             --build-arg ARCH=${{ matrix.arch }} .
 
