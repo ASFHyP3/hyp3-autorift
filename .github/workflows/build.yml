@@ -72,19 +72,19 @@ jobs:
         with:
           activate-environment: true
 
-      - name: Build docker image
-        run: |
-          echo "Building docker container for ${{ matrix.arch }}: ${{ env.IMAGE }}"
-          docker build -t ghcr.io/${{ env.IMAGE }} \
-            --label "CI_JOB_TIMESTAMP=${{ env.CI_JOB_TIMESTAMP }}" \
-            --label "version=${{ needs.version-info.outputs.version_tag }}" \
-            --label "revision=${{ github.sha }}" \
-            --build-arg ARCH=${{ matrix.arch }} .
-
-      - name: Push docker image
-        if: ${{ !env.act }}
-        run: |
-          docker push ghcr.io/${{ env.IMAGE }}
+      - name: Build, tag, and push image to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          platforms: ${{ matrix.platform }}
+          context: .
+          file: ./Dockerfile
+          push: ${{ ! github.event.pull_request.head.repo.fork }}
+          tags: |
+            ghcr.io/${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
+            org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Write matrix output
         uses: cloudposse/github-action-matrix-outputs-write@v1
@@ -133,20 +133,7 @@ jobs:
 #   - name: Set up Docker Buildx
 #     uses: docker/setup-buildx-action@v3
 #
-#   - name: Build, tag, and push image to GitHub Container Registry
-#     uses: docker/build-push-action@v6
-#     with:
-#       platforms: linux/amd64,linux/arm64
-#       context: .
-#       file: ./Dockerfile
-#       push: ${{ ! github.event.pull_request.head.repo.fork }}
-#       tags: |
-#         ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
-#       labels: |
-#         org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
-#         org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
-#         org.opencontainers.image.revision=${{ github.sha }}
-#
+
 #   - name: Add test tag
 #     if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
 #     uses: akhilerm/tag-push-action@v2.2.0
