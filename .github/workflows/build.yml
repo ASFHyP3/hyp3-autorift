@@ -30,7 +30,7 @@ jobs:
           export SDIST_VERSION=$(python -m setuptools_scm)
           SDIST_VERSION=${SDIST_VERSION:-dev}
           echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
-          echo "version_tag=${SDIST_VERSION/+/_}" >> $GITHUB_OUTPUT
+          echo "version_tag=${SDIST_VERSION}" >> $GITHUB_OUTPUT
           echo "Version number: ${SDIST_VERSION}"
 
   dockerize:
@@ -75,9 +75,9 @@ jobs:
         run: |
           echo "Building docker container for ${{ matrix.arch }}: ${{ env.IMAGE }}"
           docker build -t ${{ env.IMAGE }} \
-            --label CI_JOB_TIMESTAMP=${{ env.CI_JOB_TIMESTAMP }}
-            --label version=${{ needs.version_info.outputs.version_tag }}
-            --label revision=${{ github.sha }}
+            --label CI_JOB_TIMESTAMP=${{ env.CI_JOB_TIMESTAMP }} \
+            --label version=${{ needs.version_info.outputs.version_tag }} \
+            --label revision=${{ github.sha }} \
             --build-arg ARCH=${{ matrix.arch }} .
 
       - name: Push docker image
