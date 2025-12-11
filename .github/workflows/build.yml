@@ -5,7 +5,7 @@ on:
     branches:
       - develop
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - main
@@ -24,10 +24,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: prefix-dev/setup-pixi@v0.9.3
-        with:
-          activate-environment: true
-
       - name: set outputs
         id: set_outputs
         run: |
@@ -35,7 +31,6 @@ jobs:
           echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
           echo "version_tag=${SDIST_VERSION/+/_}" >> $GITHUB_OUTPUT
           echo "Version number: ${SDIST_VERSION}"
-
 
   dockerize:
     needs: version-info
@@ -46,6 +41,12 @@ jobs:
     concurrency:
       group: ${{ needs.version-info.outputs.version_tag }}
       cancel-in-progress: true
+    strategy:
+      matrix:
+        # Define all architectures we want to containerize for
+        arch: [linux/amd64, linux/arm64]
+    env:
+      imagename: ${{ github.repository }}:${{ needs.version-info.outputs.version_tag || 'dev' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -55,47 +56,96 @@ jobs:
         run: |
           echo "CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)" >> $GITHUB_ENV
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          activate-environment: true
 
-      - name: Lowercase repo for container registry
+      - name: Build docker image
         run: |
-          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          echo "Building docker container for ${{ matrix.arch }}: ${{ env.imagename}}@sha256:${{ github.sha }}"
+          docker build -t ${{ env.imagename }} --build-arg ARCH=${{ matrix.arch }} .
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Push docker image
+        if: ${{ !env.act }}
+        run: |
+          docker push ${{ env.imagename }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build, tag, and push image to GitHub Container Registry
-        uses: docker/build-push-action@v6
+      - name: Write matrix output
+        uses: cloudposse/github-action-matrix-outputs-write@v1
         with:
-          platforms: linux/amd64,linux/arm64
-          context: .
-          file: ./Dockerfile
-          push: ${{ ! github.event.pull_request.head.repo.fork }}
-          tags: |
-            ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
-          labels: |
-            org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
-            org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
-            org.opencontainers.image.revision=${{ github.sha }}
+          matrix-step-name: ${{ github.job }}
+          matrix-key: ${{ matrix.arch }}
+          outputs: |-
+            image: ${{ env.imagename }}
 
-      - name: Add test tag
-        if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
-        uses: akhilerm/tag-push-action@v2.2.0
+  collect:
+    needs: dockerize
+    runs-on: ubuntu-24.04-arm
+    if: ${{ !cancelled() }}
+    outputs:
+      outcomes: ${{ steps.collect.outputs.result }}
+    steps:
+      - uses: cloudposse/github-action-matrix-outputs-read@v1
+        id: read
         with:
-          src: ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
-          dst: ghcr.io/${{ env.REPO }}:test
+          matrix-step-name: dockerize
 
-      - name: Add latest tag
-        if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
-        uses: akhilerm/tag-push-action@v2.2.0
-        with:
-          src: ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
-          dst: ghcr.io/${{ env.REPO }}:latest
+  dockermanifest:
+    needs: collect
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.collect.outputs.result) }}
+    steps:
+      - name: Create dockermanifest
+        run: |
+          echo echo ${{ matrix.runner }} ${{ matrix.result }}
+
+#dockermanifest:
+# needs: dockerize
+# runs-on: ububtu-latest
+# steps:
+#   - name: Login to GitHub Container Registry
+#     uses: docker/login-action@v3
+#     with:
+#       registry: ghcr.io
+#       username: ${{ github.actor }}
+#       password: ${{ secrets.GITHUB_TOKEN }}
+#
+#   - name: Lowercase repo for container registry
+#     run: |
+#       echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+#
+#   - name: Set up QEMU
+#     uses: docker/setup-qemu-action@v3
+#
+#   - name: Set up Docker Buildx
+#     uses: docker/setup-buildx-action@v3
+#
+#   - name: Build, tag, and push image to GitHub Container Registry
+#     uses: docker/build-push-action@v6
+#     with:
+#       platforms: linux/amd64,linux/arm64
+#       context: .
+#       file: ./Dockerfile
+#       push: ${{ ! github.event.pull_request.head.repo.fork }}
+#       tags: |
+#         ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
+#       labels: |
+#         org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
+#         org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
+#         org.opencontainers.image.revision=${{ github.sha }}
+#
+#   - name: Add test tag
+#     if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
+#     uses: akhilerm/tag-push-action@v2.2.0
+#     with:
+#       src: ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
+#       dst: ghcr.io/${{ env.REPO }}:test
+#
+#   - name: Add latest tag
+#     if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
+#     uses: akhilerm/tag-push-action@v2.2.0
+#     with:
+#       src: ghcr.io/${{ env.REPO }}:${{ needs.version-info.outputs.version_tag }}
+#       dst: ghcr.io/${{ env.REPO }}:latest
