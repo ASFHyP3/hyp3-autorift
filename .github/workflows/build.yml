@@ -140,7 +140,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern=${{ version-info.outputs.version_tag }}
+            type=semver,pattern=${{ needs.version-info.outputs.version_tag }}
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Create manifest list and push
