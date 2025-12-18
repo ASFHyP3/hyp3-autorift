@@ -65,7 +65,7 @@ jobs:
         id: vars
         run: |
           echo "CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)" >> $GITHUB_ENV
-          platform=${{ matrix.platform }}
+          platform=${{ matrix.arch }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
@@ -161,4 +161,4 @@ jobs:
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ghcr.io/${{ needs.version-info.outputs.image }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ghcr.io/${{ needs.version-info.outputs.image }}
