@@ -101,6 +101,8 @@ jobs:
             org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
             org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
             org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=build-project-deps # Use GHA cache for restoring
+          cache-to: type=gha,mode=max,scope=build-project-deps # Use GHA cache for saving
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
