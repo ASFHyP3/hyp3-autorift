@@ -49,12 +49,12 @@ jobs:
       contents: read
       packages: write
     concurrency:
-      group: ${{ matrix.arch }}
+      group: ${{ matrix.platform }}
       cancel-in-progress: true
     strategy:
       matrix:
         # Define all architectures we want to containerize for
-        arch: [linux/amd64, linux/arm64]
+        platform: [linux/amd64, linux/arm64]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -65,7 +65,7 @@ jobs:
         id: vars
         run: |
           echo "CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)" >> $GITHUB_ENV
-          platform=${{ matrix.arch }}
+          platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
