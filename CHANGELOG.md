@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.27.0]
 
 ### Added
 * Support for processing multiple reference and secondary granules for optical data (Sentinel-2 and Landsat) by creating VRT mosaics in `process.py`
@@ -18,6 +18,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Refactored the optical workflow in `process.py` to accept list inputs and calculate union metadata for mosaicked inputs
 * Updated `apply_landsat_filtering` in `process.py` to accept an explicit platform argument, fixing platform detection for VRT filenames
 * Propagated chip size and search range arguments through Sentinel-1 ISCE3 workflows in `s1_isce3.py`
+
+## [0.26.1]
+
+### Fixed
+* The `id_img1` and `id_img2` attributes of `img_pair_info` for Sentinel-1 multi-burst scenes will no longer have a trailing `.`.  
 
 ## [0.26.0]
 
