@@ -226,6 +226,18 @@ def test_get_opendata_prefix():
     [
         ('', None),
         ('None', None),
+        ('1', 1),
+    ],
+)
+def test_nullable_int(argument_string, expected):
+    assert utils.nullable_int(argument_string) == expected
+
+
+@pytest.mark.parametrize(
+    'argument_string,expected',
+    [
+        ('', None),
+        ('None', None),
         ('none', 'none'),
         ('foobar', 'foobar'),
     ],

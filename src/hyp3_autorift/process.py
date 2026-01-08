@@ -160,11 +160,11 @@ def get_s2_metadata(scene_name):
 
 def _create_mosaic_metadata(metas: list[dict]) -> dict:
     """Creates a union metadata object from a list of granule metadata"""
-    log.info(f"Creating union metadata for {len(metas)} granules.")
-    
+    log.info(f'Creating union metadata for {len(metas)} granules.')
+
     # Use first granule as base for properties (like projection)
     mosaic_meta = metas[0].copy()
-    
+
     # Create a union of all bounding boxes
     try:
         min_lon = min(m['bbox'][0] for m in metas)
@@ -179,9 +179,9 @@ def _create_mosaic_metadata(metas: list[dict]) -> dict:
 
     mosaic_meta['bbox'] = union_bbox
     # Overwrite ID to show it's a mosaic
-    mosaic_meta['id'] = f"{metas[0].get('id', 'MOSAIC')}_AND_{len(metas)-1}_MORE" 
-    
-    log.info(f"Mosaic union BBOX: {union_bbox}")
+    mosaic_meta['id'] = f'{metas[0].get("id", "MOSAIC")}_AND_{len(metas) - 1}_MORE'
+
+    log.info(f'Mosaic union BBOX: {union_bbox}')
     return mosaic_meta
 
 
@@ -334,12 +334,16 @@ def process(
     if platform == 'S1-BURST':
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(reference, secondary, publish_bucket, use_static_files, frame_id, chip_size=chip_size)
+        netcdf_file = process_sentinel1_burst_isce3(
+            reference, secondary, publish_bucket, use_static_files, frame_id, chip_size=chip_size
+        )
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
-        netcdf_file = process_sentinel1_slc_isce3(reference[0], secondary[0], publish_bucket, use_static_files, chip_size=chip_size)
+        netcdf_file = process_sentinel1_slc_isce3(
+            reference[0], secondary[0], publish_bucket, use_static_files, chip_size=chip_size
+        )
 
     else:
         # Set config and env for new CXX threads in Geogrid/autoRIFT
@@ -356,12 +360,12 @@ def process(
         sec_paths = []
 
         if platform == 'S2':
-            log.info(f"Processing {len(reference)} reference S2 granules.")
+            log.info(f'Processing {len(reference)} reference S2 granules.')
             for granule in reference:
                 meta = get_s2_metadata(granule)
                 ref_metas.append(meta)
                 ref_paths.append(meta['path'])
-            log.info(f"Processing {len(secondary)} secondary S2 granules.")
+            log.info(f'Processing {len(secondary)} secondary S2 granules.')
             for granule in secondary:
                 meta = get_s2_metadata(granule)
                 sec_metas.append(meta)
@@ -372,30 +376,30 @@ def process(
             gdal.SetConfigOption('AWS_REQUEST_PAYER', 'requester')
             os.environ['AWS_REQUEST_PAYER'] = 'requester'
 
-            log.info(f"Processing {len(reference)} reference Landsat Collection 2 granules.")
+            log.info(f'Processing {len(reference)} reference Landsat Collection 2 granules.')
             for granule in reference:
                 meta = get_lc2_metadata(granule)
                 ref_metas.append(meta)
                 ref_paths.append(get_lc2_path(meta))
-            log.info(f"Processing {len(secondary)} secondary Landsat Collection 2 granules.")
+            log.info(f'Processing {len(secondary)} secondary Landsat Collection 2 granules.')
             for granule in secondary:
                 meta = get_lc2_metadata(granule)
                 sec_metas.append(meta)
                 sec_paths.append(get_lc2_path(meta))
 
-        # Handle mosaicking/metadata if multiple scenes were provided, otherwise just get metadata from the single scene        
+        # Handle mosaicking/metadata if multiple scenes were provided, otherwise just get metadata from the single scene
         if len(ref_paths) > 1:
             reference_path = f'{reference[0]}.vrt'
-            log.info(f"Creating VRT mosaic: {reference_path}")
+            log.info(f'Creating VRT mosaic: {reference_path}')
             gdal.BuildVRT(reference_path, ref_paths)
             reference_metadata = _create_mosaic_metadata(ref_metas)
         else:
             reference_path = ref_paths[0]
             reference_metadata = ref_metas[0]
-        
+
         if len(sec_paths) > 1:
             secondary_path = f'{secondary[0]}.vrt'
-            log.info(f"Creating VRT mosaic: {secondary_path}")
+            log.info(f'Creating VRT mosaic: {secondary_path}')
             gdal.BuildVRT(secondary_path, sec_paths)
             secondary_metadata = _create_mosaic_metadata(sec_metas)
         else:
@@ -443,7 +447,7 @@ def process(
             parameter_info['autorift']['chip_size_max'] = None
 
         if search_range is not None:
-            log.info(f"Overriding search range with user-defined value: {search_range}")
+            log.info(f'Overriding search range with user-defined value: {search_range}')
             # Inject user-specified search_range into 'autorift' dictionary
             parameter_info['autorift']['SearchLimitX'] = search_range
             parameter_info['autorift']['SearchLimitY'] = search_range
@@ -613,7 +617,7 @@ def main():
         secondary = granules_sorted[1]
     else:
         reference, secondary = utils.sort_ref_sec(reference, secondary)
-    
+
     try:
         ref_platforms = {get_platform(scene) for scene in reference}
         sec_platforms = {get_platform(scene) for scene in secondary}
