@@ -44,7 +44,7 @@ jobs:
 
   dockerize:
     needs: version-info
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -53,8 +53,12 @@ jobs:
       cancel-in-progress: true
     strategy:
       matrix:
-        # Define all architectures we want to containerize for
-        platform: [linux/amd64, linux/arm64]
+        include:
+          # Define all architectures we want to containerize for
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -101,8 +105,10 @@ jobs:
             org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
             org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=build-project-deps-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=build-project-deps-${{ matrix.platform }}
+          cache-from: |
+            type=gha,scope=build-project-deps-linux-amd64
+            type=gha,scope=build-project-deps-linux-arm64
+          cache-to: type=gha,mode=max,scope=build-project-deps-${{ env.PLATFORM_PAIR }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
