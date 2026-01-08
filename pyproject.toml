@@ -224,8 +224,7 @@ cmd = [
   "git+https://github.com/opera-adt/COMPASS.git@v0.5.6",
   "git+https://github.com/isce-framework/s1-reader.git@v0.2.5",
 ]
-#depends-on = ["install-isce3"]
-depends-on = []
+depends-on = ["install-isce3"]
 
 [tool.pixi.tasks.install-autorift]
 cmd = [
