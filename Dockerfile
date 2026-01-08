@@ -20,19 +20,24 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends git g++ unzip vim patch wget ca-certificates && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+  apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
 USER 1000
 SHELL ["/bin/bash", "-l", "-c"]
 
-COPY --chown=1000:1000 . /hyp3-autorift/
 
 WORKDIR /hyp3-autorift/
 
+COPY --chown=1000:1000 pixi.toml pixi.lock ./
+
 RUN pixi install --locked && \
-    pixi shell-hook -s bash >> /home/ubuntu/.profile && \
-    pixi run install-editable
+  pixi shell-hook -s bash >> /home/ubuntu/.profile
+
+COPY --chown=1000:1000 . .
+
+RUN pixi run install-editable
+
 
 WORKDIR /home/ubuntu/
 
