@@ -34,6 +34,9 @@ COPY --chown=1000:1000 pyproject.toml pixi.lock ./
 RUN pixi install --locked && \
   pixi shell-hook -s bash >> /home/ubuntu/.profile
 
+# Install isce3 on a separate layer so we cache the 10 minute long process
+RUN pixi run install-isce3
+
 COPY --chown=1000:1000 . .
 
 RUN pixi run install-editable
