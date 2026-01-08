@@ -101,8 +101,8 @@ jobs:
             org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
             org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=build-project-deps # Use GHA cache for restoring
-          cache-to: type=gha,mode=max,scope=build-project-deps # Use GHA cache for saving
+          cache-from: type=gha,scope=build-project-deps-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=build-project-deps-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
@@ -161,6 +161,16 @@ jobs:
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf 'ghcr.io/${{ needs.version-info.outputs.image }}@sha256:%s ' *)
 
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ghcr.io/${{ needs.version-info.outputs.image }}
+      - name: Add test tag
+        if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
+        uses: akhilerm/tag-push-action@v2.2.0
+        with:
+          src: ghcr.io/${{ needs.version-info.outputs.image }}
+          dst: ghcr.io/${{ env.REPO }}:test
+
+      - name: Add latest tag
+        if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
+        uses: akhilerm/tag-push-action@v2.2.0
+        with:
+          src: ghcr.io/${{ needs.version-info.outputs.image }}
+          dst: ghcr.io/${{ env.REPO }}:latest
