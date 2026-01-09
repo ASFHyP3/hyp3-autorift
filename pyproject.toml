@@ -5,57 +5,62 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hyp3_autorift"
 requires-python = ">=3.10"
-authors = [{ name = "ASF APD/Tools Team", email = "uaf-asf-apd@alaska.edu" }]
+authors = [
+    {name="ASF APD/Tools Team", email="uaf-asf-apd@alaska.edu"},
+    {name="ASF SciDev Team", email="uaf-asf-scidev@alaska.edu"},
+]
 description = "A HyP3 plugin for feature tracking processing with AutoRIFT-ISCE"
 readme = "README.md"
-license = { text = "BSD-3-Clause" }
-classifiers = [
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
-  "Natural Language :: English",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
+license = {text = "BSD-3-Clause"}
+classifiers=[
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-  # NOTE: Duplicated in "[tool.pixi.dependencies]" to prefer conda-forge dependencies.
-  #       see: https://pixi.sh/dev/python/pyproject_toml/#dependency-section
-  'boto3',
-  'botocore',
-  'burst2safe>=1.4.4',
-  'gdal>=3',
-  'h5netcdf',          # for increased performance of crop.py
-  'hyp3lib>=4,<5',
-  'matplotlib',
-  'netCDF4',
-  'numpy>=1.20',
-  'pandas>=1.4',
-  'pyproj>=3.3',
-  'python-dateutil',
-  'requests>=2.0',
-  'scipy>=1.0',
-  'xarray',
+    # NOTE: Duplicated in "[tool.pixi.dependencies]" to prefer conda-forge dependencies.
+    #       see: https://pixi.sh/dev/python/pyproject_toml/#dependency-section
+    'boto3',
+    'botocore',
+    'burst2safe>=1.4.4',
+    'gdal>=3',
+    'h5netcdf',  # for increased performance of crop.py
+    'hyp3lib>=4,<5',
+    'matplotlib',
+    'netCDF4',
+    'numpy>=1.20',
+    'pandas>=1.4',
+    'pyproj>=3.3',
+    'python-dateutil',
+    'requests>=2.0',
+    'scipy>=1.0',
+    'tqdm',
+    'xarray',
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 develop = [
-  'setuptools_scm',
-  'pillow>=7.0',
-  'pytest',
-  'pytest-console-scripts',
-  'pytest-cov',
-  'responses',
-  'ruff==0.14.7',
-  'mypy==1.19.0',
-  'types-requests',
+    'setuptools_scm',
+    'pillow>=7.0',
+    'pytest',
+    'pytest-console-scripts',
+    'pytest-cov',
+    'responses',
+    'ruff==0.14.7',
+    'mypy==1.19.0',
+    'types-requests',
 ]
 
 [project.scripts]
 hyp3_autorift = "hyp3_autorift.process:main"
 crop_netcdf_product = "hyp3_autorift.crop:main"
+bulk_crop_netcdf_product = "hyp3_autorift.crop:bulk"
 
 [project.urls]
 Homepage = "https://github.com/ASFHyP3/hyp3-autorift"
@@ -84,13 +89,13 @@ quote-style = "single"
 
 [tool.ruff.lint]
 extend-select = [
-  "NPY", # numpy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
-  "I",   # isort: https://docs.astral.sh/ruff/rules/#isort-i
-  # TODO: Uncomment the following extensions and address their warnings:
-  # "UP",  # pyupgrade: https://docs.astral.sh/ruff/rules/#pyupgrade-up
-  # "D",   # pydocstyle: https://docs.astral.sh/ruff/rules/#pydocstyle-d
-  # "ANN", # annotations: https://docs.astral.sh/ruff/rules/#flake8-annotations-ann
-  # "PTH", # use-pathlib-pth: https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
+    "NPY", # numpy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
+    "I",   # isort: https://docs.astral.sh/ruff/rules/#isort-i
+    # TODO: Uncomment the following extensions and address their warnings:
+    # "UP",  # pyupgrade: https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    # "D",   # pydocstyle: https://docs.astral.sh/ruff/rules/#pydocstyle-d
+    # "ANN", # annotations: https://docs.astral.sh/ruff/rules/#flake8-annotations-ann
+    # "PTH", # use-pathlib-pth: https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -184,7 +189,7 @@ pyre = "*"
 
 [tool.pixi.pypi-dependencies]
 snaphu = "*"
-raider = { git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
+raider = {git = "https://github.com/dbekaert/RAiDER.git", rev = "v0.5.5" }
 
 [tool.pixi.feature.pycharm.dependencies]
 pixi-pycharm = "*"
@@ -200,47 +205,57 @@ python = "3.12.*"
 
 [tool.pixi.environments]
 default = { features = ["develop", "pycharm"], solve-group = "default" }
-py310 = { features = ["develop", "py310"] }
-py311 = { features = ["develop", "py311"] }
-py312 = { features = ["develop", "py312"], solve-group = "default" }
+py310 = { features = ["develop", "py310"]}
+py311 = { features = ["develop", "py311"]}
+py312 = { features = ["develop", "py312"], solve-group = "default"}
 
 
 [tool.pixi.tasks.install-isce3]
 cmd = [
-  "python",
-  "-m",
-  "pip",
-  "install",
-  "git+https://github.com/isce-framework/isce3.git@6116cdaca709c861839804567cca406667887d8b",
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/isce-framework/isce3.git@6116cdaca709c861839804567cca406667887d8b",
 ]
 depends-on = []
 
 [tool.pixi.tasks.install-radar]
 cmd = [
-  "python",
-  "-m",
-  "pip",
-  "install",
-  "git+https://github.com/opera-adt/COMPASS.git@v0.5.6",
-  "git+https://github.com/isce-framework/s1-reader.git@v0.2.5",
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/opera-adt/COMPASS.git@v0.5.6",
+    "git+https://github.com/isce-framework/s1-reader.git@v0.2.5",
 ]
 depends-on = ["install-isce3"]
 
 [tool.pixi.tasks.install-autorift]
 cmd = [
-  "python",
-  "-m",
-  "pip",
-  "install",
-  "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
 ]
 depends-on = ["install-radar"]
 
 
 [tool.pixi.tasks.install-editable]
-cmd = ["python", "-m", "pip", "install", "-e", "."]
+cmd = [
+    "python",
+    "-m",
+    "pip",
+    "install",
+    "-e",
+    ".",
+]
 depends-on = ["install-autorift"]
 
 [tool.pixi.tasks.tests]
-cmd = ["pytest", "--cov=hyp3_autorift"]
+cmd = [
+    "pytest",
+    "--cov=hyp3_autorift",
+]
 depends-on = ["install-editable"]

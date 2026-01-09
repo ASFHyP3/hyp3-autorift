@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * A `--chip-size` argument to override the chip size specified in `DEFAULT_PARAMETER_FILE`. This includes updates to `testGeogrid.py` to skip intermediate TIF generation and `testautoRIFT.py` to manually construct static grid arrays when `--chip-size` is specified.
 * A `--search-range` argument to override the parameter file's search limit. This includes updates to `testautoRIFT.py` to manually overwrite search grid arrays, enabling processing of non-glacial terrain where default parameters are masked.
 * Logic to zero out reference displacement velocities in `testautoRIFT.py` when parameter overrides are used.
+* A `bulk_crop_netcdf_prodcuts` method to the `__main__` and console script entrypoints which will iterate through a geoparquet table of published granules and crop and chunk-align them.
 
 ### Changed
 * Refactored the optical workflow in `process.py` to accept list inputs and calculate union metadata for mosaicked inputs
