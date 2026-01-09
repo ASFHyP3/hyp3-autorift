@@ -80,6 +80,33 @@ def test_get_lc2_stac_json_key():
 
 
 @responses.activate
+def test_create_mosaic_metadata():
+    responses.add(
+        responses.GET,
+        f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200703_20200913_02_T1',
+        body='{"id": "LC08_L1TP_009011_20200703_20200913_02_T1", "bbox": [-1, -1, 0, 0]}',
+        status=200,
+    )
+
+    meta1 = process.get_lc2_metadata('LC08_L1TP_009011_20200703_20200913_02_T1')
+
+    responses.add(
+        responses.GET,
+        f'{process.LC2_SEARCH_URL}/LC08_L1TP_009011_20200603_20200813_02_T1',
+        body='{"id": "LC08_L1TP_009011_20200603_20200813_02_T1", "bbox": [0, 0, 1, 1]}',
+        status=200,
+    )
+
+    meta2 = process.get_lc2_metadata('LC08_L1TP_009011_20200603_20200813_02_T1')
+
+    metas = [meta1, meta2]
+    reference_metadata = process._create_mosaic_metadata(metas)
+
+    assert reference_metadata['bbox'] == [-1, -1, 1, 1]
+    assert reference_metadata['id'] == 'LC08_L1TP_009011_20200703_20200913_02_T1_AND_1_MORE'
+
+
+@responses.activate
 def test_get_lc2_metadata():
     responses.add(
         responses.GET,
