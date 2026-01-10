@@ -327,7 +327,7 @@ def bulk():
             netcdf_file.unlink(missing_ok=True)
 
     if args.bucket:
-        cropped_granules = Path.cwd() / f'{Path(args.granule_parquet).stem}_{args.start_idx}-{args.stop_idx}.csv'
+        cropped_granules = Path.cwd() / f'{Path(args.granules_parquet).stem}_{args.start_idx}-{args.stop_idx}.csv'
         df.loc[args.start_idx : args.stop_idx, ['bucket', 'key']].to_csv(cropped_granules)
         print(f'Uploaded CSV of cropped and chunk-aligned products to s3://{args.bucket}/{args.bucket_prefix}')
         upload_file_to_s3(cropped_granules, args.bucket, args.bucket_prefix)
