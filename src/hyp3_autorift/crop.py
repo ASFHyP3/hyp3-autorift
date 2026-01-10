@@ -276,6 +276,7 @@ def bulk():
     parser.add_argument(
         '--stop-idx', type=_nullable_int, default=None, help='Stop index of the granules to generate metadata for.'
     )
+    parser.add_argument('--keep', action='store_true', help='Keep all cropped and source granules on disk.')
 
     hyp3_group = parser.add_argument_group(
         'HyP3 content bucket',
@@ -321,11 +322,16 @@ def bulk():
                 cropped, args.publish_bucket, str(Path(granule_key).parent), s3_name=netcdf_file.name
             )
 
-        if args.bucket:
-            cropped_granules = Path.cwd() / f'{Path(args.granule_parquet).stem}_{args.start_idx}-{args.stop_idx}.csv'
-            df.loc[args.start_idx : args.stop_idx, ['bucket', 'key']].to_csv(cropped_granules)
-            print(f'Uploaded CSV of cropped and chunk-aligned products to s3://{args.bucket}/{args.bucket_prefix}')
-            upload_file_to_s3(cropped_granules, args.bucket, args.bucket_prefix)
+        if not args.keep:
+            cropped.unlink()
+            netcdf_file.unlink(missing_ok=True)
+
+    if args.bucket:
+        cropped_granules = Path.cwd() / f'{Path(args.granule_parquet).stem}_{args.start_idx}-{args.stop_idx}.csv'
+        df.loc[args.start_idx : args.stop_idx, ['bucket', 'key']].to_csv(cropped_granules)
+        print(f'Uploaded CSV of cropped and chunk-aligned products to s3://{args.bucket}/{args.bucket_prefix}')
+        upload_file_to_s3(cropped_granules, args.bucket, args.bucket_prefix)
+
 
 
 def main():
