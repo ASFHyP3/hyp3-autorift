@@ -333,7 +333,6 @@ def bulk():
         upload_file_to_s3(cropped_granules, args.bucket, args.bucket_prefix)
 
 
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
