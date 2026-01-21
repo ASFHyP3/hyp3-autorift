@@ -92,7 +92,6 @@ jobs:
           platforms: ${{ matrix.platform }}
           context: .
           file: ./Dockerfile
-          push: ${{ ! github.event.pull_request.head.repo.fork }}
           tags: |
             ghcr.io/${{ needs.version-info.outputs.repo }}
           labels: |
