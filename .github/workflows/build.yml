@@ -30,7 +30,7 @@ jobs:
         run: |
           export REPO="${{ github.repository }}"
           REPO="${REPO,,}"
-          echo "REPO=${REPO}" >> $GITHUB_ENV
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
           export SDIST_VERSION=$(python -m setuptools_scm)
           SDIST_VERSION=${SDIST_VERSION:-dev}
           echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
