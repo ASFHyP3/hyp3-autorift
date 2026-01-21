@@ -19,7 +19,7 @@ jobs:
     outputs:
       version: ${{ steps.set_outputs.outputs.version }}
       version_tag: ${{ steps.set_outputs.outputs.version_tag }}
-      image: ${{ steps.set_outputs.outputs.image }}
+      repo: ${{ steps.set_outputs.outputs.repo }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -28,17 +28,17 @@ jobs:
       - name: Setup Image name
         id: vars
         run: |
-          export IMAGE="${{ github.repository }}"
-          IMAGE="${IMAGE,,}"
-          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
 
       - name: set outputs
         id: set_outputs
         run: |
+          export REPO="${{ github.repository }}"
+          IMAGE="${REPO,,}"
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
           export SDIST_VERSION=$(python -m setuptools_scm)
           SDIST_VERSION=${SDIST_VERSION:-dev}
           echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
-          echo "version_tag=${SDIST_VERSION}" >> $GITHUB_OUTPUT
+          echo "version_tag=${SDIST_VERSION/+/_}" >> $GITHUB_OUTPUT
           echo "image=${{ env.IMAGE }}" >> $GITHUB_OUTPUT
           echo "Version number: ${SDIST_VERSION}"
 
@@ -69,8 +69,6 @@ jobs:
         id: vars
         run: |
           echo "CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)" >> $GITHUB_ENV
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
         if: ${{ !env.act }}
@@ -97,7 +95,7 @@ jobs:
           file: ./Dockerfile
           push: ${{ ! github.event.pull_request.head.repo.fork }}
           tags: |
-            ghcr.io/${{ needs.version-info.outputs.image }}
+            ghcr.io/${{ needs.version-info.outputs.repo }}
           labels: |
             org.opencontainers.image.created=${{ env.CI_JOB_TIMESTAMP }}
             org.opencontainers.image.version=${{ needs.version-info.outputs.version_tag }}
@@ -105,8 +103,8 @@ jobs:
           cache-from: |
             type=gha,scope=build-project-deps-linux-amd64
             type=gha,scope=build-project-deps-linux-arm64
-          cache-to: type=gha,mode=max,scope=build-project-deps-${{ env.PLATFORM_PAIR }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          cache-to: type=gha,mode=max,scope=build-project-deps-${{ matrix.runner }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ ! github.event.pull_request.head.repo.fork }}
 
       - name: Export digest
         run: |
@@ -117,7 +115,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ matrix.runner }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -155,10 +153,7 @@ jobs:
         with:
           images: ghcr.io/${{ needs.version-info.outputs.image }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern=${{ needs.version-info.outputs.version_tag }}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ needs.version-info.outputs.version_tag }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
