@@ -25,21 +25,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Image name
-        id: vars
-        run: |
-
       - name: set outputs
         id: set_outputs
         run: |
           export REPO="${{ github.repository }}"
-          IMAGE="${REPO,,}"
-          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
+          REPO="${REPO,,}"
+          echo "REPO=${REPO}" >> $GITHUB_ENV
           export SDIST_VERSION=$(python -m setuptools_scm)
           SDIST_VERSION=${SDIST_VERSION:-dev}
           echo "version=${SDIST_VERSION}" >> $GITHUB_OUTPUT
           echo "version_tag=${SDIST_VERSION/+/_}" >> $GITHUB_OUTPUT
-          echo "image=${{ env.IMAGE }}" >> $GITHUB_OUTPUT
           echo "Version number: ${SDIST_VERSION}"
 
   dockerize:
@@ -151,7 +146,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ needs.version-info.outputs.image }}
+          images: ghcr.io/${{ needs.version-info.outputs.repo }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version_tag }}
 
@@ -159,18 +154,18 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'ghcr.io/${{ needs.version-info.outputs.image }}@sha256:%s ' *)
+            $(printf 'ghcr.io/${{ needs.version-info.outputs.repo }}@sha256:%s ' *)
 
       - name: Add test tag
         if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
         uses: akhilerm/tag-push-action@v2.2.0
         with:
-          src: ghcr.io/${{ needs.version-info.outputs.image }}
-          dst: ghcr.io/${{ env.REPO }}:test
+          src: ghcr.io/${{ needs.version-info.outputs.repo }}
+          dst: ghcr.io/${{ needs.version-info.outputs.repo }}:test
 
       - name: Add latest tag
         if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
         uses: akhilerm/tag-push-action@v2.2.0
         with:
-          src: ghcr.io/${{ needs.version-info.outputs.image }}
-          dst: ghcr.io/${{ env.REPO }}:latest
+          src: ghcr.io/${{ needs.version-info.outputs.repo }}
+          dst: ghcr.io/${{ needs.version.info.outputs.repo }}:latest
