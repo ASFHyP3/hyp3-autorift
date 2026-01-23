@@ -38,10 +38,12 @@ from urllib.parse import urlparse
 
 import boto3
 import numpy as np
+import pandas as pd
 import pyproj
 import xarray as xr
 from dateutil.parser import parse as parse_dt
 from hyp3lib.aws import upload_file_to_s3
+from tqdm.auto import tqdm
 
 from hyp3_autorift import utils
 
@@ -253,6 +255,82 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds.to_netcdf(cropped_file, engine='h5netcdf', unlimited_dims=['time'], encoding=encoding)
 
     return cropped_file
+
+
+def _nullable_int(argument_string: str) -> int | None:
+    argument_string = argument_string.replace('None', '').strip()
+    return int(argument_string) if argument_string else None
+
+
+def bulk():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '--granules-parquet',
+        default='s3://its-live-data/test-space/stac/granules_to_recrop.parquet',
+        help='URI to a parquet file containing granule URIs to generate metadata for',
+    )
+
+    parser.add_argument(
+        '--start-idx', type=_nullable_int, default=0, help='Start index of the granules to generate metadata for.'
+    )
+    parser.add_argument(
+        '--stop-idx', type=_nullable_int, default=None, help='Stop index of the granules to generate metadata for.'
+    )
+    parser.add_argument('--keep', action='store_true', help='Keep all cropped and source granules on disk.')
+
+    hyp3_group = parser.add_argument_group(
+        'HyP3 content bucket',
+        'AWS S3 bucket and prefix to upload cropped product(s) to. Will also be used to find the input granule if '
+        '`netcdf_product` is not provided.',
+    )
+    hyp3_group.add_argument('--bucket')
+    hyp3_group.add_argument('--bucket-prefix', default='')
+
+    parser.add_argument(
+        '--publish-bucket',
+        type=utils.nullable_string,
+        default=None,
+        help='Additionally, publish products to this bucket. Necessary credentials must be provided '
+        'via the `PUBLISH_ACCESS_KEY_ID` and `PUBLISH_SECRET_ACCESS_KEY` environment variables.',
+    )
+
+    args = parser.parse_args()
+
+    df = pd.read_parquet(args.granules_parquet, engine='pyarrow')
+
+    s3 = boto3.client('s3')
+    for granule_bucket, granule_key in tqdm(
+        df.loc[args.start_idx : args.stop_idx, ['bucket', 'key']].itertuples(index=False), initial=args.start_idx
+    ):
+        print(f'Cropping and chunk-aligning s3://{args.publish_bucket}/{granule_key}')
+
+        if granule_key.endswith('_P000.nc'):
+            print(f'Cannot crop product with no valid data: s3://{granule_bucket}/{granule_key}')
+            continue
+
+        netcdf_file = Path.cwd() / Path(granule_key).name
+
+        s3.download_file(Bucket=granule_bucket, Key=granule_key, Filename=netcdf_file)
+
+        cropped = crop_netcdf_product(netcdf_file)
+
+        print(f'Saved the cropped and chunk-aligned product to {cropped}')
+
+        if args.publish_bucket:
+            print(f'Publishing the cropped and chunk-aligned product to s3://{args.publish_bucket}/{granule_key}')
+            utils.upload_file_to_s3_with_publish_access_keys(
+                cropped, args.publish_bucket, str(Path(granule_key).parent), s3_name=netcdf_file.name
+            )
+
+        if not args.keep:
+            cropped.unlink()
+            netcdf_file.unlink(missing_ok=True)
+
+    if args.bucket:
+        cropped_granules = Path.cwd() / f'{Path(args.granules_parquet).stem}_{args.start_idx}-{args.stop_idx}.csv'
+        df.loc[args.start_idx : args.stop_idx, ['bucket', 'key']].to_csv(cropped_granules)
+        print(f'Uploaded CSV of cropped and chunk-aligned products to s3://{args.bucket}/{args.bucket_prefix}')
+        upload_file_to_s3(cropped_granules, args.bucket, args.bucket_prefix)
 
 
 def main():
