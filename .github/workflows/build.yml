@@ -159,12 +159,12 @@ jobs:
         if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
         uses: akhilerm/tag-push-action@v2.2.0
         with:
-          src: ghcr.io/${{ needs.version-info.outputs.repo }}
+          src: ghcr.io/${{ needs.version-info.outputs.repo }}:${{ needs.version-info.outputs.version_tag }}
           dst: ghcr.io/${{ needs.version-info.outputs.repo }}:test
 
       - name: Add latest tag
         if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
         uses: akhilerm/tag-push-action@v2.2.0
         with:
-          src: ghcr.io/${{ needs.version-info.outputs.repo }}
+          src: ghcr.io/${{ needs.version-info.outputs.repo }}:${{ needs.version-info.outputs.version_tag }}
           dst: ghcr.io/${{ needs.version.info.outputs.repo }}:latest
