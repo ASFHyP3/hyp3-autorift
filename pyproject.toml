@@ -7,6 +7,7 @@ name = "hyp3_autorift"
 requires-python = ">=3.10"
 authors = [
     {name="ASF APD/Tools Team", email="uaf-asf-apd@alaska.edu"},
+    {name="ASF SciDev Team", email="uaf-asf-scidev@alaska.edu"},
 ]
 description = "A HyP3 plugin for feature tracking processing with AutoRIFT-ISCE"
 readme = "README.md"
@@ -34,10 +35,12 @@ dependencies = [
     'netCDF4',
     'numpy>=1.20',
     'pandas>=1.4',
+    'pyarrow',
     'pyproj>=3.3',
     'python-dateutil',
     'requests>=2.0',
     'scipy>=1.0',
+    'tqdm',
     'xarray',
 ]
 dynamic = ["version"]
@@ -58,6 +61,7 @@ develop = [
 [project.scripts]
 hyp3_autorift = "hyp3_autorift.process:main"
 crop_netcdf_product = "hyp3_autorift.crop:main"
+bulk_crop_netcdf_product = "hyp3_autorift.crop:bulk"
 
 [project.urls]
 Homepage = "https://github.com/ASFHyP3/hyp3-autorift"
@@ -131,9 +135,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
 [tool.pixi.pypi-options]
-no-build-isolation = [
-    'isce3',
-]
+no-build-isolation = ['isce3']
 
 [tool.pixi.dependencies]
 pip = "*"

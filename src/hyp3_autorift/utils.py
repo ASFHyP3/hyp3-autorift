@@ -182,6 +182,14 @@ def nullable_string(argument_string: str) -> str | None:
     return argument_string if argument_string else None
 
 
+def nullable_int(argument_string: str) -> int | None:
+    processed_string = argument_string.replace('None', '').strip()
+    if not processed_string:
+        return None
+    else:
+        return int(processed_string)
+
+
 def nullable_granule_list(granule_string: str) -> list[str]:
     granule_string = granule_string.replace('None', '').strip()
     granule_list = [granule for granule in granule_string.split(' ') if granule]
