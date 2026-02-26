@@ -1061,65 +1061,6 @@ def netCDF_packaging(
         else:
             stable_shift_applied_p = 1
 
-        var = nc_outfile.createVariable(
-            'M11',
-            np.dtype('float32'),
-            ('y', 'x'),
-            fill_value=NoDataValue,
-            zlib=True,
-            complevel=2,
-            shuffle=True,
-            chunksizes=ChunkSize,
-        )
-        var.setncattr('standard_name', 'conversion_matrix_element_11')
-        var.setncattr(
-            'description',
-            'conversion matrix element (1st row, 1st column) that can be multiplied with vx '
-            'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)',
-        )
-        var.setncattr('units', 'pixel/(meter/year)')
-        var.setncattr('grid_mapping', mapping_var_name)
-        var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
-        var.setncattr(
-            'dr_to_vr_factor_description',
-            'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr',
-        )
-
-        M11 = offset2vy_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) / scale_factor_1
-
-        M11[noDataMask] = NoDataValue
-        var[:] = M11
-
-        var = nc_outfile.createVariable(
-            'M12',
-            np.dtype('float32'),
-            ('y', 'x'),
-            fill_value=NoDataValue,
-            zlib=True,
-            complevel=2,
-            shuffle=True,
-            chunksizes=ChunkSize,
-        )
-        var.setncattr('standard_name', 'conversion_matrix_element_12')
-        var.setncattr(
-            'description',
-            'conversion matrix element (1st row, 2nd column) that can be multiplied with vy '
-            'to give range pixel displacement dr (see Eq. A18 in https://www.mdpi.com/2072-4292/13/4/749)',
-        )
-        var.setncattr('units', 'pixel/(meter/year)')
-        var.setncattr('grid_mapping', mapping_var_name)
-
-        var.setncattr('dr_to_vr_factor', dr_2_vr_factor)
-        var.setncattr(
-            'dr_to_vr_factor_description',
-            'multiplicative factor that converts slant range pixel displacement dr to slant range velocity vr',
-        )
-
-        M12 = -offset2vx_2 / (offset2vx_1 * offset2vy_2 - offset2vx_2 * offset2vy_1) / scale_factor_1
-
-        M12[noDataMask] = NoDataValue
-        var[:] = M12
-
     var = nc_outfile.createVariable(
         'chip_size_width',
         np.dtype('uint16'),
