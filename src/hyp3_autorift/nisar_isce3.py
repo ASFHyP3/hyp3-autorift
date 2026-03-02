@@ -275,31 +275,19 @@ def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_
         print(f'Preprocessing Block {row / block_size}')
 
         start = time.time()
-        is_last_row = False
         if row + block_size > num_rows:
             block_size = num_rows - row
-            is_last_row = True
-
-        # Add padding to avoid edge artifacts along the stitching boundaries
-        front_padding = 0
-        back_padding = 0
-        # if row != 0:
-        #     front_padding = wallis_filter_width
-        # if not is_last_row:
-        #     back_padding = wallis_filter_width
-        offset_padded = row - front_padding
-        y_size_padded = front_padding + block_size + back_padding
 
         encoded = band.ReadRaster(
             xoff=0,
-            yoff=offset_padded,
+            yoff=row,
             xsize=num_cols,
-            ysize=y_size_padded,
+            ysize=block_size,
             buf_xsize=num_cols,
-            buf_ysize=y_size_padded,
+            buf_ysize=block_size,
             buf_type=gdal.GDT_CFloat32
         )
-        img = np.abs(np.frombuffer(encoded, np.complex64)).reshape((y_size_padded, num_cols)).astype(np.float32)
+        img = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
         end = time.time()
         print(f'Reading SLC Block took {end-start}s')
 
@@ -330,7 +318,7 @@ def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_
 
         print(f'Row: {row}')
 
-        out_band.WriteArray(img[front_padding:block_size+front_padding], xoff=0, yoff=row)
+        out_band.WriteArray(img[:block_size], xoff=0, yoff=row)
 
 
 def download_product(granule_name: str):
