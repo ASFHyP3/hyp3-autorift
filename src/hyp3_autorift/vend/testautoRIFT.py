@@ -306,7 +306,7 @@ def runAutorift(
     obj.MultiThread = mpflag
 
     # Radar images are loaded during uniform datatype processing to save memory
-    if optflag == 1:
+    if optflag == 1 and not nisar_flag:
         obj.I1, obj.I2 = loadProductOptical(indir_m, indir_s)
     else:
         obj.I1 = loadProduct(indir_m, nisar_flag)
@@ -696,7 +696,7 @@ def generateAutoriftProduct(
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 
-        nisar_flag = nc_sensor == 'NISAR'
+        nisar_flag = nc_sensor.startswith('NISAR')
         (
             Dx,
             Dy,
@@ -1152,7 +1152,7 @@ def generateAutoriftProduct(
                         error_vector,
                         parameter_file=kwargs['parameter_file'],
                     )
-                if nc_sensor == 'NISAR':
+                if nc_sensor.startswith('NISAR'):
                     if geogrid_run_info is None:
                         gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
                         rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
@@ -1169,6 +1169,7 @@ def generateAutoriftProduct(
                     # TODO: This will need to take into account NISAR's naming convention
                     # to sort reference/secondary
                     rslcs = glob.glob('*.h5')
+                    assert len(rslcs) == 2
 
                     if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11][:8]):
                         master_filename = rslcs[0]
@@ -1177,18 +1178,24 @@ def generateAutoriftProduct(
                         master_filename = rslcs[1]
                         slave_filename = rslcs[0]
 
-                    assert len(rslcs) == 2
-                    master_meta = loadMetadataRslc(master_filename)
-                    slave_meta = loadMetadataRslc(slave_filename)
+                    if nc_sensor.endswith('GSLC'):
+                        from hyp3_autorift.nisar_isce3 import GSLCMetadata
+
+                        master_meta = GSLCMetadata('reference_cropped.tif', master_filename)
+                        slave_meta =  GSLCMetadata('secondary_cropped.tif', slave_filename)
+                        pair_type = 'optical'
+                        coordinates = 'map'
+                    else:
+                        master_meta = loadMetadataRslc(master_filename)
+                        slave_meta = loadMetadataRslc(slave_filename)
+                        pair_type = 'radar'
+                        coordinates = 'radar, map'
 
                     master_dt = master_meta.sensingStart
                     slave_dt = slave_meta.sensingStart
                     master_split = str.split(master_filename, '_')
                     slave_split = str.split(slave_filename, '_')
-
-                    pair_type = 'radar'
                     detection_method = 'feature'
-                    coordinates = 'radar, map'
                     if np.sum(SEARCHLIMITX != 0) != 0:
                         roi_valid_percentage = (
                             int(round(np.sum(CHIPSIZEX != 0) / np.sum(SEARCHLIMITX != 0) * 1000.0)) / 1000
