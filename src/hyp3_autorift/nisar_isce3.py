@@ -4,11 +4,9 @@ Prototyping the usage of NISAR data with autoRIFT
 
 import argparse
 import copy
-import tempfile
 import time
-import subprocess
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 import asf_search as asf
 import cv2
@@ -17,8 +15,8 @@ from hyp3lib.dem import prepare_dem_geotiff
 from nisar.products.readers import product
 from nisar.workflows import geo2rdr, rdr2geo, resample_slc
 from numpy import datetime64, timedelta64
-from shapely import Polygon
 from osgeo import gdal, ogr, osr
+from shapely import Polygon
 
 from hyp3_autorift import utils
 from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
@@ -34,6 +32,7 @@ def get_config(
     frequency: str = 'A',
     polarization: str = 'HH',
 ):
+    """Get the runconfig for co-registering a NISAR RSLC pair using ISCE3."""
     config = {
         'input_file_group': {'reference_rslc_file': reference_path, 'secondary_rslc_file': secondary_path},
         'dynamic_ancillary_file_group': {
@@ -78,7 +77,10 @@ def get_config(
     return config
 
 
-def get_scene_polygon(reference_path: str, epsg_code: int = 4326, bounds_from_ds: bool = False, return_in_utm: bool = False) -> ogr.Geometry:
+def get_scene_polygon(
+    reference_path: str, epsg_code: int = 4326, bounds_from_ds: bool = False, return_in_utm: bool = False
+) -> ogr.Geometry:
+    """Get the bounding polygon for a NISAR product."""
     filename = f'NETCDF:{reference_path}://science/LSAR/GSLC/grids/frequencyA/HH'
     if bounds_from_ds:
         ds = gdal.Open(filename)
@@ -114,18 +116,16 @@ def get_scene_polygon(reference_path: str, epsg_code: int = 4326, bounds_from_ds
 
 
 def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
+    """Download a DEM covering a given polygon."""
     return str(
         prepare_dem_geotiff(
-            output_name=dem_path,
-            geometry=scene_poly,
-            epsg_code=4326,
-            pixel_size=0.001,
-            height_above_ellipsoid=True
+            output_name=dem_path, geometry=scene_poly, epsg_code=4326, pixel_size=0.001, height_above_ellipsoid=True
         )
     )
 
 
 def mock_s1_orbit_file(reference_path: str) -> str:
+    """Create a mock Sentinel-1 Orbit file from the orbit info in a NISAR product."""
     orbit_path = Path(reference_path).with_suffix('.EOF')
     ds = product.open_product(reference_path)
     orbit = ds.getOrbit()
@@ -166,11 +166,12 @@ def mock_s1_orbit_file(reference_path: str) -> str:
 
 
 def get_epsg_code(ds):
+    """Get the EPSG code from a gdal dataset."""
     wkt = ds.GetProjection()
     srs = osr.SpatialReference()
     srs.ImportFromWkt(wkt)
     srs.AutoIdentifyEPSG()
-    return int(srs.GetAuthorityCode("PROJCS"))
+    return int(srs.GetAuthorityCode('PROJCS'))
 
 
 def get_bounds(ds):
@@ -188,20 +189,19 @@ def get_bounds(ds):
 
 
 def srcwin_for_intersection(xmin, ymin, xmax, ymax, gt):
-        px_w = gt[1]
-        px_h = gt[5]
+    """Create a srcwin from bounds and a geotransform."""
+    px_w = gt[1]
+    px_h = gt[5]
 
-        xoff = int(round((xmin - gt[0]) / px_w))
-        yoff = int(round((ymax - gt[3]) / px_h))
+    xoff = int(round((xmin - gt[0]) / px_w))
+    yoff = int(round((ymax - gt[3]) / px_h))
 
-        xsize = int(round((xmax - xmin) / px_w))
-        ysize = int(round((ymin - ymax) / px_h))
+    xsize = int(round((xmax - xmin) / px_w))
+    ysize = int(round((ymin - ymax) / px_h))
 
-        return xoff, yoff, xsize, ysize
+    return xoff, yoff, xsize, ysize
 
 
-# TODO: The images should probably both just be cropped to the reference's `scene_poly`
-# TODO: Do we even need to do cropping? The pairs seem to have the same dimensions.
 def crop_gslcs(reference, secondary):
     """Crop the reference and secondary GeoTIFFs to their overlap."""
     geom = get_scene_polygon(reference_path=reference, bounds_from_ds=False)
@@ -240,13 +240,11 @@ def crop_gslcs(reference, secondary):
     gdal.Translate(out1, ds1, srcWin=[xoff1, yoff1, xsize1, ysize1])
     gdal.Translate(out2, ds2, srcWin=[xoff2, yoff2, xsize2, ysize2])
 
-    print(f'Cropped the reference and secondary images to their intersection.')
+    print('Cropped the reference and secondary images to their intersection.')
 
     return out1, out2
 
 
-
-# TODO: Try the GSLC version with the RSLC and see if it was any different
 def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21, is_gslc: bool = False):
     """Convert CFloat32 rslc image to uint8 amplitude data, and write it to a GeoTIFF file."""
     ds = gdal.Open(in_filename, gdal.GA_ReadOnly)
@@ -285,11 +283,11 @@ def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_
             ysize=block_size,
             buf_xsize=num_cols,
             buf_ysize=block_size,
-            buf_type=gdal.GDT_CFloat32
+            buf_type=gdal.GDT_CFloat32,
         )
         img = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
         end = time.time()
-        print(f'Reading SLC Block took {end-start}s')
+        print(f'Reading SLC Block took {end - start}s')
 
         print('Setting Invalid to 0')
         if is_gslc:
@@ -322,6 +320,7 @@ def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_
 
 
 def download_product(granule_name: str):
+    """Download a NISAR product using asf_search."""
     res = asf.granule_search([granule_name])
 
     if len(res) == 0:
@@ -330,48 +329,20 @@ def download_product(granule_name: str):
     res.download(path='.')
 
 
-def download_static_files() -> bool:
-    raise NotImplementedError('Static files are not implement yet for NISAR.')
-
-
-def upload_static_files() -> bool:
-    raise NotImplementedError('Static files are not implemented yet for NISAR.')
-
-
-def run_isce3_without_static_files(
+def run_isce3(
     reference: str,
     secondary: str,
     dem: str,
     resample_type: str,
 ):
-    run_cfg = get_config(
-        reference_path=reference, secondary_path=secondary, dem_path=dem, resample_type=resample_type
-    )
+    """Use ISCE3 to co-register a NISAR RSLC pair."""
+    run_cfg = get_config(reference_path=reference, secondary_path=secondary, dem_path=dem, resample_type=resample_type)
 
     print(f'ISCE3 Config: {run_cfg}')
 
     rdr2geo.run(run_cfg)
     geo2rdr.run(run_cfg)
     resample_slc.run(run_cfg, resample_type)
-
-
-def run_isce3(
-    reference: str,
-    secondary: str,
-    dem: str,
-    resample_type: str,
-    use_static_files: bool = False,
-    static_files_bucket: str = '',
-):
-    if use_static_files and download_static_files(static_files_bucket):
-        raise NotImplementedError('Static files are not implemented yet for NISAR.')
-
-    run_isce3_without_static_files(
-        reference=reference,
-        secondary=secondary,
-        dem=dem,
-        resample_type=resample_type,
-    )
 
 
 class GSLCMetadata:
@@ -402,6 +373,7 @@ def process_nisar_rslc(
     frequency: str = 'A',
     polarization: str = 'HH',
 ):
+    """Run autoRIFT processing on a NISAR RSLC pair."""
     download_product(reference)
     download_product(secondary)
 
@@ -426,8 +398,6 @@ def process_nisar_rslc(
         secondary=secondary,
         dem=dem_path,
         resample_type=resample_type,
-        use_static_files=False,
-        static_files_bucket=None
     )
 
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE, flip_point=False)
@@ -471,7 +441,7 @@ def process_nisar_rslc(
     netcdf_file = generateAutoriftProduct(
         ref_amplitude_path,
         sec_amplitude_path,
-        nc_sensor='NISAR_RSLC', # TODO:
+        nc_sensor='NISAR_RSLC',  # TODO:
         optical_flag=False,
         ncname=None,
         geogrid_run_info=geogrid_info,
@@ -488,6 +458,7 @@ def process_nisar_gslc(
     frequency: str = 'A',
     polarization: str = 'HH',
 ):
+    """Run autoRIFT processing on a NISAR GSLC pair."""
     download_product(reference)
     download_product(secondary)
 
@@ -516,10 +487,7 @@ def process_nisar_gslc(
     ref_amplitude = 'reference_adjusted.tif'
     sec_amplitude = 'secondary_adjusted.tif'
 
-    paths = [
-        (ref_cropped, ref_amplitude),
-        (sec_cropped, sec_amplitude)
-    ]
+    paths = [(ref_cropped, ref_amplitude), (sec_cropped, sec_amplitude)]
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
         start_time = time.time()
@@ -557,7 +525,31 @@ def process_nisar_gslc(
     return netcdf_file
 
 
+def process_nisar_pair(
+    reference: str,
+    secondary: str,
+    frequency: str = 'A',
+    polarization: str = 'HH',
+):
+    """Run autoRIFT processing on a NISAR SLC pair."""
+    if 'RSLC' in reference:
+        process_nisar_rslc(
+            reference=reference,
+            secondary=secondary,
+            frequency=frequency,
+            polarization=polarization,
+        )
+    elif 'GSLC' in reference:
+        process_nisar_gslc(
+            reference=reference,
+            secondary=secondary,
+            frequency=frequency,
+            polarization=polarization,
+        )
+
+
 def main():
+    """CLI entrypoint for autoRIFT processing on a NISAR SLC pair."""
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '--reference',
@@ -580,20 +572,21 @@ def main():
 
     if 'RSLC' in reference:
         process_nisar_rslc(
-            reference = reference,
-            secondary = secondary,
-            frequency = 'A',
-            polarization = 'HH',
+            reference=reference,
+            secondary=secondary,
+            frequency='A',
+            polarization='HH',
         )
     elif 'GSLC' in reference:
         process_nisar_gslc(
-            reference = reference,
-            secondary = secondary,
-            frequency = 'A',
-            polarization = 'HH',
+            reference=reference,
+            secondary=secondary,
+            frequency='A',
+            polarization='HH',
         )
     else:
         raise ValueError('Unsupported product type.')
+
 
 if __name__ == '__main__':
     main()
