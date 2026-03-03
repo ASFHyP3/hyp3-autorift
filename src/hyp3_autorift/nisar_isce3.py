@@ -465,7 +465,7 @@ def process_nisar_rslc(
     netcdf_file = generateAutoriftProduct(
         ref_amplitude_path,
         sec_amplitude_path,
-        nc_sensor='NISAR_RSLC',  # TODO:
+        nc_sensor='NISAR_RSLC',
         optical_flag=False,
         ncname=None,
         geogrid_run_info=geogrid_info,
