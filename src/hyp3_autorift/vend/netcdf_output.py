@@ -702,7 +702,6 @@ def netCDF_packaging(
         vy_error = vy_error_mod
 
     print(f'Error Vector: {error_vector}')
-    print(f'Date: {IMG_INFO_DICT['date_dt']}')
     print(f'Stable Shift Applied: {stable_shift_applied}')
     print(f'Vy Error Mask: {vy_error_mask}')
     print(f'Vy Error Slow: {vy_error_slow}')
