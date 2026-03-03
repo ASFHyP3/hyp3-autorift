@@ -260,7 +260,6 @@ def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
     print(f'Number of Lines: {info.numberOfLines}')
     print(f'Number of Samples: {info.numberOfSamples}')
 
-    # TODO: `orbit_path` needs to be a mock Sentinel-1 formatted orbit file.
     info.orbitname = orbit_path
     info.orbit = rslc.getOrbit()
     info.orbitPassDirection = rslc.identification.orbitPassDirection
