@@ -701,8 +701,6 @@ def netCDF_packaging(
     else:
         vy_error = vy_error_mod
 
-    # HERE
-
     print(f'Error Vector: {error_vector}')
     print(f'Date: {IMG_INFO_DICT['date_dt']}')
     print(f'Stable Shift Applied: {stable_shift_applied}')
@@ -767,8 +765,6 @@ def netCDF_packaging(
         var.setncattr('stable_shift_slow', np.nan)
     var.setncattr('stable_count_slow', stable_count1)
 
-    # END HERE
-
     VY[noDataMask] = NoDataValue
     var[:] = np.round(np.clip(VY, -32768, 32767)).astype(np.int16)
 
@@ -800,7 +796,6 @@ def netCDF_packaging(
         shuffle=True,
         chunksizes=ChunkSize,
     )
-    # HERE
 
     var.setncattr('standard_name', 'velocity_error')
     if pair_type == 'radar':
@@ -809,8 +804,6 @@ def netCDF_packaging(
         var.setncattr('description', 'velocity magnitude error')
     var.setncattr('units', 'meter/year')
     var.setncattr('grid_mapping', mapping_var_name)
-
-    # END HERE
 
     v_error = v_error_cal(vx_error, vy_error)
     V_error = np.sqrt((vx_error * VX / V) ** 2 + (vy_error * VY / V) ** 2)
@@ -830,14 +823,10 @@ def netCDF_packaging(
             chunksizes=ChunkSize,
         )
 
-        # HERE
-
         var.setncattr('standard_name', 'range_velocity')
         var.setncattr('description', 'velocity in radar range direction')
         var.setncattr('units', 'meter/year')
         var.setncattr('grid_mapping', mapping_var_name)
-
-        # END HERE
 
         if stable_count != 0:
             temp = VR.copy() - VRref.copy()
