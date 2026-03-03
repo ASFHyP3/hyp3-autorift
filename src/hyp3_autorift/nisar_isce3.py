@@ -77,11 +77,37 @@ def get_config(
     return config
 
 
+def polygon_from_envelope(geom) -> ogr.Geometry:
+    """Create a polygon from the given polygons envelope.
+    
+    Args:
+        geom: An OGR geometry object
+    """
+    minx, maxx, miny, maxy = geom.GetEnvelope()
+
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(minx, miny)
+    ring.AddPoint(maxx, miny)
+    ring.AddPoint(maxx, maxy)
+    ring.AddPoint(minx, maxy)
+    ring.AddPoint(minx, miny)  # close ring
+
+    poly = ogr.Geometry(ogr.wkbPolygon)
+    poly.AddGeometry(ring)
+
+    return poly
+
+
 def get_scene_polygon(
-    reference_path: str, epsg_code: int = 4326, bounds_from_ds: bool = False, return_in_utm: bool = False
+    reference_path: str,
+    epsg_code: int = 4326,
+    bounds_from_ds: bool = False,
+    return_in_utm: bool = False,
+    geom_from_envelope: bool = False,
 ) -> ogr.Geometry:
     """Get the bounding polygon for a NISAR product."""
     filename = f'NETCDF:{reference_path}://science/LSAR/GSLC/grids/frequencyA/HH'
+
     if bounds_from_ds:
         ds = gdal.Open(filename)
         xmin, ymin, xmax, ymax, _ = get_bounds(ds)
@@ -103,7 +129,8 @@ def get_scene_polygon(
         out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
         transform = osr.CoordinateTransformation(srs, out_srs)
         geom.Transform(transform)
-    elif not bounds_from_ds and return_in_utm:
+
+    if not bounds_from_ds and return_in_utm:
         ds = gdal.Open(filename)
         epsg_code = get_epsg_code(ds)
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
@@ -111,6 +138,11 @@ def get_scene_polygon(
         out_srs.ImportFromEPSG(epsg_code)
         transform = osr.CoordinateTransformation(srs, out_srs)
         geom.Transform(transform)
+
+    # The polygon provided by `slc.identification.boundingPolygon` can be fairly complicated, 
+    # so creating a more simple polygon from it's envelope may be helpful.
+    if geom_from_envelope:
+        geom = polygon_from_envelope(geom)
 
     return geom
 
@@ -204,25 +236,13 @@ def srcwin_for_intersection(xmin, ymin, xmax, ymax, gt):
 
 def crop_gslcs(reference, secondary):
     """Crop the reference and secondary GeoTIFFs to their overlap."""
-    geom = get_scene_polygon(reference_path=reference, bounds_from_ds=False)
+    geom = get_scene_polygon(reference_path=reference, bounds_from_ds=False, return_in_utm=True, geom_from_envelope=True)
 
     reference = f'NETCDF:{reference}://science/LSAR/GSLC/grids/frequencyA/HH'
     secondary = f'NETCDF:{secondary}://science/LSAR/GSLC/grids/frequencyA/HH'
 
     ds1 = gdal.Open(reference)
     ds2 = gdal.Open(secondary)
-
-    epsg_code = get_epsg_code(ds1)
-
-    in_srs = osr.SpatialReference()
-    in_srs.ImportFromEPSG(4326)
-    in_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-
-    out_srs = osr.SpatialReference()
-    out_srs.ImportFromEPSG(epsg_code)
-
-    transform = osr.CoordinateTransformation(in_srs, out_srs)
-    geom.Transform(transform)
 
     xmin, xmax, ymin, ymax = geom.GetEnvelope()
 
@@ -258,13 +278,13 @@ def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_
     driver = gdal.GetDriverByName('GTIFF')
     out_ds = driver.Create(out_filename, xsize=num_cols, ysize=num_rows, bands=1, eType=gdal.GDT_Byte)
 
-    if gt:
-        out_ds.SetGeoTransform(gt)
-    if proj:
-        out_ds.SetProjection(proj)
+    if is_gslc:
+        if gt:
+            out_ds.SetGeoTransform(gt)
+        if proj:
+            out_ds.SetProjection(proj)
 
     out_band = out_ds.GetRasterBand(1)
-    out_band.SetNoDataValue(0)
 
     block_size = 10000
 
@@ -388,7 +408,7 @@ def process_nisar_rslc(
     print(f'Resample type: {resample_type}')
 
     scene_poly = get_scene_polygon(reference)
-    dem_path = get_dem(scene_poly)
+    dem_path = 'dem.tif' # get_dem(scene_poly)
 
     print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
@@ -400,11 +420,13 @@ def process_nisar_rslc(
         resample_type=resample_type,
     )
 
+    print(f'Centroid: {scene_poly.Centroid()}')
+
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE, flip_point=False)
 
     print(f'Paramenter Info: {parameter_info}')
 
-    reference_data_path = f'NETCDF:{reference}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
+    reference_data_path = f'HDF5:{reference}://science/LSAR/RSLC/swaths/frequency{frequency}/{polarization}'
     secondary_data_path = f'scratch/coarse_resample_slc/freq{frequency}/{polarization}/coregistered_secondary.slc'
 
     ref_amplitude_path = 'reference.tif'
@@ -470,7 +492,7 @@ def process_nisar_gslc(
     print(f'Frequency: {frequency}')
     print(f'Polarization: {polarization}')
 
-    scene_poly = get_scene_polygon(reference, bounds_from_ds=False, return_in_utm=True)
+    scene_poly =  get_scene_polygon(reference_path=reference, bounds_from_ds=False, return_in_utm=False, geom_from_envelope=True)
 
     print(f'Scene Polygon: {scene_poly}')
 
