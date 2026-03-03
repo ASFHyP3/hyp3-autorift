@@ -227,21 +227,35 @@ def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
     slant_ranges = metadata.slant_range
     info.startingRange = slant_ranges[0]
     info.farRange = slant_ranges[-1]
+
     info.rangePixelSize = metadata.range_pixel_spacing
+
     info.startingRange -= buffer * info.rangePixelSize
     info.farRange += buffer * info.rangePixelSize
 
+    print(f'Starting Range: {info.startingRange}')
+    print(f'Far Range: {info.farRange}')
+    print(f'Pixel Size: {info.rangePixelSize}')
+
     info.wavelength = metadata.processed_wavelength
-    info.prf = metadata.nominal_acquisition_prf
+
+    info.zero_doppler_time_spacing = metadata.zero_doppler_time_spacing
+    info.prf = 1.0 / info.zero_doppler_time_spacing
 
     info.sensingStart = datetime.strptime(str(rslc.identification.zdStartTime)[:-3], "%Y-%m-%dT%H:%M:%S.%f")
     info.aztime = float((isce3.core.DateTime(info.sensingStart) -  metadata.ref_epoch).total_seconds())
     info.sensingStop = datetime.strptime(str(rslc.identification.zdEndTime)[:-3], "%Y-%m-%dT%H:%M:%S.%f")
 
+    print(f'PRF: {info.prf}')
+    print(f'Aquisition Time: {float((info.sensingStop - info.sensingStart).total_seconds())}')
+
     info.lookSide = isce3.core.LookSide.Left
 
     info.numberOfLines = metadata.lines
     info.numberOfSamples = metadata.samples
+
+    print(f'Number of Lines: {info.numberOfLines}')
+    print(f'Number of Samples: {info.numberOfSamples}')
 
     # TODO: `orbit_path` needs to be a mock Sentinel-1 formatted orbit file.
     info.orbitname = orbit_path
