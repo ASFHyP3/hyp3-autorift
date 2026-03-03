@@ -650,6 +650,46 @@ def generateAutoriftProduct(
         band = None
         ds = None
 
+    if chip_size_min is None and 'ChipSizeX' in kwargs:
+        print(f"Using static chip size {kwargs['ChipSizeX']} from kwargs (creating arrays manually).")
+
+        if xGrid is None:
+            raise Exception("Cannot set static chip size: grid_location (xGrid) is not loaded.")
+
+        # Get the static chip size value
+        static_chip_x = int(kwargs['ChipSizeX'])
+        static_chip_y = int(kwargs.get('ChipSizeY', static_chip_x))  # Default to square
+
+        # Create the constant arrays for CSMIN and CSMAX
+        CSMINx0 = np.full(xGrid.shape, static_chip_x, dtype=np.int32)
+        CSMINy0 = np.full(xGrid.shape, static_chip_y, dtype=np.int32)
+        CSMAXx0 = np.full(xGrid.shape, static_chip_x, dtype=np.int32)
+        CSMAXy0 = np.full(xGrid.shape, static_chip_y, dtype=np.int32)
+
+    # Static Search Range Override
+    if 'SearchLimitX' in kwargs and kwargs['SearchLimitX'] is not None:
+        print(f"Using static Search Range {kwargs['SearchLimitX']} from kwargs.")
+        
+        if xGrid is None:
+             raise Exception("Cannot set static search range: grid_location (xGrid) is not loaded.")
+
+        search_limit = int(kwargs['SearchLimitX'])
+        
+        # Overwrite the SRx0/SRy0 arrays with a constant array of our desired search range.
+        SRx0 = np.full(xGrid.shape, search_limit, dtype=np.float32)
+        SRy0 = np.full(xGrid.shape, search_limit, dtype=np.float32)
+
+    # Null Reference Velocity 
+    if kwargs.get('NullReferenceVelocity') is True:
+        print("Nullifying reference velocities to zero for unbiased search.")
+        
+        if xGrid is None:
+             raise Exception("Cannot reset reference velocities: grid_location (xGrid) is not loaded.")
+
+        # Overwrite Dx0 and Dy0 with zeros
+        Dx0 = np.zeros(xGrid.shape, dtype=np.float32)
+        Dy0 = np.zeros(xGrid.shape, dtype=np.float32)
+
     intermediate_nc_file = 'autoRIFT_intermediate.nc'
 
     if os.path.exists(intermediate_nc_file):
@@ -1029,8 +1069,8 @@ def generateAutoriftProduct(
                         epsg = geogrid_run_info['epsg']
 
                     conts = get_topsinsar_config()
-                    master_filename = conts['reference_filename']
-                    slave_filename = conts['secondary_filename']
+                    master_filename = Path(conts['reference_filename']).stem
+                    slave_filename = Path(conts['secondary_filename']).stem
                     master_dt = conts['reference_dt']
                     slave_dt = conts['secondary_dt']
                     master_split = str.split(master_filename, '_')
@@ -1047,18 +1087,9 @@ def generateAutoriftProduct(
                         raise Exception('Input search range is all zero everywhere, thus no search conducted')
                     PPP = roi_valid_percentage * 100
                     if ncname is None:
-                        if '.zip' in master_filename:
-                            out_nc_filename = (
-                                f'./{master_filename[0:-4]}_X_{slave_filename[0:-4]}'
-                                f'_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
-                            )
-                        elif '.SAFE' in master_filename:
-                            out_nc_filename = (
-                                f'./{master_filename[0:-5]}_X_{slave_filename[0:-5]}'
-                                f'_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
-                            )
-                    else:
-                        out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
+                        ncname = f'./{master_filename}_X_{slave_filename}'
+
+                    out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
                     d0 = datetime.strptime(master_dt, '%Y%m%dT%H:%M:%S.%f')
@@ -1072,8 +1103,8 @@ def generateAutoriftProduct(
                     date_center = date_ct.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
                     IMG_INFO_DICT = {
-                        'id_img1': master_filename[0:-4],
-                        'id_img2': slave_filename[0:-4],
+                        'id_img1': master_filename,
+                        'id_img2': slave_filename,
                         'absolute_orbit_number_img1': master_split[7],
                         'absolute_orbit_number_img2': slave_split[7],
                         'acquisition_date_img1': master_dt,
@@ -1084,8 +1115,8 @@ def generateAutoriftProduct(
                         'mission_data_take_ID_img2': slave_split[8],
                         'mission_img1': master_split[0][0],
                         'mission_img2': slave_split[0][0],
-                        'product_unique_ID_img1': master_split[9][0:4],
-                        'product_unique_ID_img2': slave_split[9][0:4],
+                        'product_unique_ID_img1': master_split[9],
+                        'product_unique_ID_img2': slave_split[9],
                         'satellite_img1': master_split[0][1:3],
                         'satellite_img2': slave_split[0][1:3],
                         'sensor_img1': 'C',

@@ -40,6 +40,8 @@ from s1reader import load_bursts
 
 from nisar.products.readers import product
 
+log = logging.getLogger(__name__)
+
 def cmdLineParse():
     """
     Command line parser.
@@ -368,6 +370,20 @@ def runGeogrid(
         obj.csmaxxname = csmaxx
         obj.csmaxyname = csmaxy
         obj.ssmname = ssm
+        # If chip size override is provided, use it
+        if 'ChipSizeX' in kwargs and kwargs['ChipSizeX'] is not None:
+            log.info(f"Geogrid: Overriding chip size with {kwargs['ChipSizeX']}")
+            # Set the integer-based properties on the object
+            obj.ChipSizeX = int(kwargs['ChipSizeX'])
+            if 'ChipSizeY' in kwargs and kwargs['ChipSizeY'] is not None:
+                obj.ChipSizeY = int(kwargs['ChipSizeY'])
+            else:
+                obj.ChipSizeY = int(kwargs['ChipSizeX'])
+            # Clear the tif-based properties to avoid conflicts
+            obj.csminxname = None
+            obj.csminyname = None
+            obj.csmaxxname = None
+            obj.csmaxyname = None
         obj.winlocname = 'window_location.tif'
         obj.winoffname = 'window_offset.tif'
         obj.winsrname = 'window_search_range.tif'
@@ -438,6 +454,20 @@ def runGeogrid(
         obj.csmaxxname = csmaxx
         obj.csmaxyname = csmaxy
         obj.ssmname = ssm
+        # If chip size override is provided, use it
+        if 'ChipSizeX' in kwargs and kwargs['ChipSizeX'] is not None:
+            log.info(f"Geogrid: Overriding chip size with {kwargs['ChipSizeX']}")
+            # Set the integer-based properties on the object
+            obj.ChipSizeX = int(kwargs['ChipSizeX'])
+            if 'ChipSizeY' in kwargs and kwargs['ChipSizeY'] is not None:
+                obj.ChipSizeY = int(kwargs['ChipSizeY'])
+            else:
+                obj.ChipSizeY = int(kwargs['ChipSizeX'])
+            # Clear the tif-based properties to avoid conflicts
+            obj.csminxname = None
+            obj.csminyname = None
+            obj.csmaxxname = None
+            obj.csmaxyname = None
         obj.winlocname = 'window_location.tif'
         obj.winoffname = 'window_offset.tif'
         obj.winsrname = 'window_search_range.tif'
