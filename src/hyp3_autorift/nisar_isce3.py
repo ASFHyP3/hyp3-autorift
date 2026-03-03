@@ -79,7 +79,7 @@ def get_config(
 
 def polygon_from_envelope(geom) -> ogr.Geometry:
     """Create a polygon from the given polygons envelope.
-    
+
     Args:
         geom: An OGR geometry object
     """
@@ -139,7 +139,7 @@ def get_scene_polygon(
         transform = osr.CoordinateTransformation(srs, out_srs)
         geom.Transform(transform)
 
-    # The polygon provided by `slc.identification.boundingPolygon` can be fairly complicated, 
+    # The polygon provided by `slc.identification.boundingPolygon` can be fairly complicated,
     # so creating a more simple polygon from it's envelope may be helpful.
     if geom_from_envelope:
         geom = polygon_from_envelope(geom)
@@ -236,7 +236,9 @@ def srcwin_for_intersection(xmin, ymin, xmax, ymax, gt):
 
 def crop_gslcs(reference, secondary):
     """Crop the reference and secondary GeoTIFFs to their overlap."""
-    geom = get_scene_polygon(reference_path=reference, bounds_from_ds=False, return_in_utm=True, geom_from_envelope=True)
+    geom = get_scene_polygon(
+        reference_path=reference, bounds_from_ds=False, return_in_utm=True, geom_from_envelope=True
+    )
 
     reference = f'NETCDF:{reference}://science/LSAR/GSLC/grids/frequencyA/HH'
     secondary = f'NETCDF:{secondary}://science/LSAR/GSLC/grids/frequencyA/HH'
@@ -408,7 +410,7 @@ def process_nisar_rslc(
     print(f'Resample type: {resample_type}')
 
     scene_poly = get_scene_polygon(reference)
-    dem_path = 'dem.tif' # get_dem(scene_poly)
+    dem_path = 'dem.tif'  # get_dem(scene_poly)
 
     print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
@@ -492,7 +494,9 @@ def process_nisar_gslc(
     print(f'Frequency: {frequency}')
     print(f'Polarization: {polarization}')
 
-    scene_poly =  get_scene_polygon(reference_path=reference, bounds_from_ds=False, return_in_utm=False, geom_from_envelope=True)
+    scene_poly = get_scene_polygon(
+        reference_path=reference, bounds_from_ds=False, return_in_utm=False, geom_from_envelope=True
+    )
 
     print(f'Scene Polygon: {scene_poly}')
 
