@@ -592,7 +592,6 @@ def netCDF_packaging(
         vx_error = vx_error_mod
 
     print(f'Error Vector: {error_vector}')
-    print(f'Date: {IMG_INFO_DICT['date_dt']}')
     print(f'Stable Shift Applied: {stable_shift_applied}')
     print(f'Vx Error Mask: {vx_error_mask}')
     print(f'Vx Error Slow: {vx_error_slow}')
