@@ -410,7 +410,7 @@ def process_nisar_rslc(
     print(f'Resample type: {resample_type}')
 
     scene_poly = get_scene_polygon(reference)
-    dem_path = 'dem.tif'  # get_dem(scene_poly)
+    dem_path = get_dem(scene_poly)
 
     print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
