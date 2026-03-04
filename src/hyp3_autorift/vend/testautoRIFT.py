@@ -1212,8 +1212,8 @@ def generateAutoriftProduct(
                     if nc_sensor.endswith('GSLC'):
                         from hyp3_autorift.nisar_isce3 import GSLCMetadata
 
-                        master_meta = GSLCMetadata('reference_cropped.tif', master_filename)
-                        slave_meta =  GSLCMetadata('secondary_cropped.tif', slave_filename)
+                        master_meta = GSLCMetadata('reference_adjusted.tif', master_filename)
+                        slave_meta =  GSLCMetadata('secondary_adjusted.tif', slave_filename)
                         pair_type = 'optical'
                         coordinates = 'map'
                     else:

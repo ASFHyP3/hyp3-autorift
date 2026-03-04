@@ -248,8 +248,6 @@ def crop_gslcs(reference, secondary):
 
     xmin, xmax, ymin, ymax = geom.GetEnvelope()
 
-    print(f'Bounds: {geom.GetEnvelope()}')
-
     _, _, _, _, gt1 = get_bounds(ds1)
     _, _, _, _, gt2 = get_bounds(ds2)
 
@@ -379,8 +377,8 @@ class GSLCMetadata:
         ds = gdal.Open(filename)
         trans = ds.GetGeoTransform()
 
-        self.XSize = int(np.floor(trans[1]))
-        self.YSize = int(np.floor(trans[5]))
+        self.XSize = trans[1]
+        self.YSize = trans[5]
 
         self.numberOfLines = ds.RasterYSize
         self.numberOfSamples = ds.RasterXSize
@@ -541,7 +539,7 @@ def process_nisar_gslc(
         ref_amplitude,
         sec_amplitude,
         nc_sensor='NISAR_GSLC',
-        optical_flag=False,
+        optical_flag=1,
         ncname=None,
         geogrid_run_info=geogrid_info,
         **parameter_info['autorift'],
