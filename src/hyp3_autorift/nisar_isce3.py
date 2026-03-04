@@ -304,7 +304,9 @@ def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_f
             buf_ysize=block_size,
             buf_type=gdal.GDT_CFloat32,
         )
-        img[row:row+block_size] = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
+        img[row : row + block_size] = (
+            np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
+        )
         end = time.time()
         print(f'Reading SLC Block took {end - start}s')
 
