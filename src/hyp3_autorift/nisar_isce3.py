@@ -265,7 +265,7 @@ def crop_gslcs(reference, secondary):
     return out1, out2
 
 
-def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21, is_gslc: bool = False):
+def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21, is_gslc: bool = False):
     """Convert CFloat32 rslc image to uint8 amplitude data, and write it to a GeoTIFF file."""
     ds = gdal.Open(in_filename, gdal.GA_ReadOnly)
     gt = ds.GetGeoTransform(can_return_null=True)
@@ -436,7 +436,7 @@ def process_nisar_rslc(
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
         start_time = time.time()
-        convert_rslc_to_uint8_amplitude(in_path, out_path)
+        convert_slc_to_uint8_amplitude(in_path, out_path)
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
 
@@ -492,14 +492,10 @@ def process_nisar_gslc(
     print(f'Frequency: {frequency}')
     print(f'Polarization: {polarization}')
 
-    scene_poly = get_scene_polygon(
-        reference_path=reference, bounds_from_ds=False, return_in_utm=False, geom_from_envelope=True
-    )
-
-    print(f'Scene Polygon: {scene_poly}')
-
+    scene_poly = get_scene_polygon(reference, geom_from_envelope=True)
     dem_path = get_dem(scene_poly)
 
+    print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
 
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE, flip_point=False)
@@ -515,7 +511,7 @@ def process_nisar_gslc(
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
         start_time = time.time()
-        convert_rslc_to_uint8_amplitude(in_path, out_path, is_gslc=True)
+        convert_slc_to_uint8_amplitude(in_path, out_path, is_gslc=True)
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
 
