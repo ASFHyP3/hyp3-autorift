@@ -277,20 +277,19 @@ def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_f
 
     driver = gdal.GetDriverByName('GTIFF')
     out_ds = driver.Create(out_filename, xsize=num_cols, ysize=num_rows, bands=1, eType=gdal.GDT_Byte)
+    out_band = out_ds.GetRasterBand(1)
 
     if is_gslc:
-        if gt:
-            out_ds.SetGeoTransform(gt)
-        if proj:
-            out_ds.SetProjection(proj)
+        out_ds.SetGeoTransform(gt)
+        out_ds.SetProjection(proj)
 
-    out_band = out_ds.GetRasterBand(1)
+    img = np.zeros((num_rows, num_cols), dtype=np.float32)
 
     block_size = 10000
 
     # Read SLC data progressively to avoid memory issues
     for row in range(0, num_rows, block_size):
-        print(f'Preprocessing Block {row / block_size}')
+        print(f'Reading Block {row / block_size}')
 
         start = time.time()
         if row + block_size > num_rows:
@@ -305,38 +304,36 @@ def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_f
             buf_ysize=block_size,
             buf_type=gdal.GDT_CFloat32,
         )
-        img = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
+        img[row:row+block_size] = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
         end = time.time()
         print(f'Reading SLC Block took {end - start}s')
 
-        print('Setting Invalid to 0')
-        if is_gslc:
-            img[np.isnan(img)] = 0
-            img[np.isinf(img)] = 0
-        valid_data = img != 0
+    print('Setting Invalid to 0')
+    if is_gslc:
+        img[np.isnan(img)] = 0
+        img[np.isinf(img)] = 0
+    valid_data = img != 0
 
-        print('Preprocess with HPS Filter')
-        kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
-        kernel[int((wallis_filter_width - 1) / 2), int((wallis_filter_width - 1) / 2)] = kernel.size - 1
-        kernel = kernel / kernel.size
-        img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+    print('Preprocess with HPS Filter')
+    kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
+    kernel[int((wallis_filter_width - 1) / 2), int((wallis_filter_width - 1) / 2)] = kernel.size - 1
+    kernel = kernel / kernel.size
+    img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
 
-        print('Scale Values')
-        S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
-        M1 = np.mean(img[valid_data])
-        img[:] = (img - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
-        del S1, M1
-        img[:] = np.round(np.clip(img, 0, 255)).astype(np.uint8)
+    print('Scale Values')
+    S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
+    M1 = np.mean(img[valid_data])
+    img[:] = (img - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
+    del S1, M1
+    img[:] = np.round(np.clip(img, 0, 255)).astype(np.uint8)
 
-        print('Setting Invalid to 0')
-        if is_gslc:
-            img[np.isnan(img)] = 0
-            img[np.isinf(img)] = 0
-        img[~valid_data] = 0
+    print('Setting Invalid to 0')
+    if is_gslc:
+        img[np.isnan(img)] = 0
+        img[np.isinf(img)] = 0
+    img[~valid_data] = 0
 
-        print(f'Row: {row}')
-
-        out_band.WriteArray(img[:block_size], xoff=0, yoff=row)
+    out_band.WriteArray(img)
 
 
 def download_product(granule_name: str):
