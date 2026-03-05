@@ -1252,11 +1252,17 @@ def generateAutoriftProduct(
                     date_ct = slave_dt + (master_dt - slave_dt) / 2
                     date_center = date_ct.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
+                    master_cycle = int(master_filename.split('_')[4])
+                    master_rel = int(master_filename.split('_')[5])
+
+                    slave_cycle = int(slave_filename.split('_')[4])
+                    slave_rel = int(slave_filename.split('_')[5])
+
                     IMG_INFO_DICT = {
                         'id_img1': master_filename.split('.')[0],
                         'id_img2': slave_filename.split('.')[0],
-                        'absolute_orbit_number_img1': 'N/A',
-                        'absolute_orbit_number_img2': 'N/A',
+                        'absolute_orbit_number_img1': 618 + master_cycle*173 + master_rel,
+                        'absolute_orbit_number_img2': 618 + slave_cycle*173 + slave_rel,
                         'acquisition_date_img1': str(master_dt),
                         'acquisition_date_img2': str(slave_dt),
                         'flight_direction_img1': master_meta.orbitPassDirection,
@@ -1267,10 +1273,10 @@ def generateAutoriftProduct(
                         'mission_img2': 'N',
                         'product_unique_ID_img1': 'N/A',
                         'product_unique_ID_img2': 'N/A',
-                        'satellite_img1': 'N/A',
-                        'satellite_img2': 'N/A',
-                        'sensor_img1': 'N/A',
-                        'sensor_img2': 'N/A',
+                        'satellite_img1': 'NISAR',
+                        'satellite_img2': 'NISAR',
+                        'sensor_img1': 'L',
+                        'sensor_img2': 'L',
                         'time_standard_img1': 'UTC',
                         'time_standard_img2': 'UTC',
                         'date_center': date_center,
