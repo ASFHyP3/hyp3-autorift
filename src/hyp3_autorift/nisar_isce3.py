@@ -484,8 +484,8 @@ def process_nisar_gslc(
     polarization: str = 'HH',
 ):
     """Run autoRIFT processing on a NISAR GSLC pair."""
-    # download_product(reference)
-    # download_product(secondary)
+    download_product(reference)
+    download_product(secondary)
 
     reference += '.h5'
     secondary += '.h5'
@@ -496,7 +496,7 @@ def process_nisar_gslc(
     print(f'Polarization: {polarization}')
 
     scene_poly = get_scene_polygon(reference, geom_from_envelope=True)
-    dem_path = 'dem.tif'  # get_dem(scene_poly)
+    dem_path = get_dem(scene_poly)
 
     print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
@@ -505,7 +505,7 @@ def process_nisar_gslc(
 
     print(f'Paramenter Info: {parameter_info}')
 
-    ref_cropped, sec_cropped = 'reference_cropped.tif', 'secondary_cropped.tif'  # crop_gslcs(reference, secondary)
+    ref_cropped, sec_cropped = crop_gslcs(reference, secondary)
 
     ref_amplitude = 'reference_adjusted.tif'
     sec_amplitude = 'secondary_adjusted.tif'
