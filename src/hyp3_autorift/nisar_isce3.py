@@ -325,9 +325,13 @@ def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_f
     print('Scale Values')
     S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
     M1 = np.mean(img[valid_data])
-    img[:] = (img - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
+    img -= M1 - 3 * S1
+    img /= 6 * S1
+    img *= 256
     del S1, M1
-    img[:] = np.round(np.clip(img, 0, 255)).astype(np.uint8)
+    np.clip(img, 0, 255, out=img)
+    np.rint(img, out=img)
+    img[:] = img.astype(np.uint8)
 
     print('Setting Invalid to 0')
     if is_gslc:
