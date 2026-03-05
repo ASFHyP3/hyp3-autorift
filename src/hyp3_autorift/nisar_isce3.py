@@ -325,8 +325,8 @@ def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_f
     print('Scale Values')
     S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
     M1 = np.mean(img[valid_data])
-    img -= (M1 - 3 * S1)
-    img /= (6 * S1)
+    img -= M1 - 3 * S1
+    img /= 6 * S1
     img *= 256
     del S1, M1
     np.clip(img, 0, 255, out=img)
@@ -496,7 +496,7 @@ def process_nisar_gslc(
     print(f'Polarization: {polarization}')
 
     scene_poly = get_scene_polygon(reference, geom_from_envelope=True)
-    dem_path = 'dem.tif' # get_dem(scene_poly)
+    dem_path = 'dem.tif'  # get_dem(scene_poly)
 
     print(f'Scene Polygon: {scene_poly}')
     print(f'DEM Path: {dem_path}')
@@ -505,7 +505,7 @@ def process_nisar_gslc(
 
     print(f'Paramenter Info: {parameter_info}')
 
-    ref_cropped, sec_cropped = 'reference_cropped.tif', 'secondary_cropped.tif' # crop_gslcs(reference, secondary)
+    ref_cropped, sec_cropped = 'reference_cropped.tif', 'secondary_cropped.tif'  # crop_gslcs(reference, secondary)
 
     ref_amplitude = 'reference_adjusted.tif'
     sec_amplitude = 'secondary_adjusted.tif'
