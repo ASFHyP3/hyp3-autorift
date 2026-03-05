@@ -391,7 +391,7 @@ def process_nisar_rslc(
     secondary: str,
     frequency: str = 'A',
     polarization: str = 'HH',
-):
+) -> str:
     """Run autoRIFT processing on a NISAR RSLC pair."""
     download_product(reference)
     download_product(secondary)
@@ -478,7 +478,7 @@ def process_nisar_gslc(
     secondary: str,
     frequency: str = 'A',
     polarization: str = 'HH',
-):
+) -> str:
     """Run autoRIFT processing on a NISAR GSLC pair."""
     download_product(reference)
     download_product(secondary)
@@ -549,22 +549,26 @@ def process_nisar_pair(
     secondary: str,
     frequency: str = 'A',
     polarization: str = 'HH',
-):
+) -> str:
     """Run autoRIFT processing on a NISAR SLC pair."""
     if 'RSLC' in reference:
-        process_nisar_rslc(
+        netcdf_file = process_nisar_rslc(
             reference=reference,
             secondary=secondary,
             frequency=frequency,
             polarization=polarization,
         )
     elif 'GSLC' in reference:
-        process_nisar_gslc(
+        netcdf_file = process_nisar_gslc(
             reference=reference,
             secondary=secondary,
             frequency=frequency,
             polarization=polarization,
         )
+    else:
+        raise ValueError(f'Only RSLC and GSLC NISAR products are supported: {reference}')
+
+    return netcdf_file
 
 
 def main():

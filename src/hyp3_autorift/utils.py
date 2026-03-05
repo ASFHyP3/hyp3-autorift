@@ -259,6 +259,7 @@ def save_publication_info(bucket: str, prefix: str, name: str) -> Path:
 
 
 PLATFORM_SHORTNAME_LONGNAME_MAPPING = {
+    'NISAR': 'nisar',
     'S1-SLC': 'sentinel1',
     'S1-BURST': 'sentinel1',
     'S2': 'sentinel2',
