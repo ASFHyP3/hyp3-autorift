@@ -375,6 +375,11 @@ class GSLCMetadata:
         self.time = scene_name.split('_')[11]
         self.sensingStart = datetime.strptime(self.time, '%Y%m%dT%H%M%S')
 
+        cycle = int(filename.split('_')[4])
+        rel_orb = int(filename.split('_')[5])
+
+        # TODO: Confirm this equation
+        self.absoluteOrbitNumber = 618 + cycle*173 + rel_orb
         self.orbitPassDirection = 'ASCENDING' if scene_name.split('_')[6] == 'A' else 'DESCENDING'
 
         ds = gdal.Open(filename)
