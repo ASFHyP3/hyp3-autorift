@@ -390,6 +390,12 @@ class GSLCMetadata:
         self.startingY = trans[3]
 
 
+def get_polarizations(filename: str, frequency: str = 'A'):
+    """Retrieve the available polarizations for a NISAR product."""
+    slc = product.open_product(filename)
+    return slc.polarizations[frequency]
+
+
 def process_nisar_rslc(
     reference: str,
     secondary: str,
@@ -397,11 +403,6 @@ def process_nisar_rslc(
     polarization: str = 'HH',
 ) -> str:
     """Run autoRIFT processing on a NISAR RSLC pair."""
-    download_product(reference)
-    download_product(secondary)
-
-    reference += '.h5'
-    secondary += '.h5'
     resample_type = 'coarse'
 
     print(f'Reference RSLC: {reference}')
@@ -484,12 +485,6 @@ def process_nisar_gslc(
     polarization: str = 'HH',
 ) -> str:
     """Run autoRIFT processing on a NISAR GSLC pair."""
-    download_product(reference)
-    download_product(secondary)
-
-    reference += '.h5'
-    secondary += '.h5'
-
     print(f'Reference GSLC: {reference}')
     print(f'Secondary GSLC: {secondary}')
     print(f'Frequency: {frequency}')
@@ -552,9 +547,23 @@ def process_nisar_pair(
     reference: str,
     secondary: str,
     frequency: str = 'A',
-    polarization: str = 'HH',
 ) -> str:
     """Run autoRIFT processing on a NISAR SLC pair."""
+    download_product(reference)
+    download_product(secondary)
+
+    reference += '.h5'
+    secondary += '.h5'
+
+    ref_pols = get_polarizations(reference, frequency)
+
+    if 'HH' in ref_pols:
+        polarization = 'HH'
+    else:
+        polarization = 'VV'
+
+    assert polarization in get_polarizations(secondary, frequency)
+
     if 'RSLC' in reference:
         netcdf_file = process_nisar_rslc(
             reference=reference,
@@ -595,24 +604,7 @@ def main():
     reference = args.reference
     secondary = args.secondary
 
-    print(f'Reference: {reference}')
-
-    if 'RSLC' in reference:
-        process_nisar_rslc(
-            reference=reference,
-            secondary=secondary,
-            frequency='A',
-            polarization='HH',
-        )
-    elif 'GSLC' in reference:
-        process_nisar_gslc(
-            reference=reference,
-            secondary=secondary,
-            frequency='A',
-            polarization='HH',
-        )
-    else:
-        raise ValueError('Unsupported product type.')
+    process_nisar_pair(reference, secondary)
 
 
 if __name__ == '__main__':
