@@ -379,7 +379,7 @@ class GSLCMetadata:
         rel_orb = int(filename.split('_')[5])
 
         # TODO: Confirm this equation
-        self.absoluteOrbitNumber = 618 + cycle*173 + rel_orb
+        self.absoluteOrbitNumber = 618 + cycle * 173 + rel_orb
         self.orbitPassDirection = 'ASCENDING' if scene_name.split('_')[6] == 'A' else 'DESCENDING'
 
         ds = gdal.Open(filename)
