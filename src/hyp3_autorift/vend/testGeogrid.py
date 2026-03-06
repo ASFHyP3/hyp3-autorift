@@ -262,6 +262,7 @@ def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
 
     info.orbitname = orbit_path
     info.orbit = rslc.getOrbit()
+    info.absoluteOrbitNumber = rslc.identification.absoluteOrbitNumber
     info.orbitPassDirection = rslc.identification.orbitPassDirection
 
     return info
