@@ -375,8 +375,8 @@ class GSLCMetadata:
         self.time = scene_name.split('_')[11]
         self.sensingStart = datetime.strptime(self.time, '%Y%m%dT%H%M%S')
 
-        cycle = int(filename.split('_')[4])
-        rel_orb = int(filename.split('_')[5])
+        cycle = int(scene_name.split('_')[4])
+        rel_orb = int(scene_name.split('_')[5])
 
         # TODO: Confirm this equation
         self.absoluteOrbitNumber = 618 + cycle * 173 + rel_orb
