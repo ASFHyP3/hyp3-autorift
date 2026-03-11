@@ -238,7 +238,7 @@ cmd = [
     "-m",
     "pip",
     "install",
-    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
+    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.1.2",
 ]
 depends-on = ["install-radar"]
 
