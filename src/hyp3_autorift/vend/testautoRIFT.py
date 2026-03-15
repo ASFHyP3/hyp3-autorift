@@ -1183,7 +1183,7 @@ def generateAutoriftProduct(
                         error_vector,
                         parameter_file=kwargs['parameter_file'],
                     )
-                if nc_sensor.startswith('NISAR'):
+                elif nc_sensor.startswith('NISAR'):
                     if geogrid_run_info is None:
                         gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
                         rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
