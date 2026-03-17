@@ -48,7 +48,7 @@ jobs:
       contents: read
       packages: write
     concurrency:
-      group: ${{ github.ref_name }}-${{ matrix.platform }}
+      group: ${{ github.event_name }}-${{ matrix.platform }}
       cancel-in-progress: true
     strategy:
       matrix:
