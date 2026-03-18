@@ -9,7 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.28.0]
 
 ### Added
-* Support for NISAR RSLC and GSLC products
+* Preliminary support for NISAR RSLC and GSLC products. Workflow tested with uncalibrarted data and there are some known metadata/packaging issues. Use with caution.
 
 ## [0.27.0]
 
