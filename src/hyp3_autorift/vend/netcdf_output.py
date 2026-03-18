@@ -17,7 +17,7 @@ def get_satellite_attribute(info):
     mission_mapping = {
         'L': 'Landsat ',
         'S': 'Sentinel-',
-        'N': 'NISAR'
+        'N': 'NISAR',
     }
 
     satellite_1 = f'{mission_mapping[info["mission_img1"]]}{info["satellite_img1"]}'
@@ -598,7 +598,7 @@ def netCDF_packaging(
     print(f'Vx Error Mod: {vx_error_mod}')
     print(f'Vx Error: {vx_error}')
 
-    var.setncattr('error', ((np.round(vx_error * 10)) / 10).astype(int))
+    var.setncattr('error', np.round(vx_error, decimals=1))
     var.setncattr(
         'error_description',
         'best estimate of x_velocity error: vx_error is populated '
@@ -607,7 +607,7 @@ def netCDF_packaging(
     )
 
     if stable_count != 0:
-        var.setncattr('error_stationary', ((np.round(vx_error_mask * 10)) / 10).astype(int))
+        var.setncattr('error_stationary', np.round(vx_error_mask, decimals=1))
     else:
         var.setncattr('error_stationary', np.nan)
     var.setncattr(
@@ -616,19 +616,19 @@ def netCDF_packaging(
         'surfaces with velocity < 15 meter/year identified from an external mask',
     )
 
-    var.setncattr('error_modeled', ((np.round(vx_error_mod * 10)) / 10).astype(int))
+    var.setncattr('error_modeled', np.round(vx_error_mod, decimals=1))
     var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
 
     if stable_count1 != 0:
-        var.setncattr('error_slow', ((np.round(vx_error_slow * 10)) / 10).astype(int))
+        var.setncattr('error_slow', np.round(vx_error_slow, decimals=1))
     else:
         var.setncattr('error_slow', np.nan)
     var.setncattr('error_slow_description', 'RMSE over slowest 25% of retrieved velocities')
 
     if stable_shift_applied == 2:
-        var.setncattr('stable_shift', ((np.round(vx_mean_shift1 * 10)) / 10).astype(int))
+        var.setncattr('stable_shift', np.round(vx_mean_shift1, decimals=1))
     elif stable_shift_applied == 1:
-        var.setncattr('stable_shift', ((np.round(vx_mean_shift * 10)) / 10).astype(int))
+        var.setncattr('stable_shift', np.round(vx_mean_shift, decimals=1))
     else:
         var.setncattr('stable_shift', 0)
     var.setncattr('stable_shift_flag', stable_shift_applied)
@@ -642,13 +642,13 @@ def netCDF_packaging(
     )
 
     if stable_count != 0:
-        var.setncattr('stable_shift_stationary', ((np.round(vx_mean_shift * 10)) / 10).astype(int))
+        var.setncattr('stable_shift_stationary', np.round(vx_mean_shift, decimals=1))
     else:
         var.setncattr('stable_shift_stationary', np.nan)
     var.setncattr('stable_count_stationary', stable_count)
 
     if stable_count1 != 0:
-        var.setncattr('stable_shift_slow', ((np.round(vx_mean_shift1 * 10)) / 10).astype(int))
+        var.setncattr('stable_shift_slow', np.round(vx_mean_shift1, decimals=1))
     else:
         var.setncattr('stable_shift_slow', np.nan)
     var.setncattr('stable_count_slow', stable_count1)
@@ -707,7 +707,7 @@ def netCDF_packaging(
     print(f'Vy Error Mod: {vy_error_mod}')
     print(f'Vy Error: {vy_error}')
 
-    var.setncattr('error', ((np.round(vy_error * 10)) / 10).astype(int))
+    var.setncattr('error', np.round(vy_error * 10, decimals=1))
     var.setncattr(
         'error_description',
         'best estimate of y_velocity error: vy_error is populated according '
@@ -716,7 +716,7 @@ def netCDF_packaging(
     )
 
     if stable_count != 0:
-        var.setncattr('error_stationary', ((np.round(vy_error_mask * 10)) / 10).astype(int))
+        var.setncattr('error_stationary', np.round(vy_error_mask, decimals=1))
     else:
         var.setncattr('error_stationary', np.nan)
     var.setncattr(
@@ -725,19 +725,19 @@ def netCDF_packaging(
         'with velocity < 15 meter/year identified from an external mask',
     )
 
-    var.setncattr('error_modeled', ((np.round(vy_error_mod * 10)) / 10).astype(int))
+    var.setncattr('error_modeled', np.round(vy_error_mod, decimals=1))
     var.setncattr('error_modeled_description', '1-sigma error calculated using a modeled error-dt relationship')
 
     if stable_count1 != 0:
-        var.setncattr('error_slow', ((np.round(vy_error_slow * 10)) / 10).astype(int))
+        var.setncattr('error_slow', np.round(vy_error_slow, decimals=1))
     else:
         var.setncattr('error_slow', np.nan)
     var.setncattr('error_slow_description', 'RMSE over slowest 25% of retrieved velocities')
 
     if stable_shift_applied == 2:
-        var.setncattr('stable_shift', ((np.round(vy_mean_shift1 * 10)) / 10).astype(int))
+        var.setncattr('stable_shift', np.round(vy_mean_shift1, decimals=1))
     elif stable_shift_applied == 1:
-        var.setncattr('stable_shift', ((np.round(vy_mean_shift * 10)) / 10).astype(int))
+        var.setncattr('stable_shift', np.round(vy_mean_shift, decimals=1))
     else:
         var.setncattr('stable_shift', 0)
 
@@ -752,13 +752,13 @@ def netCDF_packaging(
     )
 
     if stable_count != 0:
-        var.setncattr('stable_shift_stationary', ((np.round(vy_mean_shift * 10)) / 10).astype(int))
+        var.setncattr('stable_shift_stationary', np.round(vy_mean_shift, decimals=1))
     else:
         var.setncattr('stable_shift_stationary', np.nan)
     var.setncattr('stable_count_stationary', stable_count)
 
     if stable_count1 != 0:
-        var.setncattr('stable_shift_slow', ((np.round(vy_mean_shift1 * 10)) / 10).astype(int))
+        var.setncattr('stable_shift_slow', np.round(vy_mean_shift1, decimals=1))
     else:
         var.setncattr('stable_shift_slow', np.nan)
     var.setncattr('stable_count_slow', stable_count1)
