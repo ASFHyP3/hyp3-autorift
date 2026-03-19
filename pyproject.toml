@@ -217,7 +217,7 @@ cmd = [
     "-m",
     "pip",
     "install",
-    "git+https://github.com/isce-framework/isce3.git@6116cdaca709c861839804567cca406667887d8b",
+    "git+https://github.com/isce-framework/isce3.git@6116cdaca709c861839804567cca406667887d8b",  # before v0.25.0
 ]
 depends-on = []
 
@@ -238,7 +238,7 @@ cmd = [
     "-m",
     "pip",
     "install",
-    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.0.0",
+    "git+https://github.com/nasa-jpl/autoRIFT.git@v2.1.1",
 ]
 depends-on = ["install-radar"]
 

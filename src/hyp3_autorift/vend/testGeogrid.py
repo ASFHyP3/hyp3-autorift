@@ -28,16 +28,18 @@
 # Authors: Piyush Agram, Yang Lei
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import argparse
+import logging
 import os
 import re
-from datetime import date, timedelta
-import logging
+from datetime import date, timedelta, datetime
 
 import isce3
 import numpy as np
 from geogrid import GeogridOptical, GeogridRadar
 from osgeo import gdal
 from s1reader import load_bursts
+
+from nisar.products.readers import product
 
 log = logging.getLogger(__name__)
 
@@ -213,6 +215,55 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None):
     print('SIZE', info.numberOfLines, info.numberOfSamples)
 
     info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
+
+    return info
+
+
+def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
+    """
+    Input file.
+    """
+    info = Dummy()
+    rslc =  product.open_product(ref_rslc)
+    metadata = rslc.getSwathMetadata()
+
+    slant_ranges = metadata.slant_range
+    info.startingRange = slant_ranges[0]
+    info.farRange = slant_ranges[-1]
+
+    info.rangePixelSize = metadata.range_pixel_spacing
+
+    info.startingRange -= buffer * info.rangePixelSize
+    info.farRange += buffer * info.rangePixelSize
+
+    print(f'Starting Range: {info.startingRange}')
+    print(f'Far Range: {info.farRange}')
+    print(f'Pixel Size: {info.rangePixelSize}')
+
+    info.wavelength = metadata.processed_wavelength
+
+    info.zero_doppler_time_spacing = metadata.zero_doppler_time_spacing
+    info.prf = 1.0 / info.zero_doppler_time_spacing
+
+    info.sensingStart = datetime.strptime(str(rslc.identification.zdStartTime)[:-3], "%Y-%m-%dT%H:%M:%S.%f")
+    info.aztime = float((isce3.core.DateTime(info.sensingStart) -  metadata.ref_epoch).total_seconds())
+    info.sensingStop = datetime.strptime(str(rslc.identification.zdEndTime)[:-3], "%Y-%m-%dT%H:%M:%S.%f")
+
+    print(f'PRF: {info.prf}')
+    print(f'Aquisition Time: {float((info.sensingStop - info.sensingStart).total_seconds())}')
+
+    info.lookSide = isce3.core.LookSide.Left
+
+    info.numberOfLines = metadata.lines
+    info.numberOfSamples = metadata.samples
+
+    print(f'Number of Lines: {info.numberOfLines}')
+    print(f'Number of Samples: {info.numberOfSamples}')
+
+    info.orbitname = orbit_path
+    info.orbit = rslc.getOrbit()
+    info.absoluteOrbitNumber = rslc.identification.absoluteOrbitNumber
+    info.orbitPassDirection = rslc.identification.orbitPassDirection
 
     return info
 
