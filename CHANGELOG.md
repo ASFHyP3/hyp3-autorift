@@ -11,6 +11,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 * Preliminary support for NISAR RSLC and GSLC products. Workflow tested with uncalibrarted data and there are some known metadata/packaging issues. Use with caution.
 
+### Fixed
+* `crop.py` now uses the appropriate fill value when padding the cropped dataset to align chunks instead of always using -32767 and causing integer underflows for ushort and ubyte type variables. Re-cropping existing granules will fix integer underflow issues in them. See [#419](https://github.com/ASFHyP3/hyp3-autorift/issues/419) for more details.
+
 ## [0.27.0]
 
 ### Added
