@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.2]
+
+### Added
+* Support for Sentinel-2 L2A COG processing via the AWS Element84 API.
+
+### Changed
+* `process.get_s2_metadata` now dynamically routes to either the Google Cloud Storage L1C workflow or the new AWS L2A workflow based on the scene name format.
+
 ## [0.28.1]
 
 ### Changed
