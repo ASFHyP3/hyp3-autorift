@@ -159,8 +159,10 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         grid_x_min, grid_y_min, grid_x_max, grid_y_max = aligned_bounds
         left_pad, bottom_pad, right_pad, top_pad = padding
 
-        cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode='constant', constant_values=-32767)
-        cropped_ds = cropped_ds.pad(y=(top_pad, bottom_pad), mode='constant', constant_values=-32767)
+        constant_values = {var: ds[var].encoding.get('_FillValue') for var in cropped_ds}
+
+        cropped_ds = cropped_ds.pad(x=(left_pad, right_pad), mode='constant', constant_values=constant_values)
+        cropped_ds = cropped_ds.pad(y=(top_pad, bottom_pad), mode='constant', constant_values=constant_values)
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"

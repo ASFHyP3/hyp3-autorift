@@ -1183,7 +1183,7 @@ def generateAutoriftProduct(
                         error_vector,
                         parameter_file=kwargs['parameter_file'],
                     )
-                if nc_sensor.startswith('NISAR'):
+                elif nc_sensor.startswith('NISAR'):
                     if geogrid_run_info is None:
                         gridspacingx = float(str.split(runCmd('fgrep "Grid spacing in m:" testGeogrid.txt'))[-1])
                         rangePixelSize = float(str.split(runCmd('fgrep "Ground range pixel size:" testGeogrid.txt'))[4])
@@ -1216,11 +1216,22 @@ def generateAutoriftProduct(
                         slave_meta =  GSLCMetadata('secondary_adjusted.tif', slave_filename)
                         pair_type = 'optical'
                         coordinates = 'map'
+
+                        # TODO: Landsat/Sentinel-2 values -- does this need to change for NISAR?
+                        error_vector = np.array([25.5, 25.5])
                     else:
                         master_meta = loadMetadataRslc(master_filename)
                         slave_meta = loadMetadataRslc(slave_filename)
                         pair_type = 'radar'
                         coordinates = 'radar, map'
+
+                        # TODO: S1 values -- does this need to change for NISAR?
+                        error_vector = np.array(
+                            [
+                                [0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
+                                [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628],
+                            ]
+                        )
 
                     master_dt = master_meta.sensingStart
                     slave_dt = slave_meta.sensingStart
@@ -1276,14 +1287,6 @@ def generateAutoriftProduct(
                         'roi_valid_percentage': PPP,
                         'autoRIFT_software_version': version,
                     }
-
-                    # TODO: Does this need to change for NISAR?
-                    error_vector = np.array(
-                        [
-                            [0.0356, 0.0501, 0.0266, 0.0622, 0.0357, 0.0501],
-                            [0.5194, 1.1638, 0.3319, 1.3701, 0.5191, 1.1628],
-                        ]
-                    )
 
                     netcdf_file = no.netCDF_packaging(
                         VX,
