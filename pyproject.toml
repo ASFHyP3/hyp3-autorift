@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=82.0.1", "setuptools_scm[toml]>=10.0.5"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -27,19 +27,19 @@ dependencies = [
     #       see: https://pixi.sh/dev/python/pyproject_toml/#dependency-section
     'boto3',
     'botocore',
-    'burst2safe>=1.4.4',
-    'gdal>=3',
+    'burst2safe>=2.0.2',
+    'gdal>=3.12.3',
     'h5netcdf',  # for increased performance of crop.py
-    'hyp3lib>=4,<5',
+    'hyp3lib>=4.0.1,<5',
     'matplotlib',
     'netCDF4',
-    'numpy>=1.20',
-    'pandas>=1.4',
+    'numpy>=2.2.6',
+    'pandas>=2.3.3',
     'pyarrow',
-    'pyproj>=3.3',
+    'pyproj>=3.7.1',
     'python-dateutil',
-    'requests>=2.0',
-    'scipy>=1.0',
+    'requests>=2.33.1',
+    'scipy>=1.15.3',
     'tqdm',
     'xarray',
 ]
@@ -48,13 +48,13 @@ dynamic = ["version"]
 [project.optional-dependencies]
 develop = [
     'setuptools_scm',
-    'pillow>=7.0',
+    'pillow>=12.2.0',
     'pytest',
     'pytest-console-scripts',
     'pytest-cov',
     'responses',
-    'ruff==0.14.7',
-    'mypy==1.19.0',
+    'ruff==0.15.10',
+    'mypy==1.20.1',
     'types-requests',
 ]
 
