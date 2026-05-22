@@ -143,7 +143,50 @@ def get_raster_bbox(path: str):
     ]
 
 
-def get_s2_metadata(scene_name):
+def get_s2_l2a_metadata(scene_name: str) -> dict:
+    url = f'https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a/items/{scene_name}'
+
+    response = requests.get(url)
+    response.raise_for_status()
+    item = response.json()
+
+    band_url = item['assets']['nir']['href']
+
+    if band_url.startswith('s3://'):
+        vsi_path = band_url.replace('s3://', '/vsis3/')
+    elif band_url.startswith('https://'):
+        vsi_path = '/vsicurl/' + band_url
+    else:
+        vsi_path = band_url
+
+    bbox = item.get('bbox')
+    if not bbox:
+        bbox = get_raster_bbox(vsi_path)
+
+    raw_dt = item['properties']['datetime']
+    try:
+        dt_obj = datetime.strptime(raw_dt, '%Y-%m-%dT%H:%M:%S.%fZ')
+    except ValueError:
+        dt_obj = datetime.strptime(raw_dt, '%Y-%m-%dT%H:%M:%SZ')
+
+    clean_dt = dt_obj.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    return {
+        'path': vsi_path,
+        'bbox': bbox,
+        'id': scene_name,
+        'properties': {'datetime': clean_dt, 'proj:epsg': item['properties'].get('proj:epsg')},
+    }
+
+
+def get_s2_metadata(scene_name: str) -> dict:
+    """Routes the metadata request based on the scene name format."""
+
+    # Element84 L2A STAC items
+    if scene_name.endswith('_L2A') or 'L2A' in scene_name:
+        return get_s2_l2a_metadata(scene_name)
+
+    # Google Cloud L1C .SAFE items
     path = get_s2_path(scene_name)
     bbox = get_raster_bbox(path)
     acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
