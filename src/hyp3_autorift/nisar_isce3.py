@@ -265,81 +265,80 @@ def crop_gslcs(reference, secondary):
     return out1, out2
 
 
-def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21, is_gslc: bool = False):
+def convert_rslc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21, is_gslc: bool = False):
     """Convert CFloat32 rslc image to uint8 amplitude data, and write it to a GeoTIFF file."""
     ds = gdal.Open(in_filename, gdal.GA_ReadOnly)
-    gt = ds.GetGeoTransform(can_return_null=True)
-    proj = ds.GetProjectionRef()
-
     band = ds.GetRasterBand(1)
     num_rows = band.YSize
     num_cols = band.XSize
+    block_size = 10000 + wallis_filter_width
 
     driver = gdal.GetDriverByName('GTIFF')
     out_ds = driver.Create(out_filename, xsize=num_cols, ysize=num_rows, bands=1, eType=gdal.GDT_Byte)
     out_band = out_ds.GetRasterBand(1)
+    out_band.SetNoDataValue(0)
 
-    if is_gslc:
-        out_ds.SetGeoTransform(gt)
-        out_ds.SetProjection(proj)
+    block_index = 0
 
-    img = np.zeros((num_rows, num_cols), dtype=np.float32)
-
-    block_size = 10000
-
-    # Read SLC data progressively to avoid memory issues
+    print('Reading SLC Data')
+    # Read RSLC data progressively to avoid memory issues
     for row in range(0, num_rows, block_size):
-        print(f'Reading Block {row / block_size}')
+        print(f'Preprocessing Block {block_index}')
+
+        y_offset = row - (block_index * (block_size - wallis_filter_width))
 
         start = time.time()
+        is_last_row = False
         if row + block_size > num_rows:
             block_size = num_rows - row
-
+            is_last_row = True
         encoded = band.ReadRaster(
             xoff=0,
-            yoff=row,
+            yoff=y_offset ,
             xsize=num_cols,
             ysize=block_size,
             buf_xsize=num_cols,
             buf_ysize=block_size,
-            buf_type=gdal.GDT_CFloat32,
+            buf_type=gdal.GDT_CFloat32
         )
-        img[row : row + block_size] = (
-            np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
-        )
+        img = np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
         end = time.time()
-        print(f'Reading SLC Block took {end - start}s')
+        print(f'Reading SLC Block took {end-start}s')
 
-    print('Setting Invalid to 0')
-    if is_gslc:
-        img[np.isnan(img)] = 0
-        img[np.isinf(img)] = 0
-    valid_data = img != 0
+        print('Setting Invalid to 0')
+        if is_gslc:
+            img[np.isnan(img)] = 0
+            img[np.isinf(img)] = 0
+        valid_data = img != 0
 
-    print('Preprocess with HPS Filter')
-    kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
-    kernel[int((wallis_filter_width - 1) / 2), int((wallis_filter_width - 1) / 2)] = kernel.size - 1
-    kernel = kernel / kernel.size
-    img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+        print('Preprocess with HPS Filter')
+        kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
+        kernel[int((wallis_filter_width - 1) / 2), int((wallis_filter_width - 1) / 2)] = kernel.size - 1
+        kernel = kernel / kernel.size
+        img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
 
-    print('Scale Values')
-    S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
-    M1 = np.mean(img[valid_data])
-    img -= M1 - 3 * S1
-    img /= 6 * S1
-    img *= 256
-    del S1, M1
-    np.clip(img, 0, 255, out=img)
-    np.rint(img, out=img)
-    img[:] = img.astype(np.uint8)
+        print('Scale Values')
+        S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
+        M1 = np.mean(img[valid_data])
+        img[:] = (img - (M1 - 3 * S1)) / (6 * S1) * (2**8 - 0)
+        del S1, M1
+        img[:] = np.round(np.clip(img, 0, 255)).astype(np.uint8)
 
-    print('Setting Invalid to 0')
-    if is_gslc:
-        img[np.isnan(img)] = 0
-        img[np.isinf(img)] = 0
-    img[~valid_data] = 0
+        print('Setting Invalid to 0')
+        if is_gslc:
+            img[np.isnan(img)] = 0
+            img[np.isinf(img)] = 0
+        img[~valid_data] = 0
 
-    out_band.WriteArray(img)
+        max_index = block_size if is_last_row else block_size - wallis_filter_width
+        y_offset = row - (block_index * (block_size - wallis_filter_width))
+        block_index += 1
+
+        print(f'Row: {row}')
+        print(f'Max Index: {max_index}')
+        print(f'Y Offset: {y_offset}')
+
+        out_band.WriteArray(img[:max_index], xoff=0, yoff=y_offset)
 
 
 def download_product(granule_name: str):
