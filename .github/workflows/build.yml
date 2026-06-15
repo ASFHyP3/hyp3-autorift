@@ -25,7 +25,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: prefix-dev/setup-pixi@v0.9.6
         with:
           activate-environment: true
 
@@ -158,14 +158,14 @@ jobs:
 
       - name: Add test tag
         if: ${{ github.event_name != 'pull_request' && contains(needs.version-info.outputs.version_tag, '.dev') }}
-        uses: akhilerm/tag-push-action@v2.2.0
+        uses: akhilerm/tag-push-action@v2.3.0
         with:
           src: ghcr.io/${{ needs.version-info.outputs.repo }}:${{ needs.version-info.outputs.version_tag }}
           dst: ghcr.io/${{ needs.version-info.outputs.repo }}:test
 
       - name: Add latest tag
         if: ${{ github.event_name != 'pull_request' && ! contains(needs.version-info.outputs.version_tag, '.dev') }}
-        uses: akhilerm/tag-push-action@v2.2.0
+        uses: akhilerm/tag-push-action@v2.3.0
         with:
           src: ghcr.io/${{ needs.version-info.outputs.repo }}:${{ needs.version-info.outputs.version_tag }}
           dst: ghcr.io/${{ needs.version-info.outputs.repo }}:latest
