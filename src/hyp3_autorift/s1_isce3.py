@@ -88,8 +88,8 @@ def process_sentinel1_burst_isce3(
         burst_id_ref,
         burst_id_sec,
         static_files_bucket,
-        regenerate_static_files,
         use_static_files,
+        regenerate_static_files,
         chip_size,
         search_range,
     )
