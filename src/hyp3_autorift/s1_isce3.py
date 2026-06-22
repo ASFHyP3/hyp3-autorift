@@ -68,7 +68,9 @@ def process_sentinel1_burst_isce3(
             use_static_files,
             frame_id,
             swaths,
+            regenerate_static_files,
             chip_size,
+            search_range,
         )
 
     reference = reference[0]
@@ -86,8 +88,10 @@ def process_sentinel1_burst_isce3(
         burst_id_ref,
         burst_id_sec,
         static_files_bucket,
+        regenerate_static_files,
         use_static_files,
         chip_size,
+        search_range,
     )
 
 
@@ -239,6 +243,7 @@ def process_sentinel1_slc_isce3(
         frame_id='N/A',
         chip_size=chip_size,
         search_range=search_range,
+        regenerate_static_files=regenerate_static_files,
     )
 
 
@@ -252,8 +257,8 @@ def process_slc(
     static_files_bucket,
     use_static_files,
     frame_id,
-    regenerate_static_files: bool = False,
     swaths=(1, 2, 3),
+    regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
