@@ -1,4 +1,5 @@
 import glob
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import boto3
@@ -6,6 +7,7 @@ import numpy as np
 from botocore.exceptions import ClientError, NoCredentialsError
 from osgeo import gdal
 from s1reader import Sentinel1BurstSlc
+from netCDF4 import Dataset
 
 from hyp3_autorift.utils import upload_file_to_s3_with_publish_access_keys
 
@@ -40,6 +42,146 @@ ADDITIONAL_METADATA_PARAMS = [
 ]
 
 TOPO_CORRECTION_FILES = ['x.tif', 'y.tif', 'z.tif', 'layover_shadow_mask.tif']
+
+
+class StaticBurstInfo:
+    def __init__(self, burst_id: str):
+        self.burst_id = burst_id
+        
+        self.sensing_start = None
+        self.wavelength = None
+        self.prf = None
+        self.starting_range = None
+        self.range_pixel_spacing = None
+        self.length = None
+        self.width = None
+        self.ref_epoch = None
+        self.first_valid_line = None
+        self.last_valid_line = None
+        self.first_valid_sample = None
+        self.last_valid_sample = None
+        self.azimuth_time_interval = None
+
+        self.set_burst_info_from_nc()
+        self.set_radar_grid()
+
+
+    def set_burst_info_from_nc(self):
+        """
+        Set burst info from a static layer netcdf file.
+        """
+        
+        burst_info = {}
+
+        netcdf_path = f'static_topo_corrections/{self.burst_id}/{self.burst_id}_static_rdr.nc'
+
+        if not Path(netcdf_path).exists():
+            raise FileNotFoundError(f'The static files cannot be located for {self.burst_id}.')
+
+        with Dataset(netcdf_path, "r") as ds:
+            for param in ADDITIONAL_METADATA_PARAMS:
+                _, attr_name = param.split("#", 1)
+
+                if hasattr(ds, attr_name):
+                    burst_info[attr_name] = getattr(ds, attr_name)
+                else:
+                    burst_info[attr_name] = None
+
+        self.first_valid_line = burst_info['first_valid_line']
+        self.last_valid_line = burst_info['last_valid_line']
+        self.first_valid_sample = burst_info['first_valid_sample']
+        self.last_valid_sample = burst_info['last_valid_sample']
+        self.azimuth_time_interval = burst_info['azimuth_time_interval']
+
+
+    def set_radar_grid(self):
+        """
+        Read and set the radar grid info.
+        """
+        radar_grid = {}
+
+        radar_grid_path = f'static_topo_corrections/{self.burst_id}/radar_grid.txt'
+
+        if not Path(radar_grid_path).exists():
+            raise FileNotFoundError(f'The static files cannot be located for {self.burst_id}.')
+
+        with open(radar_grid_path, 'r') as f:
+            lines = f.readlines()
+
+            for index, param in enumerate(RADAR_GRID_PARAMS):
+                _, attr_name = param.split('#', 1)
+                radar_grid[attr_name] = lines[index].strip('\n')
+
+        self.sensing_start = timedelta(seconds=int(radar_grid['sensing_start']))
+        self.wavelength = float(radar_grid['wavelength'])
+        self.prf = float(radar_grid['prf'])
+        self.starting_range = float(radar_grid['starting_range'])
+        self.range_pixel_spacing = float(radar_grid['range_pixel_spacing'])
+        self.length = int(radar_grid['length'])
+        self.width = int(radar_grid['width'])
+        self.ref_epoch = datetime.strptime(radar_grid['ref_epoch'][:-3], '%Y-%m-%dT%H:%M:%S.%f')
+
+
+def get_burst_info_from_vrt(burst_id: str):
+    """
+    Read selected global attributes from a NetCDF file.
+
+    Args:
+        burst_id: The ISCE formatted burst ID
+
+    Returns:
+        Dict containing the valid lines, valid samples, and azimuth time interval
+    """
+    metadata = {}
+
+    netcdf_path = f'static_topo_corrections/{burst_id}/{burst_id}_static_rdr.nc'
+
+    with Dataset(netcdf_path, "r") as ds:
+        for param in ADDITIONAL_METADATA_PARAMS:
+            _, attr_name = param.split("#", 1)
+
+            if hasattr(ds, attr_name):
+                metadata[attr_name] = getattr(ds, attr_name)
+            else:
+                metadata[attr_name] = None
+
+    return metadata
+
+
+def get_radar_grid(burst_id: str):
+    """
+    Read the radar grid info for a given burst into a dict.
+
+    Args:
+        burst_id: The ISCE formatted burst ID
+
+    Returns:
+        Dict containing the radar grid parameters
+    """
+    radar_grid = {}
+    
+    radar_grid_path = f'static_topo_corrections/{burst_id}/radar_grid.txt'
+
+    with open(radar_grid_path, 'r') as f:
+        lines = f.readlines()
+
+        for index, param in enumerate(RADAR_GRID_PARAMS):
+            _, attr_name = param.split('#', 1)
+            radar_grid[attr_name] = lines[index]
+
+    return radar_grid
+
+
+def check_for_static_files(burst_id: str) -> bool:
+    """Check whether static files have been retrieved for a given burst.
+    
+    Args:
+        burst_id: The ISCE formatted burst ID
+    """
+    netcdf_path = f'static_topo_corrections/{burst_id}/{burst_id}_static_rdr.nc'
+    if Path(netcdf_path).exists():
+        return True
+    return False
 
 
 def retrieve_static_nc_from_s3(burst_id: str, bucket: str, filename: str) -> str | None:

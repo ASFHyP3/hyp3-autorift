@@ -24,9 +24,13 @@ from hyp3_autorift.process import DEFAULT_PARAMETER_FILE
 from hyp3_autorift.s1_rdr_static_files import (
     S3_BUCKET,
     STATIC_DIR,
+    StaticBurstInfo,
     create_static_layer,
     get_static_layer,
     upload_static_nc_to_s3,
+    get_burst_info_from_vrt,
+    get_radar_grid,
+    check_for_static_files,
 )
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadata, loadMetadataSlc, runGeogrid
 from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
@@ -46,6 +50,9 @@ def process_sentinel1_burst_isce3(
 ):
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
+
+    # safe_ref = 'S1A_IW_SLC__1SSH_20190318T183108_20190318T183130_026396_02F421_6181.SAFE'
+    # safe_sec = 'S1B_IW_SLC__1SSH_20190312T183027_20190312T183048_015325_01CB06_3E90.SAFE'
 
     orbit_ref = retrieve_orbit_file(str(safe_ref), orbit_dir='.', concatenate=True)
     orbit_sec = retrieve_orbit_file(str(safe_sec), orbit_dir='.', concatenate=True)
@@ -214,6 +221,9 @@ def process_sentinel1_slc_isce3(
 ):
     safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
     safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
+
+    # safe_ref = 'S1A_IW_SLC__1SSH_20190318T183108_20190318T183130_026396_02F421_6181.SAFE'
+    # safe_sec = 'S1B_IW_SLC__1SSH_20190312T183027_20190312T183048_015325_01CB06_3E90.SAFE'
 
     orbit_ref = retrieve_orbit_file(safe_ref, orbit_dir='.', concatenate=True)
     orbit_sec = retrieve_orbit_file(safe_sec, orbit_dir='.', concatenate=True)
@@ -409,6 +419,12 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, 
 
     for swath in swaths:
         ref_bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
+
+        for index, burst in enumerate(ref_bursts):
+            if check_for_static_files(burst.burst_id):
+                ref_bursts[index] = StaticBurstInfo(burst.burst_id) 
+                ref_bursts[index].sensing_start = burst.sensing_start
+
         ref_burst_files = [b for b in burst_files_ref if f'iw{swath}' in b]
         sec_burst_files = [b for b in burst_files_sec if f'iw{swath}' in b]
 
@@ -564,10 +580,14 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
     num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
     az_reference_offsets = get_azimuth_reference_offsets(ref_bursts)
 
+    print(az_reference_offsets)
+
     ref_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
     sec_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
+
     for index in range(num_bursts):
         burst = ref_bursts[index]
+
         burst_limit = az_reference_offsets[index]
         burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index]))
         burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index]))
@@ -603,6 +623,10 @@ def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burs
 
         print(
             f'IW{swath}[{merge_start_index}:{merge_end_index}] = burst_{index}[{burst_start_index}:{burst_end_index}]'
+        )
+
+        print(
+            f'Range Slice Length: {burst.last_valid_sample - burst.first_valid_sample}'
         )
 
         burst_arr_ref = burst_arr_ref[burst_az_slice, rng_slice]
