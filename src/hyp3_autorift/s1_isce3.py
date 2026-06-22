@@ -41,6 +41,7 @@ def process_sentinel1_burst_isce3(
     static_files_bucket,
     use_static_files,
     frame_id,
+    regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
@@ -100,6 +101,7 @@ def process_burst(
     burst_id_sec,
     static_files_bucket,
     use_static_files,
+    regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
@@ -113,7 +115,10 @@ def process_burst(
         bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
     )
 
-    if use_static_files:
+    if regenerate_static_files:
+        has_static_layer = False
+        do_static_upload = True
+    elif use_static_files:
         retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
         has_static_layer = get_static_layer(burst_id_ref, retrieval_bucket)
         do_static_upload = not has_static_layer and static_files_bucket
@@ -209,6 +214,7 @@ def process_sentinel1_slc_isce3(
     slc_sec,
     static_files_bucket,
     use_static_files,
+    regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
@@ -246,6 +252,7 @@ def process_slc(
     static_files_bucket,
     use_static_files,
     frame_id,
+    regenerate_static_files: bool = False,
     swaths=(1, 2, 3),
     chip_size: int | None = None,
     search_range: int | None = None,
@@ -265,7 +272,10 @@ def process_slc(
         swath = int(burst_id.split('_')[-1][-1])
         burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
 
-        if use_static_files:
+        if regenerate_static_files:
+            has_static_layer = False
+            do_static_upload = True
+        elif use_static_files:
             retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
             has_static_layer = get_static_layer(burst_id, retrieval_bucket)
             do_static_upload = not has_static_layer and static_files_bucket
