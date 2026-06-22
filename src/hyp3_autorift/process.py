@@ -387,6 +387,7 @@ def process(
             frame_id,
             regenerate_static_files=regenerate_static_files,
             chip_size=chip_size,
+            search_range=search_range,
         )
 
     elif platform == 'S1-SLC':
@@ -399,6 +400,7 @@ def process(
             use_static_files,
             regenerate_static_files=regenerate_static_files,
             chip_size=chip_size,
+            search_range=search_range,
         )
 
     elif platform == 'NISAR':
