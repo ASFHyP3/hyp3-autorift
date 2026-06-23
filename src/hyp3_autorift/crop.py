@@ -64,7 +64,7 @@ def get_aligned_min(val, grid_spacing):
     difference = val - nearest
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
-    return val - padding, int(padding / 120)
+    return val - padding, int(padding / PIXEL_SIZE)
 
 
 def get_aligned_max(val, grid_spacing):
@@ -73,7 +73,7 @@ def get_aligned_max(val, grid_spacing):
     difference = nearest - val
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
-    return val + padding, int(padding / 120)
+    return val + padding, int(padding / PIXEL_SIZE)
 
 
 def get_alignment_info(
