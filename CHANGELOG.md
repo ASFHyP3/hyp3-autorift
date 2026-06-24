@@ -10,9 +10,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 * Support for Sentinel-2 L2A COG processing via the AWS Element84 API.
+* Option to force the regeneration of Sentinel-1 static layers.
 
 ### Changed
 * `process.get_s2_metadata` now dynamically routes to either the Google Cloud Storage L1C workflow or the new AWS L2A workflow based on the scene name format.
+
+### Fixed
+* The Sentinel-1 workflow now correctly uses the chip size and search range overrides.
 
 ## [0.28.1]
 

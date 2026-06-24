@@ -347,6 +347,7 @@ def process(
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
     use_static_files: bool = True,
+    regenerate_static_files: bool = False,
     frame_id: str | None = None,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -359,7 +360,8 @@ def process(
         search_range: (Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.
         naming_scheme: Naming scheme to use for product files
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
-        use_static_files: Use pre-generated static topographic correction files if available
+        use_static_files: Use pre-generated static topographic correction files if available (Sentinel-1 only).
+        regenerate_static_files: Force the creation of, and upload of, new static files (Sentinel-1 only).
         frame_id: OPERA frame ID to record in the img_pair_info variable in the autoRIFT product file
 
     Returns:
@@ -378,14 +380,27 @@ def process(
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
         netcdf_file = process_sentinel1_burst_isce3(
-            reference, secondary, publish_bucket, use_static_files, frame_id, chip_size=chip_size
+            reference,
+            secondary,
+            publish_bucket,
+            use_static_files,
+            frame_id,
+            regenerate_static_files=regenerate_static_files,
+            chip_size=chip_size,
+            search_range=search_range,
         )
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
         netcdf_file = process_sentinel1_slc_isce3(
-            reference[0], secondary[0], publish_bucket, use_static_files, chip_size=chip_size
+            reference[0],
+            secondary[0],
+            publish_bucket,
+            use_static_files,
+            regenerate_static_files=regenerate_static_files,
+            chip_size=chip_size,
+            search_range=search_range,
         )
 
     elif platform == 'NISAR':
@@ -625,12 +640,19 @@ def main():
         help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
     )
     parser.add_argument(
+        '--regenerate-static-files',
+        type=string_is_true,
+        default=False,
+        help='Force the creation of, and upload of, new static files (Sentinel-1 only).',
+    )
+    parser.add_argument(
         '--frame-id',
         type=utils.nullable_string,
         default=None,
         help='Optional OPERA frame ID to include in metadata for Sentinel-1 multi-burst processing, '
         'and will be ignored otherwise.',
     )
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -692,6 +714,7 @@ def main():
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
         use_static_files=args.use_static_files,
+        regenerate_static_files=args.regenerate_static_files,
         frame_id=args.frame_id,
     )
 
