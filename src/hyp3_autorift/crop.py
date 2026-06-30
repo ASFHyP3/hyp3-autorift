@@ -166,7 +166,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
-        cropped_ds['img_pair_info'] = ds['img_pair_info'].astype('int8')
+        cropped_ds['img_pair_info'] = ds['img_pair_info'].where(False, -1).astype('int8')
         cropped_ds.drop_vars('mapping')
 
         if 'time' not in cropped_ds.coords:
@@ -212,7 +212,7 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
                 'microseconds_added_description': '6-digit numeric hash of the filename.',
             }
 
-        cropped_ds['mapping'] = ds['mapping'].astype('int8')
+        cropped_ds['mapping'] = ds['mapping'].where(False, -1).astype('int8')
 
         cropped_ds['x'] = x_values
         cropped_ds['y'] = y_values
