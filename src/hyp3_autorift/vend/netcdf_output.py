@@ -474,7 +474,7 @@ def netCDF_packaging(
     nc_outfile.setncattr('source', source)
     nc_outfile.setncattr('references', references)
 
-    var = nc_outfile.createVariable('img_pair_info', np.dtype('int8'), (), fill_value=None)
+    var = nc_outfile.createVariable('img_pair_info', np.dtype('int8'), (), fill_value=-127)
     var.setncattr('standard_name', 'image_pair_information')
     for key in IMG_INFO_DICT:
         if key == 'autoRIFT_software_version':
@@ -505,7 +505,7 @@ def netCDF_packaging(
     var[:] = y
 
     mapping_var_name = 'mapping'  # need to set this as an attribute for the image variables
-    var = nc_outfile.createVariable(mapping_var_name, np.dtype('int8'), (), fill_value=None)
+    var = nc_outfile.createVariable(mapping_var_name, np.dtype('int8'), (), fill_value=-127)
     if srs.GetAttrValue('PROJECTION') == 'Polar_Stereographic':
         var.setncattr('grid_mapping_name', 'polar_stereographic')
         var.setncattr('straight_vertical_longitude_from_pole', srs.GetProjParm('central_meridian'))
