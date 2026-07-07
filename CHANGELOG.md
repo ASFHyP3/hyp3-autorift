@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.2]
+
+### Added
+* Support for Sentinel-2 L2A COG processing via the AWS Element84 API.
+* Option to force the regeneration of Sentinel-1 static layers.
+
+### Changed
+* `process.get_s2_metadata` now dynamically routes to either the Google Cloud Storage L1C workflow or the new AWS L2A workflow based on the scene name format.
+* `netcdf_output.py` now writes the `mapping` and `img_pair_info` as type `int8` instead of `str` to sidestep a virtualizarr quark downstream.
+
+### Fixed
+* The Sentinel-1 workflow now correctly uses the chip size and search range overrides.
+* The cropping workflow now ensures `mapping` and `img_pair_info` are of type `int8` instead of `str`.
+
 ## [0.28.1]
 
 ### Changed

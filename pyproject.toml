@@ -53,8 +53,8 @@ develop = [
     'pytest-console-scripts',
     'pytest-cov',
     'responses',
-    'ruff==0.14.7',
-    'mypy==1.19.0',
+    'ruff==0.15.20',
+    'mypy==2.1.0',
     'types-requests',
 ]
 
@@ -173,7 +173,8 @@ yamale = "*"
 backoff = "*"
 pysolid = "*"
 # For PyCharm IDE integration
-pixi-pycharm = ">=0.0.8,<0.0.9"
+pixi-pycharm = ">=0.0.8"
+ipython = ">=8.37.0"
 
 
 [tool.pixi.target.linux-64.dependencies]

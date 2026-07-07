@@ -64,7 +64,7 @@ def get_aligned_min(val, grid_spacing):
     difference = val - nearest
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
-    return val - padding, int(padding / 120)
+    return val - padding, int(padding / PIXEL_SIZE)
 
 
 def get_aligned_max(val, grid_spacing):
@@ -73,7 +73,7 @@ def get_aligned_max(val, grid_spacing):
     difference = nearest - val
     pixel_misalignment = difference % PIXEL_SIZE
     padding = difference - pixel_misalignment
-    return val + padding, int(padding / 120)
+    return val + padding, int(padding / PIXEL_SIZE)
 
 
 def get_alignment_info(
@@ -166,7 +166,9 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         # Reset data for mapping and img_pair_info data variables as ds.where() extends data of all data variables
         # to the dimensions of the "mask"
-        cropped_ds['img_pair_info'] = ds['img_pair_info']
+        cropped_ds['img_pair_info'] = ds['img_pair_info'].where(False, -127).astype('int8')
+        cropped_ds['img_pair_info'].encoding = {'dtype': np.dtype('int8'), '_FillValue': -127}
+
         cropped_ds.drop_vars('mapping')
 
         if 'time' not in cropped_ds.coords:
@@ -212,7 +214,8 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
                 'microseconds_added_description': '6-digit numeric hash of the filename.',
             }
 
-        cropped_ds['mapping'] = ds['mapping']
+        cropped_ds['mapping'] = ds['mapping'].where(False, -127).astype('int8')
+        cropped_ds['mapping'].encoding = {'dtype': np.dtype('int8'), '_FillValue': -127}
 
         cropped_ds['x'] = x_values
         cropped_ds['y'] = y_values

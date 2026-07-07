@@ -143,7 +143,50 @@ def get_raster_bbox(path: str):
     ]
 
 
-def get_s2_metadata(scene_name):
+def get_s2_l2a_metadata(scene_name: str) -> dict:
+    url = f'https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a/items/{scene_name}'
+
+    response = requests.get(url)
+    response.raise_for_status()
+    item = response.json()
+
+    band_url = item['assets']['nir']['href']
+
+    if band_url.startswith('s3://'):
+        vsi_path = band_url.replace('s3://', '/vsis3/')
+    elif band_url.startswith('https://'):
+        vsi_path = '/vsicurl/' + band_url
+    else:
+        vsi_path = band_url
+
+    bbox = item.get('bbox')
+    if not bbox:
+        bbox = get_raster_bbox(vsi_path)
+
+    raw_dt = item['properties']['datetime']
+    try:
+        dt_obj = datetime.strptime(raw_dt, '%Y-%m-%dT%H:%M:%S.%fZ')
+    except ValueError:
+        dt_obj = datetime.strptime(raw_dt, '%Y-%m-%dT%H:%M:%SZ')
+
+    clean_dt = dt_obj.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    return {
+        'path': vsi_path,
+        'bbox': bbox,
+        'id': scene_name,
+        'properties': {'datetime': clean_dt, 'proj:epsg': item['properties'].get('proj:epsg')},
+    }
+
+
+def get_s2_metadata(scene_name: str) -> dict:
+    """Routes the metadata request based on the scene name format."""
+
+    # Element84 L2A STAC items
+    if scene_name.endswith('_L2A') or 'L2A' in scene_name:
+        return get_s2_l2a_metadata(scene_name)
+
+    # Google Cloud L1C .SAFE items
     path = get_s2_path(scene_name)
     bbox = get_raster_bbox(path)
     acquisition_start = datetime.strptime(scene_name.split('_')[2], '%Y%m%dT%H%M%S')
@@ -304,6 +347,7 @@ def process(
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
     use_static_files: bool = True,
+    regenerate_static_files: bool = False,
     frame_id: str | None = None,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -316,7 +360,8 @@ def process(
         search_range: (Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.
         naming_scheme: Naming scheme to use for product files
         publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
-        use_static_files: Use pre-generated static topographic correction files if available
+        use_static_files: Use pre-generated static topographic correction files if available (Sentinel-1 only).
+        regenerate_static_files: Force the creation of, and upload of, new static files (Sentinel-1 only).
         frame_id: OPERA frame ID to record in the img_pair_info variable in the autoRIFT product file
 
     Returns:
@@ -335,14 +380,27 @@ def process(
         from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
 
         netcdf_file = process_sentinel1_burst_isce3(
-            reference, secondary, publish_bucket, use_static_files, frame_id, chip_size=chip_size
+            reference,
+            secondary,
+            publish_bucket,
+            use_static_files,
+            frame_id,
+            regenerate_static_files=regenerate_static_files,
+            chip_size=chip_size,
+            search_range=search_range,
         )
 
     elif platform == 'S1-SLC':
         from hyp3_autorift.s1_isce3 import process_sentinel1_slc_isce3
 
         netcdf_file = process_sentinel1_slc_isce3(
-            reference[0], secondary[0], publish_bucket, use_static_files, chip_size=chip_size
+            reference[0],
+            secondary[0],
+            publish_bucket,
+            use_static_files,
+            regenerate_static_files=regenerate_static_files,
+            chip_size=chip_size,
+            search_range=search_range,
         )
 
     elif platform == 'NISAR':
@@ -582,12 +640,19 @@ def main():
         help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
     )
     parser.add_argument(
+        '--regenerate-static-files',
+        type=string_is_true,
+        default=False,
+        help='Force the creation of, and upload of, new static files (Sentinel-1 only).',
+    )
+    parser.add_argument(
         '--frame-id',
         type=utils.nullable_string,
         default=None,
         help='Optional OPERA frame ID to include in metadata for Sentinel-1 multi-burst processing, '
         'and will be ignored otherwise.',
     )
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -649,6 +714,7 @@ def main():
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
         use_static_files=args.use_static_files,
+        regenerate_static_files=args.regenerate_static_files,
         frame_id=args.frame_id,
     )
 
