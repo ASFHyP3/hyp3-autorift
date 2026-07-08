@@ -135,28 +135,31 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         The Path to the cropped netCDF file
     """
     with xr.open_dataset(netcdf_file, engine='h5netcdf') as ds:
-        # this will drop X/Y coordinates, so drop non-None values just to get X/Y extends
-        xy_ds = ds.where(ds.v.notnull()).dropna(dim='x', how='all').dropna(dim='y', how='all')
+        # this will drop Y/X coordinates, so drop non-None values just to get Y/X extends
+        yx_ds = ds.where(ds.v.notnull()).dropna(dim='y', how='all').dropna(dim='x', how='all')
 
-        x_values = xy_ds.x.values
-        grid_x_min, grid_x_max = x_values.min(), x_values.max()
-
-        y_values = xy_ds.y.values
+        y_values = yx_ds.y.values
         grid_y_min, grid_y_max = y_values.min(), y_values.max()
 
-        # Based on X/Y extends, mask original dataset
-        mask_lon = (ds.x >= grid_x_min) & (ds.x <= grid_x_max)
-        mask_lat = (ds.y >= grid_y_min) & (ds.y <= grid_y_max)
-        mask = mask_lon & mask_lat
+        x_values = yx_ds.x.values
+        grid_x_min, grid_x_max = x_values.min(), x_values.max()
 
-        cropped_ds = ds.where(mask).dropna(dim='x', how='all').dropna(dim='y', how='all')
+        y_slice = (
+            slice(grid_y_min, grid_y_max) if ds.indexes['y'].is_monotonic_increasing else slice(grid_y_max, grid_y_min)
+        )
+        x_slice = (
+            slice(grid_x_min, grid_x_max) if ds.indexes['x'].is_monotonic_increasing else slice(grid_x_max, grid_x_min)
+        )
+        cropped_ds = ds.sel(y=y_slice, x=x_slice)
         cropped_ds = cropped_ds.load()
 
         projection = ds['mapping'].attrs['spatial_epsg']
 
-        aligned_bounds, padding, x_values, y_values = get_alignment_info(grid_x_min, grid_y_min, grid_x_max, grid_y_max)
+        aligned_bounds, padding, aligned_x_values, aligned_y_values = get_alignment_info(
+            grid_x_min, grid_y_min, grid_x_max, grid_y_max
+        )
 
-        grid_x_min, grid_y_min, grid_x_max, grid_y_max = aligned_bounds
+        aligned_x_min, aligned_y_min, aligned_x_max, aligned_y_max = aligned_bounds
         left_pad, bottom_pad, right_pad, top_pad = padding
 
         constant_values = {var: ds[var].encoding.get('_FillValue') for var in cropped_ds}
@@ -217,15 +220,15 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds['mapping'] = ds['mapping'].where(False, -127).astype('int8')
         cropped_ds['mapping'].encoding = {'dtype': np.dtype('int8'), '_FillValue': -127}
 
-        cropped_ds['x'] = x_values
-        cropped_ds['y'] = y_values
+        cropped_ds['y'] = aligned_y_values
+        cropped_ds['x'] = aligned_x_values
 
-        cropped_ds['x'].attrs = ds['x'].attrs
         cropped_ds['y'].attrs = ds['y'].attrs
+        cropped_ds['x'].attrs = ds['x'].attrs
 
         # Compute centroid longitude/latitude
-        center_x = (grid_x_min + grid_x_max) / 2
-        center_y = (grid_y_min + grid_y_max) / 2
+        center_y = (aligned_y_min + aligned_y_max) / 2
+        center_x = (aligned_x_min + aligned_x_max) / 2
 
         # Convert to lon/lat coordinates
         to_lon_lat_transformer = pyproj.Transformer.from_crs(f'EPSG:{projection}', 'EPSG:4326', always_xy=True)
@@ -237,11 +240,13 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         cropped_ds['img_pair_info'].attrs['longitude'] = round(center_lon_lat[0], 2)
 
         # Update mapping.GeoTransform
-        x_cell = x_values[1] - x_values[0]
-        y_cell = y_values[1] - y_values[0]
+        y_cell = aligned_y_values[1] - aligned_y_values[0]
+        x_cell = aligned_x_values[1] - aligned_x_values[0]
 
         # It was decided to keep all values in GeoTransform center-based
-        cropped_ds['mapping'].attrs['GeoTransform'] = f'{x_values[0]} {x_cell} 0 {y_values[0]} 0 {y_cell}'
+        cropped_ds['mapping'].attrs['GeoTransform'] = (
+            f'{aligned_x_values[0]} {x_cell} 0 {aligned_y_values[0]} 0 {y_cell}'
+        )
 
         dim_chunks_settings = (1, CHUNK_SIZE, CHUNK_SIZE)
 
