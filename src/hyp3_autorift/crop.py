@@ -144,11 +144,13 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         x_values = yx_ds.x.values
         grid_x_min, grid_x_max = x_values.min(), x_values.max()
 
-        cropped_ds = ds.sel(
-            # Setting the step inline with the coordinate monocity since (-1)**True -> -1 and (-1)**False -> 1
-            y=slice(grid_y_min, grid_y_max, (-1) ** ds.indexes['y'].is_monotonic_decreasing),
-            x=slice(grid_x_min, grid_x_max, (-1) ** ds.indexes['x'].is_monotonic_decreasing),
+        y_slice = (
+            slice(grid_y_min, grid_y_max) if ds.indexes['y'].is_monotonic_increasing else slice(grid_y_max, grid_y_min)
         )
+        x_slice = (
+            slice(grid_x_min, grid_x_max) if ds.indexes['x'].is_monotonic_increasing else slice(grid_x_max, grid_x_min)
+        )
+        cropped_ds = ds.sel(y=y_slice, x=x_slice)
         cropped_ds = cropped_ds.load()
 
         projection = ds['mapping'].attrs['spatial_epsg']
