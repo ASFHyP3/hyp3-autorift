@@ -146,14 +146,16 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
 
         cropped_ds = ds.sel(
             # Setting the step inline with the coordinate monocity since (-1)**True -> -1 and (-1)**False -> 1
-            y=slice(grid_y_min, grid_y_max, (-1)**ds.indexes['y'].is_monotonic_decreasing),
-            x=slice(grid_x_min, grid_x_max, (-1)**ds.indexes['x'].is_monotonic_decreasing),
+            y=slice(grid_y_min, grid_y_max, (-1) ** ds.indexes['y'].is_monotonic_decreasing),
+            x=slice(grid_x_min, grid_x_max, (-1) ** ds.indexes['x'].is_monotonic_decreasing),
         )
         cropped_ds = cropped_ds.load()
 
         projection = ds['mapping'].attrs['spatial_epsg']
 
-        aligned_bounds, padding, aligned_x_values, aligned_y_values = get_alignment_info(grid_x_min, grid_y_min, grid_x_max, grid_y_max)
+        aligned_bounds, padding, aligned_x_values, aligned_y_values = get_alignment_info(
+            grid_x_min, grid_y_min, grid_x_max, grid_y_max
+        )
 
         aligned_x_min, aligned_y_min, aligned_x_max, aligned_y_max = aligned_bounds
         left_pad, bottom_pad, right_pad, top_pad = padding
@@ -240,7 +242,9 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         x_cell = aligned_x_values[1] - aligned_x_values[0]
 
         # It was decided to keep all values in GeoTransform center-based
-        cropped_ds['mapping'].attrs['GeoTransform'] = f'{aligned_x_values[0]} {x_cell} 0 {aligned_y_values[0]} 0 {y_cell}'
+        cropped_ds['mapping'].attrs['GeoTransform'] = (
+            f'{aligned_x_values[0]} {x_cell} 0 {aligned_y_values[0]} 0 {y_cell}'
+        )
 
         dim_chunks_settings = (1, CHUNK_SIZE, CHUNK_SIZE)
 
