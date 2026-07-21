@@ -3,12 +3,15 @@
 import json
 import logging
 import os
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Union
 
 import boto3
 import numpy as np
+from burst2safe.safe import Safe
+from burst2safe.utils import BurstInfo
 from hyp3lib import DemError
 from hyp3lib.aws import get_content_type, get_tag_set
 from netCDF4 import Dataset
@@ -299,3 +302,65 @@ def get_platform(scene: str) -> str:
     if scene.startswith('NISAR'):
         return 'NISAR'
     raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
+
+
+def get_burst_rid_and_info(scene: str) -> Tuple[str, BurstInfo]:
+    platform, burst_id, swath, acquisition, polarization, _ = scene.split('_')
+    rid = '_'.join([platform, burst_id, swath, polarization])
+
+    # FIXME: do an asf_search.search here? Only thing missing is absolute orbit... This is obnoxious because we'll call
+    #        burst2safe way later so will do multiple lookups
+    info = BurstInfo(
+        # required for burst group validity check
+        granule=scene,
+        swath=swath,
+        polarization=polarization,
+        burst_id=int(burst_id),
+        # Side-stepping that this is required to be the same for all bursts in burst group validity check
+        absolute_orbit=0,
+        # Required but not used by burst group validity check
+        metadata_path=Path('/dev/null'),
+        # Fake; required to instantiate class but not needed for burst group validity check
+        direction='',
+        burst_index=0,
+        relative_orbit=0,
+        data_url='',
+        # Not-optional optionals
+        slc_granule=None,
+        date=None,
+        data_path=None,
+        metadata_url=None,
+    )
+    return rid, info
+
+
+def ensure_burst_group_validity(reference: list, secondary: list) -> Tuple[list, list]:
+    ref_rids, ref_infos = zip(*[get_burst_rid_and_info(scene) for scene in reference])
+    sec_rids, sec_infos = zip(*[get_burst_rid_and_info(scene) for scene in secondary])
+
+    if len(ref_rids) != len(sec_rids):
+        warnings.warn(
+            'A different number of reference and secondary bursts were provided!\n'
+            f'reference = {reference}\n'
+            f'secondary = {secondary}\n'
+            'Selecting the bursts common to each set.'
+        )
+        common_rids = set(ref_rids) & set(sec_rids)
+
+        ref_infos = tuple(ref_infos for ref_rid, ref_infos in zip(ref_rids, ref_infos) if ref_rid in common_rids)
+        sec_infos = tuple(sec_infos for sec_rid, sec_infos in zip(sec_rids, sec_infos) if sec_rid in common_rids)
+
+        reference = [info.granule for info in ref_infos]
+        secondary = [info.granule for info in sec_infos]
+
+    if len(reference) < 5 or len(secondary) < 5:
+        raise ValueError(
+            'At least 5 common bursts are required for ITS_LIVE processing:\n'
+            f'reference = {reference}\n'
+            f'secondary = {secondary}'
+        )
+
+    Safe.check_group_validity(ref_infos)
+    Safe.check_group_validity(sec_infos)
+
+    return reference, secondary

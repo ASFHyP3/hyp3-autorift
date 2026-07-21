@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.4]
+
+### Fixed
+* The common Sentinel-1 bursts in the reference and secondary list will now be used for processing and the final burst group validity will be checked by `burst2safe` before processing. This makes autoRIFT more robust to frames with alternating acquisition strategies for some bursts (e.g., a burst is only acquired for S1A and not S1B).
+
 ## [0.28.3]
 
 ### Fixed

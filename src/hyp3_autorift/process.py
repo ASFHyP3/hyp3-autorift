@@ -674,7 +674,6 @@ def main():
         parser.error('Must provide exactly two granules.')
 
     if has_granules:
-        # FIXME: won't actually warn because of: https://github.com/ASFHyP3/burst2safe/issues/160
         warnings.warn(
             'The positional argument for granules is deprecated and will be removed in a future release. '
             'Please use --reference and --secondary.',
@@ -701,9 +700,13 @@ def main():
     if ref_platforms != sec_platforms and not (ref_platforms | sec_platforms).issubset(landsat_missions):
         parser.error('all scenes must be of the same type.')
 
-    is_optical = ref_platforms.issubset({'S2'} | landsat_missions)
-    if not is_optical and len(reference) != len(secondary):
-        parser.error('Must provide the same number of reference and secondary scenes.')
+    is_radar = ref_platforms.issubset({'S1-BURST', 'S1-SLC', 'NISAR'})
+    if is_radar:
+        if ref_platforms == {'S1-BURST'}:
+            reference, secondary = utils.ensure_burst_group_validity(reference, secondary)
+
+        if len(reference) != len(secondary):
+            parser.error('Must provide the same number of reference and secondary scenes.')
 
     product_file, browse_file, thumbnail_file = process(
         reference,
