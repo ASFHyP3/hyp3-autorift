@@ -347,8 +347,8 @@ def ensure_burst_group_validity(reference: list, secondary: list) -> Tuple[list,
         )
         common_rids = set(ref_rids) & set(sec_rids)
 
-        ref_infos = [ref_infos for ref_rid, ref_infos in zip(ref_rids, ref_infos) if ref_rid in common_rids]
-        sec_infos = [sec_infos for sec_rid, sec_infos in zip(sec_rids, sec_infos) if sec_rid in common_rids]
+        ref_infos = tuple(ref_infos for ref_rid, ref_infos in zip(ref_rids, ref_infos) if ref_rid in common_rids)
+        sec_infos = tuple(sec_infos for sec_rid, sec_infos in zip(sec_rids, sec_infos) if sec_rid in common_rids)
 
         reference = [info.granule for info in ref_infos]
         secondary = [info.granule for info in sec_infos]
