@@ -354,9 +354,11 @@ def ensure_burst_group_validity(reference: list, secondary: list) -> Tuple[list,
         secondary = [info.granule for info in sec_infos]
 
     if len(reference) < 5 or len(secondary) < 5:
-        raise ValueError('At least 5 common bursts are required for ITS_LIVE processing:\n'
-                         f'reference = {reference}\n'
-                         f'secondary = {secondary}')
+        raise ValueError(
+            'At least 5 common bursts are required for ITS_LIVE processing:\n'
+            f'reference = {reference}\n'
+            f'secondary = {secondary}'
+        )
 
     Safe.check_group_validity(ref_infos)
     Safe.check_group_validity(sec_infos)
