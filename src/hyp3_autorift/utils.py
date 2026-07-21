@@ -320,7 +320,7 @@ def get_burst_rid_and_info(scene: str) -> Tuple[str, BurstInfo]:
         absolute_orbit=0,
         # Required but not used by burst group validity check
         metadata_path=Path('/dev/null'),
-        # Fake because required to instantiate class but not needed for burst group validity check
+        # Fake; required to instantiate class but not needed for burst group validity check
         direction='',
         burst_index=0,
         relative_orbit=0,
