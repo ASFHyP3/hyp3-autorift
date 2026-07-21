@@ -260,3 +260,36 @@ def test_nullable_string(argument_string, expected):
 )
 def test_nullable_granule_list(granule_string, expected):
     assert utils.nullable_granule_list(granule_string) == expected
+
+
+def test_ensure_burst_group_validity():
+    reference = [
+        'S1_175514_IW1_20190915T082904_HH_4194-BURST',
+        'S1_175515_IW1_20190915T082907_HH_4194-BURST',
+        'S1_175516_IW1_20190915T082910_HH_4194-BURST',
+        'S1_175517_IW1_20190915T082912_HH_4194-BURST',
+        'S1_175518_IW1_20190915T082915_HH_4194-BURST',
+        'S1_175519_IW1_20190915T082918_HH_4194-BURST',
+        'S1_175520_IW1_20190915T082921_HH_4194-BURST',
+        'S1_175521_IW1_20190915T082923_HH_B381-BURST',
+    ]
+    secondary = [
+        'S1_175514_IW1_20190909T082822_HH_9B4C-BURST',
+        'S1_175515_IW1_20190909T082825_HH_9B4C-BURST',
+        'S1_175516_IW1_20190909T082828_HH_9B4C-BURST',
+        'S1_175517_IW1_20190909T082830_HH_9B4C-BURST',
+        'S1_175518_IW1_20190909T082833_HH_9B4C-BURST',
+        'S1_175519_IW1_20190909T082836_HH_9B4C-BURST',
+        'S1_175520_IW1_20190909T082839_HH_9B4C-BURST',
+    ]
+    ref, sec = utils.ensure_burst_group_validity(reference, secondary)
+    assert ref == reference[:-1]
+    assert sec == secondary
+
+    with pytest.raises(ValueError):
+        # burst gap in swath
+        _, _ = utils.ensure_burst_group_validity(reference=reference[:4] + reference[5:], secondary=secondary)
+
+    with pytest.raises(ValueError):
+        # less than 5 bursts
+        _, _ = utils.ensure_burst_group_validity(reference=reference[:4], secondary=secondary)
