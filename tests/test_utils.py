@@ -282,7 +282,9 @@ def test_ensure_burst_group_validity():
         'S1_175519_IW1_20190909T082836_HH_9B4C-BURST',
         'S1_175520_IW1_20190909T082839_HH_9B4C-BURST',
     ]
-    ref, sec = utils.ensure_burst_group_validity(reference, secondary)
+    with pytest.warns(UserWarning):
+        ref, sec = utils.ensure_burst_group_validity(reference, secondary)
+
     assert ref == reference[:-1]
     assert sec == secondary
 
@@ -292,4 +294,4 @@ def test_ensure_burst_group_validity():
 
     with pytest.raises(ValueError):
         # less than 5 bursts
-        _, _ = utils.ensure_burst_group_validity(reference=reference[:4], secondary=secondary)
+        _, _ = utils.ensure_burst_group_validity(reference=reference[:4], secondary=secondary[:4])
