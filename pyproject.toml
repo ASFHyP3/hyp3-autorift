@@ -53,8 +53,8 @@ develop = [
     'pytest-console-scripts',
     'pytest-cov',
     'responses',
-    'ruff==0.15.20',
-    'mypy==2.1.0',
+    'ruff==0.15.21',
+    'mypy==2.3.0',
     'types-requests',
 ]
 
@@ -141,7 +141,7 @@ no-build-isolation = ['isce3']
 pip = "*"
 boto3 = "*"
 botocore = "*"
-burst2safe = ">=1.4.4"
+burst2safe = ">=2.0.0"
 gdal = ">=3"
 h5netcdf = "*"
 hyp3lib = ">=4,<5"
