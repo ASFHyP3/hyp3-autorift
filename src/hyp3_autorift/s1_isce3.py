@@ -55,7 +55,7 @@ def process_sentinel1_burst_isce3(
         burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
         burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
 
-        swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
+        swaths = sorted({int(g.split('_')[2][2]) for g in reference})
 
         return process_slc(
             safe_ref,
@@ -444,11 +444,9 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, 
             sensing_stop = burst_sensing_stop
             last_rng_samples = num_rng_samples
 
-        if sensing_start > burst_sensing_start:
-            sensing_start = burst_sensing_start
+        sensing_start = min(sensing_start, burst_sensing_start)
 
-        if sensing_stop < burst_sensing_stop:
-            sensing_stop = burst_sensing_stop
+        sensing_stop = max(sensing_stop, burst_sensing_stop)
 
         if swath > min(swaths):
             rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
@@ -467,10 +465,9 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, 
     total_az_samples = 1 + int(np.round(sensing_time / az_time_interval))
 
     for slc in ['ref', 'sec']:
-        swath_index = 0
         merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=np.float32)
 
-        for swath in swaths:
+        for swath_index, swath in enumerate(swaths):
             print(f'Merging Swath {swath}')
 
             slc_path = slc + '_swath_iw' + str(swath) + '.tif'
@@ -504,8 +501,6 @@ def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, 
             )
 
             merged_arr[merged_az_slice, merged_rng_slice][cond] = slc_array[slc_az_slice, slc_rng_slice][cond]
-
-            swath_index += 1
 
         write_slc_gdal(merged_arr, 'reference.tif' if slc == 'ref' else 'secondary.tif')
 
@@ -719,7 +714,7 @@ def get_burst_id(safe, burst_granule, orbit_file):
             str_burst_id = 't' + str(int(x.burst_id.track_number)).zfill(3) + '_' + burst_id_x
 
     if str_burst_id is None:
-        raise Exception('The burst id from ' + burst_granule + ' was not found in ' + safe)
+        raise Exception('The burst id from ' + burst_granule + ' was not found in ' + safe)  # noqa: TRY002
 
     return str_burst_id
 
@@ -728,7 +723,7 @@ def get_isce3_burst_id(burst):
     track_number = 't' + str(int(burst.burst_id.track_number)).zfill(3)
     esa_burst_id = str(burst.burst_id.esa_burst_id).zfill(6)
     subswath = burst.burst_id.subswath.lower()
-    return '_'.join([track_number, esa_burst_id, subswath])
+    return f'{track_number}_{esa_burst_id}_{subswath}'
 
 
 def get_burst_ids(safe, orbit_file):

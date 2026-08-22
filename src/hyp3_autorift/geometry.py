@@ -1,7 +1,6 @@
 """Geometry routines for working Geogrid"""
 
 import logging
-from typing import Tuple
 
 from osgeo import ogr, osr
 
@@ -10,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 def polygon_from_bbox(
-    x_limits: Tuple[float, float], y_limits: Tuple[float, float], epsg_code: int = 4326
+    x_limits: tuple[float, float], y_limits: tuple[float, float], epsg_code: int = 4326
 ) -> ogr.Geometry:
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint_2D(x_limits[0], y_limits[1])

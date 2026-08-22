@@ -97,7 +97,7 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str) -> None:
 
     try:
         upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f'Unable to upload {filename} to S3 due to {e}.')
 
 
@@ -159,8 +159,7 @@ def get_static_layer(burst_id: str, bucket: str) -> bool:
         metadata = ds.GetMetadata()
 
     with open(burst_static_dir / 'radar_grid.txt', 'w') as rdr_grid_file:
-        for param in RADAR_GRID_PARAMS:
-            rdr_grid_file.write(metadata[param] + '\n')
+        rdr_grid_file.writelines(metadata[param] + '\n' for param in RADAR_GRID_PARAMS)
 
     return True
 
@@ -178,14 +177,14 @@ def create_static_layer(burst_id: str, burst: Sentinel1BurstSlc, isce_product_pa
     """
 
     burst_paths = sorted(glob.glob(isce_product_path))
-    burst_path = [p for p in burst_paths if p.split('/')[-1] == burst_id][0]
+    burst_path = next(p for p in burst_paths if p.split('/')[-1] == burst_id)
     burst_dir = glob.glob(burst_path + '/*')[0]
     burst_rdr_grid_txt = glob.glob(glob.glob(burst_path + '/*')[0] + '/*.txt')[0]
     burst_topo_nc = f'{burst_id}_static_rdr.nc'
     topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
     with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
-        metadata = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]))
+        metadata = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file]))
 
     additional_metadata_vals = [
         burst.first_valid_line,

@@ -225,11 +225,11 @@ def srcwin_for_intersection(xmin, ymin, xmax, ymax, gt):
     px_w = gt[1]
     px_h = gt[5]
 
-    xoff = int(round((xmin - gt[0]) / px_w))
-    yoff = int(round((ymax - gt[3]) / px_h))
+    xoff = round((xmin - gt[0]) / px_w)
+    yoff = round((ymax - gt[3]) / px_h)
 
-    xsize = int(round((xmax - xmin) / px_w))
-    ysize = int(round((ymin - ymax) / px_h))
+    xsize = round((xmax - xmin) / px_w)
+    ysize = round((ymin - ymax) / px_h)
 
     return xoff, yoff, xsize, ysize
 

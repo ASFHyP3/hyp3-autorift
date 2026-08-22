@@ -6,7 +6,6 @@ import os
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Union
 
 import boto3
 import numpy as np
@@ -43,7 +42,7 @@ def upload_file_to_s3_with_publish_access_keys(
 
     extra_args = {'ContentType': get_content_type(key)}
 
-    logging.info(f'Uploading s3://{bucket}/{key}')
+    log.info(f'Uploading s3://{bucket}/{key}')
     s3_client.upload_file(str(path_to_file), bucket, key, extra_args)
 
     tag_set = get_tag_set(path_to_file.name)
@@ -153,7 +152,7 @@ def get_epsg_code(info: dict) -> int:
     return epsg_code
 
 
-def ensure_same_projection(reference_path: Union[str, Path], secondary_path: Union[str, Path]) -> Tuple[str, str]:
+def ensure_same_projection(reference_path: str | Path, secondary_path: str | Path) -> tuple[str, str]:
     reprojection_dir = Path('reprojected')
     reprojection_dir.mkdir(exist_ok=True)
 
@@ -210,7 +209,7 @@ def sort_ref_sec(reference: list[str], secondary: list[str]) -> tuple[list[str],
     return reference, secondary
 
 
-def get_lat_lon_from_ncfile(ncfile: Path) -> Tuple[float, float]:
+def get_lat_lon_from_ncfile(ncfile: Path) -> tuple[float, float]:
     with Dataset(ncfile) as ds:
         var = ds.variables['img_pair_info']
         return var.latitude, var.longitude
@@ -304,9 +303,9 @@ def get_platform(scene: str) -> str:
     raise NotImplementedError(f'autoRIFT processing not available for this platform. {scene}')
 
 
-def get_burst_rid_and_info(scene: str) -> Tuple[str, BurstInfo]:
-    platform, burst_id, swath, acquisition, polarization, _ = scene.split('_')
-    rid = '_'.join([platform, burst_id, swath, polarization])
+def get_burst_rid_and_info(scene: str) -> tuple[str, BurstInfo]:
+    platform, burst_id, swath, _, polarization, _ = scene.split('_')
+    rid = f'{platform}_{burst_id}_{swath}_{polarization}'
 
     # FIXME: do an asf_search.search here? Only thing missing is absolute orbit... This is obnoxious because we'll call
     #        burst2safe way later so will do multiple lookups
@@ -334,7 +333,7 @@ def get_burst_rid_and_info(scene: str) -> Tuple[str, BurstInfo]:
     return rid, info
 
 
-def ensure_burst_group_validity(reference: list, secondary: list) -> Tuple[list, list]:
+def ensure_burst_group_validity(reference: list, secondary: list) -> tuple[list, list]:
     ref_rids, ref_infos = zip(*[get_burst_rid_and_info(scene) for scene in reference])
     sec_rids, sec_infos = zip(*[get_burst_rid_and_info(scene) for scene in secondary])
 
