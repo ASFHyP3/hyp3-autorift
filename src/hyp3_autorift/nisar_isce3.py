@@ -279,7 +279,7 @@ def convert_rslc_to_uint8_amplitude(
     num_rows = band.YSize
     num_cols = band.XSize
 
-    driver = gdal.GetDriverByName("GTiff")
+    driver = gdal.GetDriverByName('GTiff')
     temp_filename = 'temp.tif'
     temp_ds = driver.Create(
         temp_filename,
@@ -290,7 +290,7 @@ def convert_rslc_to_uint8_amplitude(
     )
     temp_band = temp_ds.GetRasterBand(1)
 
-    driver = gdal.GetDriverByName("GTiff")
+    driver = gdal.GetDriverByName('GTiff')
     out_ds = driver.Create(
         out_filename,
         xsize=num_cols,
@@ -326,9 +326,8 @@ def convert_rslc_to_uint8_amplitude(
             dtype=np.complex64,
         ).reshape(block_rows, num_cols)
 
-        np.abs(src, out=img[row:row + block_rows])
+        np.abs(src, out=img[row : row + block_rows])
         del src
-        src = None
 
     if is_gslc:
         np.nan_to_num(
@@ -347,7 +346,7 @@ def convert_rslc_to_uint8_amplitude(
     kernel[center, center] = kernel.size - 1
     kernel /= kernel.size
 
-    img = cv2.filter2D(
+    img = cv2.filter2D(  # type: ignore [assignment]
         img,
         -1,
         kernel,
@@ -363,7 +362,7 @@ def convert_rslc_to_uint8_amplitude(
     img **= 2
     S1 = np.sqrt(np.mean(img))
 
-    img = None
+    del img
     ds = gdal.Open(temp_filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
     img = band.ReadAsArray()
@@ -378,7 +377,7 @@ def convert_rslc_to_uint8_amplitude(
     for row in range(0, num_rows, block_size):
         block_rows = min(block_size, num_rows - row)
 
-        out_block = img[row:row + block_rows].astype(
+        out_block = img[row : row + block_rows].astype(
             np.uint8,
             copy=True,
         )
