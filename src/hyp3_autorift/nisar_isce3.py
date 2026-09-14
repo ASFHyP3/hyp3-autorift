@@ -45,7 +45,7 @@ def get_config(
                 'threshold': 1e-8,
                 'numiter': 25,
                 'extraiter': 10,
-                'lines_per_block': 10000,
+                'lines_per_block': 2500,
                 'write_x': True,
                 'write_y': True,
                 'write_z': True,
@@ -60,13 +60,13 @@ def get_config(
                 'threshold': 1e-8,
                 'numiter': 25,
                 'extraiter': 10,
-                'lines_per_block': 10000,
+                'lines_per_block': 2500,
                 'topo_path': 'scratch/',
                 'maxiter': 10,
             },
             f'{resample_type}_resample': {
                 'offsets_dir': 'scratch/',
-                'lines_per_tile': 10000,
+                'lines_per_tile': 2500,
                 'flatten': False,
             },
             'input_subset': {'list_of_frequencies': {frequency: [polarization]}},
@@ -151,7 +151,7 @@ def get_dem(scene_poly: ogr.Geometry, dem_path: str = 'dem.tif') -> str:
     """Download a DEM covering a given polygon."""
     return str(
         prepare_dem_geotiff(
-            output_name=dem_path, geometry=scene_poly, epsg_code=4326, pixel_size=0.001, height_above_ellipsoid=True
+            output_name=dem_path, geometry=scene_poly, pixel_size=0.001, epsg_code=4326, height_above_ellipsoid=True
         )
     )
 
@@ -265,8 +265,12 @@ def crop_gslcs(reference, secondary):
     return out1, out2
 
 
-def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_filter_width=21, is_gslc: bool = False):
-    """Convert CFloat32 rslc image to uint8 amplitude data, and write it to a GeoTIFF file."""
+def convert_rslc_to_uint8_amplitude(
+    in_filename: str,
+    out_filename: str,
+    wallis_filter_width=21,
+    is_gslc: bool = False,
+):
     ds = gdal.Open(in_filename, gdal.GA_ReadOnly)
     gt = ds.GetGeoTransform(can_return_null=True)
     proj = ds.GetProjectionRef()
@@ -275,71 +279,110 @@ def convert_slc_to_uint8_amplitude(in_filename: str, out_filename: str, wallis_f
     num_rows = band.YSize
     num_cols = band.XSize
 
-    driver = gdal.GetDriverByName('GTIFF')
-    out_ds = driver.Create(out_filename, xsize=num_cols, ysize=num_rows, bands=1, eType=gdal.GDT_Byte)
+    driver = gdal.GetDriverByName('GTiff')
+    temp_filename = 'temp.tif'
+    temp_ds = driver.Create(
+        temp_filename,
+        xsize=num_cols,
+        ysize=num_rows,
+        bands=1,
+        eType=gdal.GDT_Float32,
+    )
+    temp_band = temp_ds.GetRasterBand(1)
+
+    driver = gdal.GetDriverByName('GTiff')
+    out_ds = driver.Create(
+        out_filename,
+        xsize=num_cols,
+        ysize=num_rows,
+        bands=1,
+        eType=gdal.GDT_Byte,
+    )
     out_band = out_ds.GetRasterBand(1)
 
     if is_gslc:
         out_ds.SetGeoTransform(gt)
         out_ds.SetProjection(proj)
 
-    img = np.zeros((num_rows, num_cols), dtype=np.float32)
+    img = np.empty((num_rows, num_cols), dtype=np.float32)
 
-    block_size = 10000
+    block_size = 2500
 
-    # Read SLC data progressively to avoid memory issues
     for row in range(0, num_rows, block_size):
-        print(f'Reading Block {row / block_size}')
-
-        start = time.time()
-        if row + block_size > num_rows:
-            block_size = num_rows - row
+        block_rows = min(block_size, num_rows - row)
 
         encoded = band.ReadRaster(
             xoff=0,
             yoff=row,
             xsize=num_cols,
-            ysize=block_size,
+            ysize=block_rows,
             buf_xsize=num_cols,
-            buf_ysize=block_size,
+            buf_ysize=block_rows,
             buf_type=gdal.GDT_CFloat32,
         )
-        img[row : row + block_size] = (
-            np.abs(np.frombuffer(encoded, np.complex64)).reshape((block_size, num_cols)).astype(np.float32)
-        )
-        end = time.time()
-        print(f'Reading SLC Block took {end - start}s')
 
-    print('Setting Invalid to 0')
+        src = np.frombuffer(
+            encoded,
+            dtype=np.complex64,
+        ).reshape(block_rows, num_cols)
+
+        np.abs(src, out=img[row : row + block_rows])
+        del src
+
     if is_gslc:
-        img[np.isnan(img)] = 0
-        img[np.isinf(img)] = 0
-    valid_data = img != 0
+        np.nan_to_num(
+            img,
+            copy=False,
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
 
-    print('Preprocess with HPS Filter')
-    kernel = -np.ones((wallis_filter_width, wallis_filter_width), dtype=np.float32)
-    kernel[int((wallis_filter_width - 1) / 2), int((wallis_filter_width - 1) / 2)] = kernel.size - 1
-    kernel = kernel / kernel.size
-    img[:] = cv2.filter2D(img, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+    kernel = -np.ones(
+        (wallis_filter_width, wallis_filter_width),
+        dtype=np.float32,
+    )
+    center = wallis_filter_width // 2
+    kernel[center, center] = kernel.size - 1
+    kernel /= kernel.size
 
-    print('Scale Values')
-    S1 = np.std(img[valid_data]) * np.sqrt(img[valid_data].size / (img[valid_data].size - 1.0))
-    M1 = np.mean(img[valid_data])
+    img = cv2.filter2D(  # type: ignore [assignment]
+        img,
+        -1,
+        kernel,
+        borderType=cv2.BORDER_CONSTANT,
+    )
+
+    temp_band.WriteArray(img)
+    temp_ds = None
+    temp_band = None
+
+    M1 = np.mean(img)
+    img -= M1
+    img **= 2
+    S1 = np.sqrt(np.mean(img))
+
+    del img
+    ds = gdal.Open(temp_filename, gdal.GA_ReadOnly)
+    band = ds.GetRasterBand(1)
+    img = band.ReadAsArray()
+
     img -= M1 - 3 * S1
     img /= 6 * S1
     img *= 256
-    del S1, M1
+
     np.clip(img, 0, 255, out=img)
     np.rint(img, out=img)
-    img[:] = img.astype(np.uint8)
 
-    print('Setting Invalid to 0')
-    if is_gslc:
-        img[np.isnan(img)] = 0
-        img[np.isinf(img)] = 0
-    img[~valid_data] = 0
+    for row in range(0, num_rows, block_size):
+        block_rows = min(block_size, num_rows - row)
 
-    out_band.WriteArray(img)
+        out_block = img[row : row + block_rows].astype(
+            np.uint8,
+            copy=True,
+        )
+
+        out_band.WriteArray(out_block, xoff=0, yoff=row)
 
 
 def download_product(granule_name: str):
@@ -445,7 +488,7 @@ def process_nisar_rslc(
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
         start_time = time.time()
-        convert_slc_to_uint8_amplitude(in_path, out_path)
+        convert_rslc_to_uint8_amplitude(in_path, out_path)
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
 
@@ -514,7 +557,7 @@ def process_nisar_gslc(
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
         start_time = time.time()
-        convert_slc_to_uint8_amplitude(in_path, out_path, is_gslc=True)
+        convert_rslc_to_uint8_amplitude(in_path, out_path, is_gslc=True)
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
 
