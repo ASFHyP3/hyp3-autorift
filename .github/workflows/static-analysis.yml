@@ -9,42 +9,10 @@ jobs:
     permissions:
       contents: read
 
-  check-with-ruff:
-    runs-on: ubuntu-24.04-arm
+  call-pixi-tasks-workflow:
+    uses: ASFHyP3/actions/.github/workflows/reusable-pixi-tasks.yml@support-pixi
+    with:
+      tasks: >-
+        ["mypy", "ruff check -- --output-format=github", "ruff format -- --diff"]
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: prefix-dev/setup-pixi@v0.10.2
-        with:
-          activate-environment: true
-
-      - name: ruff check
-        run: |
-          ruff check --output-format=github || (echo 'Run `ruff check --fix` to automatically fix errors where possible.' && exit 1)
-
-      - name: ruff format
-        if: ${{ !cancelled() }}
-        run: |
-          ruff format --diff || (echo 'Run `ruff format` to automatically re-format.' && exit 1)
-
-
-  check-with-mypy:
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: prefix-dev/setup-pixi@v0.10.2
-        with:
-          activate-environment: true
-
-      - name: Run pixi install task
-        run: |
-          pixi run install-editable
-
-      - name: Check with MyPy
-        run: |
-          mkdir .mypy_cache && mypy .
