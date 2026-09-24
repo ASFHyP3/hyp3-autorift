@@ -361,8 +361,6 @@ def convert_rslc_to_uint8_amplitude(
     temp_ds = None
     temp_band = None
 
-    Path(temp_filename).unlink()
-
     M1 = np.mean(img)
     img -= M1
     img **= 2
@@ -372,6 +370,8 @@ def convert_rslc_to_uint8_amplitude(
     ds = gdal.Open(temp_filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
     img = band.ReadAsArray()
+
+    Path(temp_filename).unlink()
 
     img -= M1 - 3 * S1
     img /= 6 * S1
