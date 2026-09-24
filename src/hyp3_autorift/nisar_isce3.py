@@ -4,6 +4,7 @@ Prototyping the usage of NISAR data with autoRIFT
 
 import argparse
 import copy
+import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -281,12 +282,14 @@ def convert_rslc_to_uint8_amplitude(
 
     driver = gdal.GetDriverByName('GTiff')
     temp_filename = 'temp.tif'
+    options = ['BIGTIFF=YES', 'COMPRESS=DEFLATE']
     temp_ds = driver.Create(
         temp_filename,
         xsize=num_cols,
         ysize=num_rows,
         bands=1,
         eType=gdal.GDT_Float32,
+        options=options,
     )
     temp_band = temp_ds.GetRasterBand(1)
 
@@ -297,6 +300,7 @@ def convert_rslc_to_uint8_amplitude(
         ysize=num_rows,
         bands=1,
         eType=gdal.GDT_Byte,
+        options=options,
     )
     out_band = out_ds.GetRasterBand(1)
 
@@ -366,6 +370,8 @@ def convert_rslc_to_uint8_amplitude(
     ds = gdal.Open(temp_filename, gdal.GA_ReadOnly)
     band = ds.GetRasterBand(1)
     img = band.ReadAsArray()
+
+    Path(temp_filename).unlink()
 
     img -= M1 - 3 * S1
     img /= 6 * S1
@@ -484,6 +490,16 @@ def process_nisar_rslc(
     ref_amplitude_path = 'reference.tif'
     sec_amplitude_path = 'secondary.tif'
 
+    orbit_path = mock_s1_orbit_file(reference)
+    meta_r = loadMetadataRslc(reference, orbit_path=orbit_path)
+    meta_temp = loadMetadataRslc(secondary)
+    meta_s = copy.copy(meta_r)
+    meta_s.sensingStart = meta_temp.sensingStart
+    meta_s.sensingStop = meta_temp.sensingStop
+
+    shutil.rmtree('scratch/rdr2geo')
+    Path(secondary).unlink()
+
     paths = [(reference_data_path, ref_amplitude_path), (secondary_data_path, sec_amplitude_path)]
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
@@ -492,12 +508,7 @@ def process_nisar_rslc(
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
 
-    orbit_path = mock_s1_orbit_file(reference)
-    meta_r = loadMetadataRslc(reference, orbit_path=orbit_path)
-    meta_temp = loadMetadataRslc(secondary)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
+    Path(reference).unlink()
 
     geogrid_info = runGeogrid(
         info=meta_r,
@@ -553,6 +564,11 @@ def process_nisar_gslc(
     ref_amplitude = 'reference_adjusted.tif'
     sec_amplitude = 'secondary_adjusted.tif'
 
+    meta_r = GSLCMetadata(ref_amplitude, reference)
+    meta_s = GSLCMetadata(sec_amplitude, secondary)
+
+    Path(secondary).unlink()
+
     paths = [(ref_cropped, ref_amplitude), (sec_cropped, sec_amplitude)]
     for in_path, out_path in paths:
         print(f'Creating {out_path} from {in_path}')
@@ -560,9 +576,6 @@ def process_nisar_gslc(
         convert_rslc_to_uint8_amplitude(in_path, out_path, is_gslc=True)
         end_time = time.time()
         print(f'Creating {out_path} took {end_time - start_time}s')
-
-    meta_r = GSLCMetadata(ref_amplitude, reference)
-    meta_s = GSLCMetadata(sec_amplitude, secondary)
 
     geogrid_info = runGeogrid(
         info=meta_r,
