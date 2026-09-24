@@ -4,8 +4,8 @@ Prototyping the usage of NISAR data with autoRIFT
 
 import argparse
 import copy
-import time
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -282,7 +282,7 @@ def convert_rslc_to_uint8_amplitude(
 
     driver = gdal.GetDriverByName('GTiff')
     temp_filename = 'temp.tif'
-    options=['BIGTIFF=YES', 'COMPRESS=DEFLATE']
+    options = ['BIGTIFF=YES', 'COMPRESS=DEFLATE']
     temp_ds = driver.Create(
         temp_filename,
         xsize=num_cols,
