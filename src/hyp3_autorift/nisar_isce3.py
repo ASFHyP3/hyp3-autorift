@@ -420,6 +420,7 @@ def run_isce3(
 class GSLCMetadata:
     def __init__(self, filename, scene_name):
         self.filename = filename
+        self.scene_name = scene_name
 
         self.time = scene_name.split('_')[11]
         self.sensingStart = datetime.strptime(self.time, '%Y%m%dT%H%M%S')
@@ -494,6 +495,7 @@ def process_nisar_rslc(
     meta_r = loadMetadataRslc(reference, orbit_path=orbit_path)
     meta_temp = loadMetadataRslc(secondary)
     meta_s = copy.copy(meta_r)
+    meta_s.scene_name = secondary
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
 
