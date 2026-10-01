@@ -576,6 +576,8 @@ def generateAutoriftProduct(
     mpflag,
     ncname,
     geogrid_run_info=None,
+    meta_r=None,
+    meta_s=None,
     **kwargs,
 ):
     xGrid = None
@@ -1197,31 +1199,24 @@ def generateAutoriftProduct(
                         dt = geogrid_run_info['dt']
                         epsg = geogrid_run_info['epsg']
 
-                    # TODO: This will need to take into account NISAR's naming convention
-                    # to sort reference/secondary
-                    rslcs = glob.glob('*.h5')
-                    assert len(rslcs) == 2
+                    assert meta_r
+                    assert meta_s
 
-                    if int(str(rslcs[0]).split('_')[11][:8]) < int(str(rslcs[1]).split('_')[11][:8]):
-                        master_filename = rslcs[0]
-                        slave_filename = rslcs[1]
-                    else:
-                        master_filename = rslcs[1]
-                        slave_filename = rslcs[0]
+                    master_meta = meta_r
+                    slave_meta = meta_s
+
+                    master_filename = meta_r.scene_name
+                    slave_filename = meta_s.scene_name
 
                     if nc_sensor.endswith('GSLC'):
                         from hyp3_autorift.nisar_isce3 import GSLCMetadata
 
-                        master_meta = GSLCMetadata('reference_adjusted.tif', master_filename)
-                        slave_meta =  GSLCMetadata('secondary_adjusted.tif', slave_filename)
                         pair_type = 'optical'
                         coordinates = 'map'
 
                         # TODO: Landsat/Sentinel-2 values -- does this need to change for NISAR?
                         error_vector = np.array([25.5, 25.5])
                     else:
-                        master_meta = loadMetadataRslc(master_filename)
-                        slave_meta = loadMetadataRslc(slave_filename)
                         pair_type = 'radar'
                         coordinates = 'radar, map'
 
