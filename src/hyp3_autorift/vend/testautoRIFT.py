@@ -440,6 +440,21 @@ def runAutorift(
             warnings.warn('FFT filtering must be done before processing with geogrid! Be careful when using this method',
                         UserWarning)
         else:
+            # Unlike the Wallis paths above, this path's own `zero_mask` is `None` for everything but
+            # an L7 pair with a `_zeroMask` sidecar on disk (`generateAutoriftProduct`), so without
+            # this `uniform_data_type` never zeroes nodata out of the quantized bytes and a chip
+            # straddling one has nothing in it to test. The raw zero value is the same nodata test the
+            # `noDataMask` loop above already applies at one pixel per grid point, kept per pixel here
+            # so `arImgDisp_u`/`arImgDisp_s` can test a chip's own footprint instead of its one center.
+            #
+            # Not NISAR: this whole block is already `if not nisar_flag`, and NISAR's own `loadProduct`
+            # truncates to `uint8` before filtering, which saturates real pixels to 0 as well as nodata
+            # (the `obj.I1[obj.I1 == 0] = 128` line below exists for exactly that reason) — a value test
+            # would misread real data as nodata there, a separate, pre-existing defect this does not fix.
+            if zero_mask is None:
+                obj.zeroMask = (obj.I1 == 0) | (obj.I2 == 0)
+            else:
+                obj.zeroMask = zero_mask
             obj.preprocess_filt_hps()
 
 
