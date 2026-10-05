@@ -534,6 +534,8 @@ def process_nisar_rslc(
         geogrid_run_info=geogrid_info,
         **parameter_info['autorift'],
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+        meta_r=meta_r,
+        meta_s=meta_s
     )
 
     return netcdf_file
@@ -601,6 +603,8 @@ def process_nisar_gslc(
         geogrid_run_info=geogrid_info,
         **parameter_info['autorift'],
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+        meta_r=meta_r,
+        meta_s=meta_s
     )
 
     return netcdf_file
