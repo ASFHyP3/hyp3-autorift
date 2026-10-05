@@ -11,6 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * The block size for NISAR processing in ISCE3 has been reduced to 2500.
 * The memory usage in `convert_rslc_to_uint8_amplitude` has been significantly reduced.
+* The storage used by the NISAR workflow has been significantly reduced.
 
 ## [0.28.4]
 
