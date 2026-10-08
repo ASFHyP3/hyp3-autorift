@@ -335,7 +335,7 @@ def runAutorift(
     #        generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     # TODO: Is this necessary for radar images?
     if zero_mask is None and 'wallis_fill' not in preprocessing_methods:
-        zero_mask = (obj.I1 == 0) | (obj.I2 == 0)
+        zero_mask = np.isclose(obj.I1, 0.0) | np.isclose(obj.I2, 0.0)
 
     if zero_mask is not None:
         for ii in range(obj.xGrid.shape[0]):
