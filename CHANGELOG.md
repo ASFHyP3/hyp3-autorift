@@ -12,6 +12,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * The block size for NISAR processing in ISCE3 has been reduced to 2500.
 * The memory usage in `convert_rslc_to_uint8_amplitude` has been significantly reduced.
 
+### Fixed
+* For pairs that include a Landsat 7 scene, the nodata border is now set to 0 after the 8-bit conversion; previously the first two rows of each image were set to 0 instead.
+
 ## [0.28.4]
 
 ### Fixed

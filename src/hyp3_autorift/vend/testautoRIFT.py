@@ -732,7 +732,7 @@ def generateAutoriftProduct(
             s_zero = s_zero.astype(np.uint8)
 
             zero_mask = m_zero | s_zero
-            zero_mask = zero_mask.astype(np.uint8)
+            zero_mask = zero_mask.astype(bool)
 
         print(f'Using preprocessing methods {preprocessing_methods}')
 
