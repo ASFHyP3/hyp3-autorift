@@ -12,6 +12,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * The block size for NISAR processing in ISCE3 has been reduced to 2500.
 * The memory usage in `convert_rslc_to_uint8_amplitude` has been significantly reduced.
 
+### Fixed
+* Nodata pixels are now set to 0 after the 8-bit conversion for Sentinel-1, Sentinel-2, and Landsat 4/5/8/9 pairs, as they already were for Landsat 7. NISAR is unchanged.
+
 ## [0.28.4]
 
 ### Fixed

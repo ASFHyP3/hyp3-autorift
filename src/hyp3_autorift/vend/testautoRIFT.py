@@ -334,15 +334,10 @@ def runAutorift(
     #        However, we do have the image zero_mask already, so we can use that to create the output product noDataMask
     #        generate the nodata mask where offset searching will be skipped based on 1) imported nodata mask and/or 2) zero values in the image
     # TODO: Is this necessary for radar images?
-    if 'wallis_fill' not in preprocessing_methods:
-        for ii in range(obj.xGrid.shape[0]):
-            for jj in range(obj.xGrid.shape[1]):
-                if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
-                    if (obj.I1[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0) | (
-                        obj.I2[obj.yGrid[ii, jj] - 1, obj.xGrid[ii, jj] - 1] == 0
-                    ):
-                        noDataMask[ii, jj] = True
-    elif zero_mask is not None:
+    if zero_mask is None and 'wallis_fill' not in preprocessing_methods:
+        zero_mask = np.isclose(obj.I1, 0.0) | np.isclose(obj.I2, 0.0)
+
+    if zero_mask is not None:
         for ii in range(obj.xGrid.shape[0]):
             for jj in range(obj.xGrid.shape[1]):
                 if (obj.yGrid[ii, jj] != nodata) & (obj.xGrid[ii, jj] != nodata):
@@ -413,20 +408,21 @@ def runAutorift(
         print('Pre-process Start!!!')
         print(f'Using Wallis Filter Width: {obj.WallisFilterWidth}')
 
+        # Set nodata back to 0 after the uint8 conversion below.
+        obj.zeroMask = zero_mask
+
         # TODO: Allow different filters to be applied images independently; default to most stringent filtering
         if 'wallis_fill' in preprocessing_methods:
             # FIXME: Ensuring landsat 7 images are projected correctly requires wallis_fill filtering and then reprojecting the
             #        secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
             warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
                         UserWarning)
-            obj.zeroMask = zero_mask
             # obj.preprocess_filt_wal_nodata_fill()
         elif 'wallis' in preprocessing_methods:
             # FIXME: Ensuring landsat 7 images are projected correctly requires wallis filtering and then reprojecting the
             #       secondary scene before processing with Geogrid or autoRIFT; this now occurs in hyp3-autorift/process.py
             warnings.warn('Wallis filtering must be done before processing with geogrid! Be careful when using this method',
                         UserWarning)
-            obj.zeroMask = zero_mask
             # obj.preprocess_filt_wal()
         elif 'fft' in preprocessing_methods:
             # FIXME: Ensuring landsat 7 images are projected correctly requires fft filtering and then reprojecting the
