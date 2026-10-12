@@ -227,6 +227,8 @@ def loadMetadataRslc(ref_rslc: str, buffer: float = 0.0, orbit_path: str = ''):
     rslc =  product.open_product(ref_rslc)
     metadata = rslc.getSwathMetadata()
 
+    info.scene_name = ref_rslc
+
     slant_ranges = metadata.slant_range
     info.startingRange = slant_ranges[0]
     info.farRange = slant_ranges[-1]
