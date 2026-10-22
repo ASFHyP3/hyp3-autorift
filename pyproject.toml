@@ -261,3 +261,12 @@ cmd = [
     "--cov=hyp3_autorift",
 ]
 depends-on = ["install-editable"]
+
+[tool.pixi.tasks.mypy]
+cmd = [
+    "mypy",
+    ".",
+    "--exclude",
+    "build"
+]
+depends-on = ["install-editable"]
