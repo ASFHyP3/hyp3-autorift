@@ -41,6 +41,7 @@ from s1reader import load_bursts
 
 from nisar.products.readers import product
 
+
 log = logging.getLogger(__name__)
 
 def cmdLineParse():
@@ -159,7 +160,7 @@ def loadMetadata(safe, orbit_path, swath, buffer=0, burst_shape=None):
     return info
 
 
-def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None):
+def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None, bursts=None):
     """
     Input file.
     """
@@ -172,13 +173,22 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None):
 
     orbit_file = orbit_path
     total_width = 0
-    bursts = []
+    use_static_files = not (bursts is None)
+    bursts = [] if not use_static_files else bursts
     for swath in swaths:
-        burstst = load_bursts(safe, orbit_file, swath, pol)
-        bursts += burstst
-        dt = bursts[0].azimuth_time_interval
-        sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[-1].shape[0] - 1) * dt)
-        sensingStartt = burstst[0].sensing_start
+        if use_static_files:
+            bursts_s1r = load_bursts(safe, orbit_file, swath, pol)
+            burstst = [burst for burst in bursts if f'iw{swath}' in burst.burst_id]
+            dt = bursts[0].azimuth_time_interval
+            sensingStopt = bursts_s1r[-1].sensing_start + timedelta(seconds=(bursts[-1].shape[0] - 1) * dt)
+            sensingStartt = bursts_s1r[0].sensing_start
+        else:
+            burstst = load_bursts(safe, orbit_file, swath, pol)
+            bursts += burstst
+            dt = bursts[0].azimuth_time_interval
+            sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[-1].shape[0] - 1) * dt)
+            sensingStartt = burstst[0].sensing_start
+
         if swath == min(swaths):
             info.prf = 1 / burstst[0].azimuth_time_interval
             info.sensingStart = sensingStartt
@@ -199,7 +209,12 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None):
             + bursts[-1].shape[1]
         )
 
-    info.aztime = float((isce3.core.DateTime(info.sensingStart) - bursts[0].orbit.reference_epoch).total_seconds())
+    if use_static_files:
+        burst = load_bursts(safe, orbit_file, swaths[0], pol)[0]
+        info.aztime = float((isce3.core.DateTime(burst.sensing_start) - burst.orbit.reference_epoch).total_seconds())
+    else:
+        info.aztime = float((isce3.core.DateTime(info.sensingStart) - bursts[0].orbit.reference_epoch).total_seconds())
+
     info.orbitname = orbit_path
     info.farRange = info.startingRange + (total_width - 1.0) * info.rangePixelSize
     info.lookSide = isce3.core.LookSide.Right
