@@ -64,18 +64,24 @@ def get_topsinsar_config():
         safes = glob.glob('*.zip')
         fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
 
-    safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type]
-    orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
+    # safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type]
+    # orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
 
-    safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
-    orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
+    # safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
+    # orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
+
+    safe_ref = 'S1A_IW_SLC__1SSH_20260525T100039_20260525T100046_064672_0825AB_A644.SAFE' # safes[np.argmin(fechas_safes)]
+    orbit_path_ref = 'S1A_OPER_AUX_POEORB_OPOD_20260614T070417_V20260524T225942_20260526T005942.EOF' # orbits[np.argmin(fechas_orbits)]
+
+    safe_sec = 'S1C_IW_SLC__1SSH_20260531T095945_20260531T095952_007896_0100E7_C20B.SAFE' # safes[np.argmax(fechas_safes)]
+    orbit_path_sec = 'S1C_OPER_AUX_POEORB_OPOD_20260620T070929_V20260530T225942_20260601T005942.EOF' # orbits[np.argmax(fechas_orbits)]
 
     if len(glob.glob('*_ref*.tif')) > 0:
         swath = int(os.path.basename(glob.glob('*_ref*.tif')[0]).split('_')[2][2])
     else:
         swath = None
 
-    safe: str
+    # safe: str
     pol = getPol(safe_ref, orbit_path_ref)
     burst = None
 

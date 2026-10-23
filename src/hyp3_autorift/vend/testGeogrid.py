@@ -38,6 +38,7 @@ import numpy as np
 from geogrid import GeogridOptical, GeogridRadar
 from osgeo import gdal
 from s1reader import load_bursts
+from s1reader.s1_reader import get_burst_orbit, get_osv_list_from_orbit
 
 from nisar.products.readers import product
 
@@ -160,14 +161,12 @@ def loadMetadata(safe, orbit_path, swath, buffer=0, burst_shape=None):
     return info
 
 
-def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None, bursts=None):
+def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None, bursts=None):
     """
     Input file.
     """
     if swaths is None:
         swaths = [1, 2, 3]
-
-    pol = getPol(safe, orbit_path)
 
     info = Dummy()
 
@@ -177,11 +176,11 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None, bur
     bursts = [] if not use_static_files else bursts
     for swath in swaths:
         if use_static_files:
-            bursts_s1r = load_bursts(safe, orbit_file, swath, pol)
+            # bursts_s1r = load_bursts(safe, orbit_file, swath, pol)
             burstst = [burst for burst in bursts if f'iw{swath}' in burst.burst_id]
             dt = bursts[0].azimuth_time_interval
-            sensingStopt = bursts_s1r[-1].sensing_start + timedelta(seconds=(bursts[-1].shape[0] - 1) * dt)
-            sensingStartt = bursts_s1r[0].sensing_start
+            sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(bursts[-1].shape[0] - 1) * dt)
+            sensingStartt = burstst[0].sensing_start
         else:
             burstst = load_bursts(safe, orbit_file, swath, pol)
             bursts += burstst
@@ -201,6 +200,10 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None, bur
         if info.sensingStop < sensingStopt:
             info.sensingStop = sensingStopt
 
+    print(f'Sensing Start: {info.sensingStart}')
+    print(f'Sensing Stop: {info.sensingStop}')
+    print(f'PRF: {info.prf}')
+
     if slc_shape:
         total_width = slc_shape[1]
     else:
@@ -210,10 +213,11 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None, bur
         )
 
     if use_static_files:
-        burst = load_bursts(safe, orbit_file, swaths[0], pol)[0]
-        info.aztime = float((isce3.core.DateTime(burst.sensing_start) - burst.orbit.reference_epoch).total_seconds())
+        info.aztime = float((bursts[0].sensing_start - bursts[0].reference_epoch).total_seconds())
+        print(f'Azimuth Time: {info.aztime}')
     else:
         info.aztime = float((isce3.core.DateTime(info.sensingStart) - bursts[0].orbit.reference_epoch).total_seconds())
+        print(f'Azimuth Time: {info.aztime}')
 
     info.orbitname = orbit_path
     info.farRange = info.startingRange + (total_width - 1.0) * info.rangePixelSize
@@ -229,7 +233,12 @@ def loadMetadataSlc(safe, orbit_path, buffer=0, swaths=None, slc_shape=None, bur
 
     print('SIZE', info.numberOfLines, info.numberOfSamples)
 
-    info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
+    osv_list = get_osv_list_from_orbit(info.orbitname, info.sensingStart, info.sensingStop)
+    info.orbit = get_burst_orbit(info.sensingStart, info.sensingStop, osv_list)
+
+    print(info.orbit)
+
+    # info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
 
     return info
 
@@ -349,7 +358,7 @@ def coregisterLoadMetadata(indir_m, indir_s, **kwargs):
 
 
 def runGeogrid(
-    info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, optical_flag=1, **kwargs
+    info, info1, dem, dhdx, dhdy, vx, vy, srx, sry, csminx, csminy, csmaxx, csmaxy, ssm, optical_flag=1, dt=None, **kwargs
 ):
     """
     Wire and run geogrid.
@@ -453,7 +462,10 @@ def runGeogrid(
         obj.aztime = info.aztime
         obj.wavelength = info.wavelength
         obj.lookSide = info.lookSide
-        obj.repeatTime = (info1.sensingStart - info.sensingStart).total_seconds()
+        if dt:
+            obj.repeatTime = dt
+        else:
+            obj.repeatTime = (info1.sensingStart - info.sensingStart).total_seconds()
         obj.numberOfLines = info.numberOfLines
         obj.numberOfSamples = info.numberOfSamples
         obj.nodata_out = -32767

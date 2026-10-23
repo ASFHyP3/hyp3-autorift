@@ -3,13 +3,13 @@ import glob
 import logging
 import math
 import os
-import shutil
-import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import asf_search
 import netCDF4
 import numpy as np
+import s1_orbits
 import s1reader
 from burst2safe.burst2safe import burst2safe
 from compass import s1_cslc
@@ -72,6 +72,7 @@ def process_sentinel1_burst_isce3(
             regenerate_static_files,
             chip_size,
             search_range,
+            reference[0],
         )
 
     reference = reference[0]
@@ -93,6 +94,7 @@ def process_sentinel1_burst_isce3(
         regenerate_static_files,
         chip_size,
         search_range,
+        reference,
     )
 
 
@@ -109,6 +111,7 @@ def process_burst(
     regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
+    ref_burst: str | None = None,
 ):
     swath = int(granule_ref.split('_')[2][2])
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
@@ -157,11 +160,17 @@ def process_burst(
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
 
-    meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
-    meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
+    if use_static_files:
+        burst = get_burst_info(burst_id_ref)
+        static_orbit_path = get_orbit_for_static(ref_burst, str(burst.sensing_start))
+        meta_r = loadMetadataSlc(safe_ref, static_orbit_path, pol, swaths=[swath], bursts=[burst])
+        meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=[swath], bursts=[burst])
+    else:
+        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=[swath])
+        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=[swath])
+        meta_s = copy.copy(meta_r)
+        meta_s.sensingStart = meta_temp.sensingStart
+        meta_s.sensingStop = meta_temp.sensingStop
 
     if chip_size is not None:
         log.info(f'Overriding chip size with user-defined value: {chip_size}')  # Add this log
@@ -262,11 +271,12 @@ def process_slc(
     regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
+    ref_burst: str = None,
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-    burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
+    burst_ids = sorted(list(set(burst_ids_sec) & set(burst_ids_ref)))
     pol = getPol(safe_ref, orbit_ref)
 
     download_dem(
@@ -313,35 +323,37 @@ def process_slc(
             upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
             topo_correction_file.unlink()
 
-        if has_static_layer:
-            shutil.rmtree(STATIC_DIR / burst_id)
-
-    slc_shape = merge_swaths(
+    slc_shape = merge_bursts(
         safe=safe_ref,
         orbit=orbit_ref,
-        pol=pol, 
+        pol=pol,
         out_path='reference.tif',
         swaths=swaths,
         isce_path_prefix='product',
-        use_static_files=use_static_files
+        use_static_files=use_static_files,
     )
 
-    _ = merge_swaths(
+    if use_static_files:
+        bursts = [get_burst_info(burst_id) for burst_id in burst_ids]
+        static_orbit_path = get_orbit_for_static(ref_burst, str(bursts[0].sensing_start))
+        meta_r = loadMetadataSlc(safe_ref, static_orbit_path, pol, swaths=swaths, slc_shape=slc_shape, bursts=bursts)
+        meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=swaths, bursts=bursts)
+    else:
+        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=swaths, slc_shape=slc_shape)
+        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
+        meta_s = copy.copy(meta_r)
+        meta_s.sensingStart = meta_temp.sensingStart
+        meta_s.sensingStop = meta_temp.sensingStop
+
+    _ = merge_bursts(
         safe=safe_ref,
         orbit=orbit_ref,
         pol=pol,
         out_path='secondary.tif',
         isce_path_prefix='product_sec',
         swaths=swaths,
-        use_static_files=use_static_files
+        use_static_files=use_static_files,
     )
-
-    bursts = [get_burst_info(burst_id) for burst_id in burst_ids] if use_static_files else None
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths, slc_shape=slc_shape, bursts=bursts)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths, bursts=bursts)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
 
     if chip_size is not None:
         log.info(f'Overriding chip size with user-defined value: {chip_size}')  # Add this log
@@ -364,11 +376,16 @@ def process_slc(
         # Nullify Reference Velocity for non-glacier applications
         parameter_info['autorift']['NullReferenceVelocity'] = True
 
+    ref_time = s1reader.load_bursts(safe_ref, orbit_ref, min(swaths), pol)[0].sensing_start
+    sec_time = s1reader.load_bursts(safe_sec, orbit_sec, min(swaths), pol)[0].sensing_start
+    repeat_time = (sec_time - ref_time).total_seconds()
+
     geogrid_info = runGeogrid(
         info=meta_r,
         info1=meta_s,
         optical_flag=0,
         epsg=parameter_info['epsg'],
+        dt=repeat_time,
         **parameter_info['geogrid'],
     )
 
@@ -392,6 +409,22 @@ def process_slc(
         var.setncattr('frame_img2', str(frame_id))
 
     return netcdf_file
+
+
+def get_orbit_for_static(scene: str, static_date: str):
+    stack = asf_search.stack_from_id(scene)
+    results = [res for res in stack if res.properties['startTime'][:10] == static_date[:10]]
+    assert len(results) == 1
+
+    group_id = results[0].properties['groupID']
+    slcs = asf_search.search(groupID=group_id, processingLevel=asf_search.PRODUCT_TYPE.SLC)
+    assert len(slcs) == 1
+
+    slc_name = slcs[0].properties['sceneName']
+    orbit_path = s1_orbits.fetch_for_scene(slc_name)
+    assert orbit_path
+
+    return str(orbit_path)
 
 
 def read_slc_gdal(slc_path: str):
@@ -462,10 +495,10 @@ def get_valid_bounds(slc):
         return None
 
     return {
-        "first_valid_line": int(lines.min()),
-        "last_valid_line": int(lines.max()),
-        "first_valid_sample": int(samples.min()),
-        "last_valid_sample": int(samples.max()),
+        'first_valid_line': int(lines.min()),
+        'last_valid_line': int(lines.max()),
+        'first_valid_sample': int(samples.min()),
+        'last_valid_sample': int(samples.max()),
     }
 
 
@@ -495,18 +528,12 @@ def get_burst_info(burst_id):
         valid_data['first_valid_sample'],
         valid_data['last_valid_sample'],
         valid_data['first_valid_line'],
-        valid_data['last_valid_line']
+        valid_data['last_valid_line'],
     )
 
 
-def merge_swaths(
-    safe: str,
-    orbit: str,
-    pol: str,
-    out_path: str,
-    isce_path_prefix='product',
-    swaths=(1, 2, 3),
-    use_static_files=False
+def merge_bursts(
+    safe: str, orbit: str, pol: str, out_path: str, isce_path_prefix='product', swaths=(1, 2, 3), use_static_files=False
 ):
     burst_ids = get_burst_ids(safe, orbit)
 
@@ -518,16 +545,13 @@ def merge_swaths(
             bursts.extend(s1reader.load_bursts(safe, orbit, swath, pol))
 
     sensing_starts = sorted([burst.sensing_start for burst in bursts])
-
     sensing_start = min(sensing_starts)
     sensing_end = max(sensing_starts) + timedelta(seconds=bursts[-1].azimuth_time_interval * bursts[-1].length)
     sensing_time = sensing_end - sensing_start
     az_interval = bursts[0].azimuth_time_interval
-
     min_range = bursts[0].starting_range
     max_range = bursts[-1].starting_range + bursts[-1].range_pixel_spacing * bursts[-1].width
     total_range = max_range - min_range
-
     max_lines = int(np.round((sensing_time / az_interval).total_seconds()))
     max_samples = int(np.round(total_range / bursts[0].range_pixel_spacing))
 
@@ -546,19 +570,18 @@ def merge_swaths(
         print(f'Merging {burst_id} from {isce_path_prefix} to {out_path}')
 
         file = get_burst_path(str(Path(isce_path_prefix) / burst_id))
-
         ds = gdal.Open(file)
         band = ds.GetRasterBand(1)
         arr = np.abs(band.ReadAsArray()).astype(np.float32)
 
         index = burst_ids.index(burst_id)
-
         start_range = int((bursts[index].starting_range - min_range) / bursts[index].range_pixel_spacing)
         end_range = int(start_range + bursts[index].width)
-        
-        start_az = int(np.floor(
-            ((bursts[index].sensing_start - sensing_start) / bursts[index].azimuth_time_interval).total_seconds()
-        ))
+        start_az = int(
+            np.floor(
+                ((bursts[index].sensing_start - sensing_start) / bursts[index].azimuth_time_interval).total_seconds()
+            )
+        )
         end_az = start_az + bursts[index].length
 
         print(f'Azimuth: {start_az}, {end_az}')
@@ -568,19 +591,12 @@ def merge_swaths(
 
         buffer_lines = 8
 
-        valid_az = slice(
-            valid_data['first_valid_line'] + buffer_lines,
-            valid_data['last_valid_line'] - buffer_lines
-        )
+        valid_az = slice(valid_data['first_valid_line'] + buffer_lines, valid_data['last_valid_line'] - buffer_lines)
         valid_rng = slice(
-            valid_data['first_valid_sample'] + buffer_lines,
-            valid_data['last_valid_sample'] - buffer_lines
+            valid_data['first_valid_sample'] + buffer_lines, valid_data['last_valid_sample'] - buffer_lines
         )
 
-        grid[
-            slice(start_az, end_az),
-            slice(start_range, end_range)
-        ][valid_az, valid_rng] = arr[valid_az, valid_rng]
+        grid[slice(start_az, end_az), slice(start_range, end_range)][valid_az, valid_rng] = arr[valid_az, valid_rng]
 
     write_slc_gdal(grid, out_path)
 
@@ -592,7 +608,7 @@ def get_burst_path(burst_filename: str):
 
 
 # FIXME: is_slc could be handled by swaths?
-def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
+def bounding_box(safe, orbit_file, is_slc, pol='HH', swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     Args:
@@ -612,7 +628,7 @@ def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     if not is_slc:
         info = loadMetadata(safe, orbit_file, swath=swaths[0])
     else:
-        info = loadMetadataSlc(safe, orbit_file, swaths=swaths)
+        info = loadMetadataSlc(safe, orbit_file, pol, swaths=swaths)
 
     obj = GeogridRadar()
 
