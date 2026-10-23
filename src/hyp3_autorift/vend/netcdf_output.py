@@ -1295,55 +1295,9 @@ def getPol(safe, orbit_path):
             pass
 
 
-def loadMetadata(indir):
-    """
-    Input file.
-    """
-    import os
-    import numpy as np
-    from datetime import datetime
-    from s1reader import load_bursts
-    import glob
-
-    orbits = glob.glob('*.EOF')
-    fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
-    safes = glob.glob('*.SAFE')
-    if len(safes) == 0:
-        safes = glob.glob('*.zip')
-    fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
-
-    if 'ref' in indir:
-        safe = 'S1A_IW_SLC__1SSH_20260525T100039_20260525T100046_064672_0825AB_A644.SAFE' # safes[np.argmin(fechas_safes)]
-        orbit_path = 'S1A_OPER_AUX_POEORB_OPOD_20260614T070417_V20260524T225942_20260526T005942.EOF' # orbits[np.argmin(fechas_orbits)]
-    else:
-        safe = 'S1C_IW_SLC__1SSH_20260531T095945_20260531T095952_007896_0100E7_C20B.SAFE' # safes[np.argmax(fechas_safes)]
-        orbit_path = 'S1C_OPER_AUX_POEORB_OPOD_20260620T070929_V20260530T225942_20260601T005942.EOF' # orbits[np.argmax(fechas_orbits)]
-
-    pol = getPol(safe, orbit_path)
-
-    swaths = []
-
-    if '_' in indir:
-        swath = int(indir.split('_')[2][2])
-        bursts = load_bursts(safe, orbit_path, swath, pol)
-        for bur in bursts:
-            if int(bur.burst_id.subswath[2]) == swath:
-                burst = bur
-    else:
-        # Find the first swath containing data
-        for swath in [1, 2, 3]:
-            try:
-                bursts = load_bursts(safe, orbit_path, swath, pol)
-                burst = bursts[0]
-                swaths.append(bursts[0])
-            except:
-                continue
-
-    return swaths, burst.orbit_direction
-
-
 def cal_swath_offset_bias(
-    indir_m,
+    meta_r,
+    meta_s,
     rngind,
     azmind,
     VX,
@@ -1357,116 +1311,114 @@ def cal_swath_offset_bias(
     ScaleChipSizeY,
     output_ref=[0.0, 0.0, 0.0, 0.0],
 ):
-    # swaths, flight_direction = loadMetadata(os.path.basename(indir_m))
-    # swaths_s, flight_direction_s = loadMetadata(os.path.basename(indir_m.replace('reference', 'secondary')))
+    flight_direction = meta_r.orbitDirection
+    flight_direction_s = meta_s.orbitDirection
 
-    # flight_direction = flight_direction.lower()
-    # flight_direction_s = flight_direction_s.lower()
+    platform_r = meta_r.platformID
+    platform_s = meta_s.platformID
 
-    # if swaths[0].platform_id == swaths_s[0].platform_id:
-    #     print(f'subswath offset bias correction not performed for {swaths[0].platform_id},{swaths_s[0].platform_id} combination')
-    #     return DX, DY, flight_direction, flight_direction_s
-    # elif len(swaths) < 3:
-    #     print('subswath offset bias correction not performed for products with less than 3 swaths')
-    #     return DX, DY, flight_direction, flight_direction_s
-    # else:
-    #     if swaths[0].platform_id[2] == 'B':
-    #         output_ref = [-output_ref[0], -output_ref[1], -output_ref[2], -output_ref[3]]
+    if platform_r == platform_s:
+        print(f'subswath offset bias correction not performed for {platform_r},{platform_s} combination')
+        return DX, DY, flight_direction, flight_direction_s
+    elif len(meta_r.startingRanges) < 3:
+        print('subswath offset bias correction not performed for products with less than 3 swaths')
+        return DX, DY, flight_direction, flight_direction_s
+    else:
+        if platform_r == 'B':
+            output_ref = [-output_ref[0], -output_ref[1], -output_ref[2], -output_ref[3]]
 
-    # output = []
-    # swath_border = []
-    # swath_border_full = []
-    # flag21 = 0
-    # flag32 = 0
+    output = []
+    swath_border = []
+    swath_border_full = []
+    flag21 = 0
+    flag32 = 0
 
-    # rngind = rngind.astype(np.float32)
-    # azmind = azmind.astype(np.float32)
-    # rngind[rngind == nodata] = np.nan
-    # azmind[azmind == nodata] = np.nan
+    rngind = rngind.astype(np.float32)
+    azmind = azmind.astype(np.float32)
+    rngind[rngind == nodata] = np.nan
+    azmind[azmind == nodata] = np.nan
 
-    # IW1_shape = swaths[0].shape
-    # IW1_far_range = swaths[0].starting_range + (IW1_shape[1] - 1.0) * swaths[0].range_pixel_spacing
+    swath_shapes = meta_r.swathShapes
+    starting_ranges = meta_r.startingRanges
+    range_pixel_spacing = meta_r.rangePixelSpacing
 
-    # IW2_shape = swaths[1].shape
-    # IW2_far_range = swaths[1].starting_range + (IW2_shape[1] - 1.0) * swaths[1].range_pixel_spacing
+    IW1_shape = swath_shapes[0]
+    IW1_far_range = starting_ranges[0] + (IW1_shape[1] - 1.0) * range_pixel_spacing
 
-    # IW3_shape = swaths[2].shape
-    # IW3_far_range = swaths[2].starting_range + (IW3_shape[1] - 1.0) * swaths[2].range_pixel_spacing
+    IW2_shape = swath_shapes[1]
+    IW2_far_range = starting_ranges[1] + (IW2_shape[1] - 1.0) * range_pixel_spacing
 
-    # if len(swaths) > 1:
-    #     ncols = int(np.round((IW3_far_range - swaths[0].starting_range) / swaths[0].range_pixel_spacing))
-    #     ind2 = int(np.round((IW1_far_range - swaths[0].starting_range) / swaths[0].range_pixel_spacing))
-    #     ind1 = int(np.round((swaths[1].starting_range - swaths[0].starting_range) / swaths[0].range_pixel_spacing))
-    # else:
-    #     ncols = int(np.round((IW1_far_range - swaths[0].starting_range) / swaths[0].range_pixel_spacing))
-    #     ind2 = ncols
-    #     ind1 = 0
+    IW3_shape = swath_shapes[2]
+    IW3_far_range = starting_ranges[2] + (IW3_shape[1] - 1.0) * range_pixel_spacing
 
-    # swath_border.append((ind1 + ind2) / 2)
-    # swath_border_full.append(ind1)
-    # swath_border_full.append(ind2)
+    ncols = int(np.round((IW3_far_range - starting_ranges[0]) / range_pixel_spacing))
+    ind2 = int(np.round((IW1_far_range - starting_ranges[0]) / range_pixel_spacing))
+    ind1 = int(np.round((starting_ranges[1] - starting_ranges[0]) / range_pixel_spacing))
 
-    # mask1 = (rngind > ind1 - 500) & (rngind < ind1)
-    # mask2 = (rngind > ind2) & (rngind < ind2 + 500)
+    swath_border.append((ind1 + ind2) / 2)
+    swath_border_full.append(ind1)
+    swath_border_full.append(ind2)
 
-    # if (
-    #     (np.nanstd(VX[mask2]) < 25)
-    #     & (np.nanstd(VX[mask1]) < 25)
-    #     & (np.nanstd(VY[mask2]) < 25)
-    #     & (np.nanstd(VY[mask1]) < 25)
-    # ):
-    #     output.append(output_ref[0])
-    #     output.append(output_ref[1])
-    #     flag21 = 1
-    # else:
-    #     output.append(output_ref[0])
-    #     output.append(output_ref[1])
+    mask1 = (rngind > ind1 - 500) & (rngind < ind1)
+    mask2 = (rngind > ind2) & (rngind < ind2 + 500)
 
-    # if len(swaths) > 1:
-    #     ind2 = int(np.round((IW2_far_range - swaths[0].starting_range) / swaths[0].range_pixel_spacing))
-    #     ind1 = int(np.round((swaths[2].starting_range - swaths[0].starting_range) / swaths[0].range_pixel_spacing))
+    if (
+        (np.nanstd(VX[mask2]) < 25)
+        & (np.nanstd(VX[mask1]) < 25)
+        & (np.nanstd(VY[mask2]) < 25)
+        & (np.nanstd(VY[mask1]) < 25)
+    ):
+        output.append(output_ref[0])
+        output.append(output_ref[1])
+        flag21 = 1
+    else:
+        output.append(output_ref[0])
+        output.append(output_ref[1])
 
-    # swath_border.append((ind1 + ind2) / 2)
-    # swath_border_full.append(ind1)
-    # swath_border_full.append(ind2)
+    ind2 = int(np.round((IW2_far_range - starting_ranges[0]) / range_pixel_spacing))
+    ind1 = int(np.round((starting_ranges[2] - starting_ranges[0]) / range_pixel_spacing))
 
-    # mask1 = (rngind > ind1 - 500) & (rngind < ind1)
-    # mask2 = (rngind > ind2) & (rngind < ind2 + 500)
+    swath_border.append((ind1 + ind2) / 2)
+    swath_border_full.append(ind1)
+    swath_border_full.append(ind2)
 
-    # if (
-    #     (np.nanstd(VX[mask2]) < 25)
-    #     & (np.nanstd(VX[mask1]) < 25)
-    #     & (np.nanstd(VY[mask2]) < 25)
-    #     & (np.nanstd(VY[mask1]) < 25)
-    # ):
-    #     output.append(output_ref[2])
-    #     output.append(output_ref[3])
-    #     flag32 = 1
-    # else:
-    #     output.append(output_ref[2])
-    #     output.append(output_ref[3])
+    mask1 = (rngind > ind1 - 500) & (rngind < ind1)
+    mask2 = (rngind > ind2) & (rngind < ind2 + 500)
 
-    # mask1 = (rngind > swath_border[1]) & (rngind < ncols)
-    # DX[mask1] = DX[mask1] - output[2]
-    # DY[mask1] = DY[mask1] - output[3]
+    if (
+        (np.nanstd(VX[mask2]) < 25)
+        & (np.nanstd(VX[mask1]) < 25)
+        & (np.nanstd(VY[mask2]) < 25)
+        & (np.nanstd(VY[mask1]) < 25)
+    ):
+        output.append(output_ref[2])
+        output.append(output_ref[3])
+        flag32 = 1
+    else:
+        output.append(output_ref[2])
+        output.append(output_ref[3])
 
-    # mask2 = (rngind > swath_border[0]) & (rngind < ncols)
-    # DX[mask2] = DX[mask2] - output[0]
-    # DY[mask2] = DY[mask2] - output[1]
+    mask1 = (rngind > swath_border[1]) & (rngind < ncols)
+    DX[mask1] = DX[mask1] - output[2]
+    DY[mask1] = DY[mask1] - output[3]
 
-    # if flag21 == 1:
-    #     DX, DY = rotate_vel2radar(
-    #         rngind, azmind, DX, DY, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, 0
-    #     )
-    #     print('sharp peaks corrected at subswath 2 and 1 borders')
-    # if flag32 == 1:
-    #     DX, DY = rotate_vel2radar(
-    #         rngind, azmind, DX, DY, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, 1
-    #     )
-    #     print('sharp peaks corrected at subswath 3 and 2 borders')
+    mask2 = (rngind > swath_border[0]) & (rngind < ncols)
+    DX[mask2] = DX[mask2] - output[0]
+    DY[mask2] = DY[mask2] - output[1]
 
-    # print('subswath offset bias between subswath 2 and 1: {0} {1}'.format(output[0], output[1]))
-    # print('subswath offset bias between subswath 3 and 2: {0} {1}'.format(output[2], output[3]))
-    # print('subswath border index: {0} {1}'.format(swath_border[0], swath_border[1]))
+    if flag21 == 1:
+        DX, DY = rotate_vel2radar(
+            rngind, azmind, DX, DY, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, 0
+        )
+        print('sharp peaks corrected at subswath 2 and 1 borders')
+    if flag32 == 1:
+        DX, DY = rotate_vel2radar(
+            rngind, azmind, DX, DY, swath_border, swath_border_full, GridSpacingX, ScaleChipSizeY, 1
+        )
+        print('sharp peaks corrected at subswath 3 and 2 borders')
 
-    return DX, DY, 'DESCENDING', 'DESCENDING'# DX, DY, flight_direction, flight_direction_s
+    print('subswath offset bias between subswath 2 and 1: {0} {1}'.format(output[0], output[1]))
+    print('subswath offset bias between subswath 3 and 2: {0} {1}'.format(output[2], output[3]))
+    print('subswath border index: {0} {1}'.format(swath_border[0], swath_border[1]))
+
+    return DX, DY, flight_direction, flight_direction_s

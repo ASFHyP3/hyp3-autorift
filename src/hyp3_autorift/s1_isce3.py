@@ -284,9 +284,12 @@ def process_slc(
         bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
     )
 
+    orbit_direction = None
     for burst_id in burst_ids:
         swath = int(burst_id.split('_')[-1][-1])
         burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
+        if not orbit_direction:
+            orbit_direction = burst.orbit_direction
 
         if regenerate_static_files:
             has_static_layer = False
@@ -327,6 +330,7 @@ def process_slc(
         safe=safe_ref,
         orbit=orbit_ref,
         pol=pol,
+        burst_ids=burst_ids,
         out_path='reference.tif',
         swaths=swaths,
         isce_path_prefix='product',
@@ -345,10 +349,16 @@ def process_slc(
         meta_s.sensingStart = meta_temp.sensingStart
         meta_s.sensingStop = meta_temp.sensingStop
 
+    meta_r.orbitDirection = orbit_direction
+    meta_s.orbitDirection = orbit_direction
+    meta_r.platformID = str(safe_ref)[3]
+    meta_s.platformID = str(safe_sec)[3]
+
     _ = merge_bursts(
         safe=safe_ref,
         orbit=orbit_ref,
         pol=pol,
+        burst_ids=burst_ids,
         out_path='secondary.tif',
         isce_path_prefix='product_sec',
         swaths=swaths,
@@ -401,6 +411,8 @@ def process_slc(
         geogrid_run_info=geogrid_info,
         **parameter_info['autorift'],
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+        meta_r=meta_r,
+        meta_s=meta_s,
     )
 
     with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
@@ -533,10 +545,15 @@ def get_burst_info(burst_id):
 
 
 def merge_bursts(
-    safe: str, orbit: str, pol: str, out_path: str, isce_path_prefix='product', swaths=(1, 2, 3), use_static_files=False
+    safe: str,
+    orbit: str,
+    pol: str,
+    burst_ids: list,
+    out_path: str,
+    isce_path_prefix='product',
+    swaths=(1, 2, 3),
+    use_static_files=False,
 ):
-    burst_ids = get_burst_ids(safe, orbit)
-
     bursts = []
     if use_static_files:
         bursts = [get_burst_info(burst_id) for burst_id in burst_ids]

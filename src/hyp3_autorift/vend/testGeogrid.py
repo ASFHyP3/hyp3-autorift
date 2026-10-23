@@ -174,19 +174,20 @@ def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None
     total_width = 0
     use_static_files = not (bursts is None)
     bursts = [] if not use_static_files else bursts
+    info.startingRanges = []
+    info.swathShapes = []
     for swath in swaths:
         if use_static_files:
-            # bursts_s1r = load_bursts(safe, orbit_file, swath, pol)
             burstst = [burst for burst in bursts if f'iw{swath}' in burst.burst_id]
-            dt = bursts[0].azimuth_time_interval
-            sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(bursts[-1].shape[0] - 1) * dt)
-            sensingStartt = burstst[0].sensing_start
         else:
             burstst = load_bursts(safe, orbit_file, swath, pol)
             bursts += burstst
-            dt = bursts[0].azimuth_time_interval
-            sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(burstst[-1].shape[0] - 1) * dt)
-            sensingStartt = burstst[0].sensing_start
+
+        dt = bursts[0].azimuth_time_interval
+        sensingStopt = burstst[-1].sensing_start + timedelta(seconds=(bursts[-1].shape[0] - 1) * dt)
+        sensingStartt = burstst[0].sensing_start
+        info.swathShapes.append(burstst[0].shape)
+        info.startingRanges.append(burstst[0].starting_range)
 
         if swath == min(swaths):
             info.prf = 1 / burstst[0].azimuth_time_interval

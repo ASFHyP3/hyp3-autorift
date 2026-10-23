@@ -920,7 +920,8 @@ def generateAutoriftProduct(
                     swath_offset_bias_ref = [-0.01, 0.019, -0.0068, 0.006]
 
                     DX, DY, flight_direction_m, flight_direction_s = no.cal_swath_offset_bias(
-                        indir_m,
+                        meta_r,
+                        meta_s,
                         xGrid,
                         yGrid,
                         VX,
