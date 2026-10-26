@@ -341,6 +341,7 @@ def process_slc(
 
     if use_static_files:
         bursts = [get_burst_info(burst_id) for burst_id in burst_ids]
+        assert ref_burst
         static_orbit_path = get_orbit_for_static(ref_burst, str(bursts[0].sensing_start))
         meta_r = loadMetadataSlc(
             safe_ref,
