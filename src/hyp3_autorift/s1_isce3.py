@@ -341,8 +341,18 @@ def process_slc(
     if use_static_files:
         bursts = [get_burst_info(burst_id) for burst_id in burst_ids]
         static_orbit_path = get_orbit_for_static(ref_burst, str(bursts[0].sensing_start))
-        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, static_orbit_path=static_orbit_path, swaths=swaths, slc_shape=slc_shape, bursts=bursts)
-        meta_s = loadMetadataSlc(safe_sec, orbit_sec, pol, static_orbit_path=static_orbit_path, swaths=swaths, bursts=bursts)
+        meta_r = loadMetadataSlc(
+            safe_ref,
+            orbit_ref,
+            pol,
+            static_orbit_path=static_orbit_path,
+            swaths=swaths,
+            slc_shape=slc_shape,
+            bursts=bursts,
+        )
+        meta_s = loadMetadataSlc(
+            safe_sec, orbit_sec, pol, static_orbit_path=static_orbit_path, swaths=swaths, bursts=bursts
+        )
     else:
         meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=swaths, slc_shape=slc_shape)
         meta_temp = loadMetadataSlc(safe_sec, orbit_sec, pol, swaths=swaths)
@@ -605,11 +615,7 @@ def merge_bursts(
 
         start_range = int((burst.starting_range - min_range) / burst.range_pixel_spacing)
         end_range = int(start_range + burst.width)
-        start_az = int(
-            np.floor(
-                ((burst.sensing_start - sensing_start) / burst.azimuth_time_interval).total_seconds()
-            )
-        )
+        start_az = int(np.floor(((burst.sensing_start - sensing_start) / burst.azimuth_time_interval).total_seconds()))
         end_az = start_az + burst.length
 
         print(f'Azimuth: {start_az}, {end_az}')
@@ -619,10 +625,7 @@ def merge_bursts(
 
         buffer_lines = 8
 
-        valid_az = slice(
-            valid_data['first_valid_line'] + buffer_lines,
-            valid_data['last_valid_line'] - buffer_lines
-        )
+        valid_az = slice(valid_data['first_valid_line'] + buffer_lines, valid_data['last_valid_line'] - buffer_lines)
         valid_rng = slice(
             valid_data['first_valid_sample'] + buffer_lines, valid_data['last_valid_sample'] - buffer_lines
         )
