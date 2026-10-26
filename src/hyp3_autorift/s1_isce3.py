@@ -603,7 +603,6 @@ def merge_bursts(
     print(f'Total Azimuth Pixels: {max_lines}')
     print(f'Total Range Pixels: {max_samples}')
 
-    # for burst_id in burst_ids:
     for burst in bursts:
         burst_id = str(burst.burst_id)
         print(f'Merging {burst_id} from {isce_path_prefix} to {out_path}')
