@@ -163,6 +163,7 @@ def process_burst(
 
     if use_static_files:
         burst = get_burst_info(burst_id_ref)
+        assert ref_burst
         static_orbit_path = get_orbit_for_static(ref_burst, str(burst.sensing_start))
         meta_r = loadMetadataSlc(safe_ref, static_orbit_path, pol, swaths=[swath], bursts=[burst])
         meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=[swath], bursts=[burst])
@@ -272,7 +273,7 @@ def process_slc(
     regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
-    ref_burst: str = None,
+    ref_burst: str | None = None,
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
@@ -592,7 +593,7 @@ def merge_bursts(
     max_lines = int(np.round((sensing_time / az_interval).total_seconds()))
     max_samples = int(np.round(total_range / bursts[0].range_pixel_spacing))
 
-    grid = np.ndarray((max_lines, max_samples), dtype=np.float32)
+    grid: np.ndarray = np.ndarray((max_lines, max_samples), dtype=np.float32)
 
     print(f'Sensing Start: {sensing_start}')
     print(f'Sensing Stop: {sensing_end}')
