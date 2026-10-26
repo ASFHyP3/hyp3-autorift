@@ -3,6 +3,7 @@ import glob
 import logging
 import math
 import os
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -340,19 +341,24 @@ def process_slc(
     if use_static_files:
         bursts = [get_burst_info(burst_id) for burst_id in burst_ids]
         static_orbit_path = get_orbit_for_static(ref_burst, str(bursts[0].sensing_start))
-        meta_r = loadMetadataSlc(safe_ref, static_orbit_path, pol, swaths=swaths, slc_shape=slc_shape, bursts=bursts)
-        meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=swaths, bursts=bursts)
+        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, static_orbit_path=static_orbit_path, swaths=swaths, slc_shape=slc_shape, bursts=bursts)
+        meta_s = loadMetadataSlc(safe_sec, orbit_sec, pol, static_orbit_path=static_orbit_path, swaths=swaths, bursts=bursts)
     else:
         meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=swaths, slc_shape=slc_shape)
-        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
+        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, pol, swaths=swaths)
         meta_s = copy.copy(meta_r)
         meta_s.sensingStart = meta_temp.sensingStart
         meta_s.sensingStop = meta_temp.sensingStop
+        meta_s.sensingDt = meta_temp.sensingDt
 
+    meta_r.sceneName = safe_ref
+    meta_s.sceneName = safe_sec
     meta_r.orbitDirection = orbit_direction
     meta_s.orbitDirection = orbit_direction
     meta_r.platformID = str(safe_ref)[3]
     meta_s.platformID = str(safe_sec)[3]
+
+    shutil.rmtree('product/')
 
     _ = merge_bursts(
         safe=safe_ref,
@@ -364,6 +370,10 @@ def process_slc(
         swaths=swaths,
         use_static_files=use_static_files,
     )
+
+    if use_static_files:
+        shutil.rmtree('static_topo_corrections/')
+    shutil.rmtree('product_sec/')
 
     if chip_size is not None:
         log.info(f'Overriding chip size with user-defined value: {chip_size}')  # Add this log
@@ -514,7 +524,7 @@ def get_valid_bounds(slc):
     }
 
 
-def get_burst_info(burst_id):
+def get_burst_info(burst_id, isce_path_prefix='product'):
     info_path = f'./static_topo_corrections/{burst_id}/{burst_id}_static_rdr.nc'
     ds = gdal.Open(info_path)
     metadata = ds.GetMetadata()
@@ -524,7 +534,7 @@ def get_burst_info(burst_id):
     sensing_start_delta = timedelta(seconds=int(metadata['NC_GLOBAL#sensing_start']))
     sensing_start = ref_epoch + sensing_start_delta
 
-    valid_data = get_valid_bounds(get_burst_path(f'./product/{burst_id}'))
+    valid_data = get_valid_bounds(get_burst_path(str(Path(isce_path_prefix) / burst_id)))
 
     return MockBurstInfo(
         burst_id,
@@ -556,7 +566,7 @@ def merge_bursts(
 ):
     bursts = []
     if use_static_files:
-        bursts = [get_burst_info(burst_id) for burst_id in burst_ids]
+        bursts = [get_burst_info(burst_id, isce_path_prefix=isce_path_prefix) for burst_id in burst_ids]
     else:
         for swath in swaths:
             bursts.extend(s1reader.load_bursts(safe, orbit, swath, pol))
@@ -583,7 +593,9 @@ def merge_bursts(
     print(f'Total Azimuth Pixels: {max_lines}')
     print(f'Total Range Pixels: {max_samples}')
 
-    for burst_id in burst_ids:
+    # for burst_id in burst_ids:
+    for burst in bursts:
+        burst_id = str(burst.burst_id)
         print(f'Merging {burst_id} from {isce_path_prefix} to {out_path}')
 
         file = get_burst_path(str(Path(isce_path_prefix) / burst_id))
@@ -591,15 +603,14 @@ def merge_bursts(
         band = ds.GetRasterBand(1)
         arr = np.abs(band.ReadAsArray()).astype(np.float32)
 
-        index = burst_ids.index(burst_id)
-        start_range = int((bursts[index].starting_range - min_range) / bursts[index].range_pixel_spacing)
-        end_range = int(start_range + bursts[index].width)
+        start_range = int((burst.starting_range - min_range) / burst.range_pixel_spacing)
+        end_range = int(start_range + burst.width)
         start_az = int(
             np.floor(
-                ((bursts[index].sensing_start - sensing_start) / bursts[index].azimuth_time_interval).total_seconds()
+                ((burst.sensing_start - sensing_start) / burst.azimuth_time_interval).total_seconds()
             )
         )
-        end_az = start_az + bursts[index].length
+        end_az = start_az + burst.length
 
         print(f'Azimuth: {start_az}, {end_az}')
         print(f'Range: {start_range}, {end_range}')
@@ -608,10 +619,16 @@ def merge_bursts(
 
         buffer_lines = 8
 
-        valid_az = slice(valid_data['first_valid_line'] + buffer_lines, valid_data['last_valid_line'] - buffer_lines)
+        valid_az = slice(
+            valid_data['first_valid_line'] + buffer_lines,
+            valid_data['last_valid_line'] - buffer_lines
+        )
         valid_rng = slice(
             valid_data['first_valid_sample'] + buffer_lines, valid_data['last_valid_sample'] - buffer_lines
         )
+
+        print(f'Valid Azimuth: {valid_az}')
+        print(f'Valid Range: {valid_rng}')
 
         grid[slice(start_az, end_az), slice(start_range, end_range)][valid_az, valid_rng] = arr[valid_az, valid_rng]
 

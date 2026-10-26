@@ -51,70 +51,6 @@ import hyp3_autorift.vend.netcdf_output as no
 from hyp3_autorift.vend.testGeogrid import getPol, loadMetadataRslc
 
 
-def get_topsinsar_config():
-    """
-    Input file.
-    """
-    orbits = glob.glob('*.EOF')
-    fechas_orbits = [datetime.strptime(os.path.basename(file).split('_')[6], 'V%Y%m%dT%H%M%S') for file in orbits]
-    safes = glob.glob('*.SAFE')
-    if not len(safes) == 0:
-        fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
-    else:
-        safes = glob.glob('*.zip')
-        fechas_safes = [datetime.strptime(os.path.basename(file).split('_')[5], '%Y%m%dT%H%M%S') for file in safes]
-
-    # safe_ref = safes[np.argmin(fechas_safes)]  # type: ignore[arg-type]
-    # orbit_path_ref = orbits[np.argmin(fechas_orbits)]  # type: ignore[arg-type]
-
-    # safe_sec = safes[np.argmax(fechas_safes)]  # type: ignore[arg-type]
-    # orbit_path_sec = orbits[np.argmax(fechas_orbits)]  # type: ignore[arg-type]
-
-    safe_ref = 'S1A_IW_SLC__1SSH_20260525T100039_20260525T100046_064672_0825AB_A644.SAFE' # safes[np.argmin(fechas_safes)]
-    orbit_path_ref = 'S1A_OPER_AUX_POEORB_OPOD_20260614T070417_V20260524T225942_20260526T005942.EOF' # orbits[np.argmin(fechas_orbits)]
-
-    safe_sec = 'S1C_IW_SLC__1SSH_20260531T095945_20260531T095952_007896_0100E7_C20B.SAFE' # safes[np.argmax(fechas_safes)]
-    orbit_path_sec = 'S1C_OPER_AUX_POEORB_OPOD_20260620T070929_V20260530T225942_20260601T005942.EOF' # orbits[np.argmax(fechas_orbits)]
-
-    if len(glob.glob('*_ref*.tif')) > 0:
-        swath = int(os.path.basename(glob.glob('*_ref*.tif')[0]).split('_')[2][2])
-    else:
-        swath = None
-
-    # safe: str
-    pol = getPol(safe_ref, orbit_path_ref)
-    burst = None
-
-    config_data = {}
-    for name in ['reference', 'secondary']:
-        # Find the first swath with data in it
-        swath_range = [swath] if swath else [1, 2, 3]
-        for swath in swath_range:
-            try:
-                if name == 'reference':
-                    burst = load_bursts(safe_ref, orbit_path_ref, swath, pol)[0]
-                    safe = safe_ref
-                else:
-                    burst = load_bursts(safe_sec, orbit_path_sec, swath, pol)[0]
-                    safe = safe_sec
-            except IndexError:
-                continue
-            break
-
-        assert burst
-        sensing_start = burst.sensing_start
-        length, width = burst.shape
-        prf = 1 / burst.azimuth_time_interval
-
-        sensing_stop = sensing_start + timedelta(seconds=(length - 1.0) / prf)
-
-        sensing_dt = (sensing_stop - sensing_start) / 2 + sensing_start
-
-        config_data[f'{name}_filename'] = Path(safe).name
-        config_data[f'{name}_dt'] = sensing_dt.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
-
-    return config_data
-
 
 def runCmd(cmd):
     out = subprocess.getoutput(cmd)
@@ -1077,11 +1013,11 @@ def generateAutoriftProduct(
                         dt = geogrid_run_info['dt']
                         epsg = geogrid_run_info['epsg']
 
-                    conts = get_topsinsar_config()
-                    master_filename = Path(conts['reference_filename']).stem
-                    slave_filename = Path(conts['secondary_filename']).stem
-                    master_dt = conts['reference_dt']
-                    slave_dt = conts['secondary_dt']
+                    # TODO: Pull this information from meta_r, meta_s
+                    master_filename = Path(meta_r.sceneName).stem
+                    slave_filename = Path(meta_s.sceneName).stem
+                    d0 = meta_r.sensingDt
+                    d1 = meta_s.sensingDt
                     master_split = str.split(master_filename, '_')
                     slave_split = str.split(slave_filename, '_')
 
@@ -1101,14 +1037,14 @@ def generateAutoriftProduct(
                     out_nc_filename = f'{ncname}_G{gridspacingx:04.0f}V02_P{np.floor(PPP):03.0f}.nc'
                     CHIPSIZEY = np.round(CHIPSIZEX * ScaleChipSizeY / 2) * 2
 
-                    d0 = datetime.strptime(master_dt, '%Y%m%dT%H:%M:%S.%f')
-                    d1 = datetime.strptime(slave_dt, '%Y%m%dT%H:%M:%S.%f')
                     date_dt_base = (d1 - d0).total_seconds() / timedelta(days=1).total_seconds()
                     date_dt = np.float64(date_dt_base)
                     if date_dt < 0:
                         raise Exception('Input image 1 must be older than input image 2')
 
                     date_ct = d0 + (d1 - d0) / 2
+                    d0 = d0.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
+                    d1 = d1.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
                     date_center = date_ct.strftime('%Y%m%dT%H:%M:%S.%f').rstrip('0')
 
                     IMG_INFO_DICT = {
@@ -1116,8 +1052,8 @@ def generateAutoriftProduct(
                         'id_img2': slave_filename,
                         'absolute_orbit_number_img1': master_split[7],
                         'absolute_orbit_number_img2': slave_split[7],
-                        'acquisition_date_img1': master_dt,
-                        'acquisition_date_img2': slave_dt,
+                        'acquisition_date_img1': d0,
+                        'acquisition_date_img2': d1,
                         'flight_direction_img1': flight_direction_m,
                         'flight_direction_img2': flight_direction_s,
                         'mission_data_take_ID_img1': master_split[8],

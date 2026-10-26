@@ -161,7 +161,7 @@ def loadMetadata(safe, orbit_path, swath, buffer=0, burst_shape=None):
     return info
 
 
-def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None, bursts=None):
+def loadMetadataSlc(safe, orbit_path, pol, buffer=0, static_orbit_path=None, swaths=None, slc_shape=None, bursts=None):
     """
     Input file.
     """
@@ -170,9 +170,11 @@ def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None
 
     info = Dummy()
 
-    orbit_file = orbit_path
     total_width = 0
     use_static_files = not (bursts is None)
+    if use_static_files:
+        assert static_orbit_path
+    info.orbitname = static_orbit_path if use_static_files else orbit_path
     bursts = [] if not use_static_files else bursts
     info.startingRanges = []
     info.swathShapes = []
@@ -180,7 +182,7 @@ def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None
         if use_static_files:
             burstst = [burst for burst in bursts if f'iw{swath}' in burst.burst_id]
         else:
-            burstst = load_bursts(safe, orbit_file, swath, pol)
+            burstst = load_bursts(safe, orbit_path, swath, pol)
             bursts += burstst
 
         dt = bursts[0].azimuth_time_interval
@@ -220,11 +222,17 @@ def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None
         info.aztime = float((isce3.core.DateTime(info.sensingStart) - bursts[0].orbit.reference_epoch).total_seconds())
         print(f'Azimuth Time: {info.aztime}')
 
-    info.orbitname = orbit_path
     info.farRange = info.startingRange + (total_width - 1.0) * info.rangePixelSize
     info.lookSide = isce3.core.LookSide.Right
     info.startingRange -= buffer * info.rangePixelSize
     info.farRange += buffer * info.rangePixelSize
+
+    first_burst = load_bursts(safe, orbit_path, min(swaths), pol)[0]
+    last_burst = load_bursts(safe, orbit_path, max(swaths), pol)[-1]
+
+    sensing_start = first_burst.sensing_start
+    sensing_stop = last_burst.sensing_start + timedelta(seconds=(last_burst.shape[0] - 1) * first_burst.azimuth_time_interval)
+    info.sensingDt = (sensing_stop - sensing_start) / 2 + sensing_start
 
     if slc_shape:
         info.numberOfLines, info.numberOfSamples = slc_shape
@@ -234,12 +242,11 @@ def loadMetadataSlc(safe, orbit_path, pol, buffer=0, swaths=None, slc_shape=None
 
     print('SIZE', info.numberOfLines, info.numberOfSamples)
 
-    osv_list = get_osv_list_from_orbit(info.orbitname, info.sensingStart, info.sensingStop)
-    info.orbit = get_burst_orbit(info.sensingStart, info.sensingStop, osv_list)
-
-    print(info.orbit)
-
-    # info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
+    if use_static_files:
+        osv_list = get_osv_list_from_orbit(static_orbit_path, info.sensingStart, info.sensingStop)
+        info.orbit = get_burst_orbit(info.sensingStart, info.sensingStop, osv_list)
+    else:
+        info.orbit = getMergedOrbit(safe, orbit_path, swaths[0])
 
     return info
 
