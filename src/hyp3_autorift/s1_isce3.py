@@ -589,7 +589,10 @@ def merge_bursts(
     sensing_time = sensing_end - sensing_start
     az_interval = bursts[0].azimuth_time_interval
     min_range = bursts[0].starting_range
-    max_range = bursts[-1].starting_range + bursts[-1].range_pixel_spacing * bursts[-1].width
+    last_swath_bursts = [burst for burst in bursts if f'iw{max(swaths)}' in burst.burst_id]
+    max_range = (
+        last_swath_bursts[-1].starting_range + last_swath_bursts[-1].range_pixel_spacing * last_swath_bursts[-1].width
+    )
     total_range = max_range - min_range
     max_lines = int(np.round((sensing_time / az_interval).total_seconds()))
     max_samples = int(np.round(total_range / bursts[0].range_pixel_spacing))
