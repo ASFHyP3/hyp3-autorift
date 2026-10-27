@@ -589,7 +589,7 @@ def merge_bursts(
     sensing_time = sensing_end - sensing_start
     az_interval = bursts[0].azimuth_time_interval
     min_range = bursts[0].starting_range
-    last_swath_bursts = [burst for burst in bursts if f'iw{max(swaths)}' in burst.burst_id]
+    last_swath_bursts = [burst for burst in bursts if f'iw{max(swaths)}' in str(burst.burst_id)]
     max_range = (
         last_swath_bursts[-1].starting_range + last_swath_bursts[-1].range_pixel_spacing * last_swath_bursts[-1].width
     )
