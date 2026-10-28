@@ -498,6 +498,7 @@ def process_nisar_rslc(
     meta_s.scene_name = secondary
     meta_s.sensingStart = meta_temp.sensingStart
     meta_s.sensingStop = meta_temp.sensingStop
+    meta_s.absoluteOrbitNumber = meta_temp.absoluteOrbitNumber
 
     shutil.rmtree('scratch/rdr2geo')
     Path(secondary).unlink()
@@ -588,6 +589,8 @@ def process_nisar_gslc(
         epsg=parameter_info['epsg'],
         **parameter_info['geogrid'],
     )
+
+    Path(reference).unlink()
 
     print('Finished Geogrid')
 

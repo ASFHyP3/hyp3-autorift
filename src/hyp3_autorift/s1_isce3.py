@@ -4,11 +4,13 @@ import logging
 import math
 import os
 import shutil
-import subprocess
-from datetime import timedelta
+from datetime import datetime, timedelta
+from pathlib import Path
 
+import asf_search
 import netCDF4
 import numpy as np
+import s1_orbits
 import s1reader
 from burst2safe.burst2safe import burst2safe
 from compass import s1_cslc
@@ -71,6 +73,7 @@ def process_sentinel1_burst_isce3(
             regenerate_static_files,
             chip_size,
             search_range,
+            reference[0],
         )
 
     reference = reference[0]
@@ -92,6 +95,7 @@ def process_sentinel1_burst_isce3(
         regenerate_static_files,
         chip_size,
         search_range,
+        reference,
     )
 
 
@@ -108,6 +112,7 @@ def process_burst(
     regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
+    ref_burst: str | None = None,
 ):
     swath = int(granule_ref.split('_')[2][2])
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
@@ -156,11 +161,18 @@ def process_burst(
     s1_cslc.run('s1_cslc.yaml', 'radar')
     convert2isce(burst_id_sec, ref=False)
 
-    meta_r = loadMetadata(safe_ref, orbit_ref, swath=swath)
-    meta_temp = loadMetadata(safe_sec, orbit_sec, swath=swath)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
+    if use_static_files:
+        burst = get_burst_info(burst_id_ref)
+        assert ref_burst
+        static_orbit_path = get_orbit_for_static(ref_burst, str(burst.sensing_start))
+        meta_r = loadMetadataSlc(safe_ref, static_orbit_path, pol, swaths=[swath], bursts=[burst])
+        meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=[swath], bursts=[burst])
+    else:
+        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=[swath])
+        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=[swath])
+        meta_s = copy.copy(meta_r)
+        meta_s.sensingStart = meta_temp.sensingStart
+        meta_s.sensingStop = meta_temp.sensingStop
 
     if chip_size is not None:
         log.info(f'Overriding chip size with user-defined value: {chip_size}')  # Add this log
@@ -261,11 +273,12 @@ def process_slc(
     regenerate_static_files: bool = False,
     chip_size: int | None = None,
     search_range: int | None = None,
+    ref_burst: str | None = None,
 ):
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-    burst_ids = list(set(burst_ids_sec) & set(burst_ids_ref))
+    burst_ids = sorted(list(set(burst_ids_sec) & set(burst_ids_ref)))
     pol = getPol(safe_ref, orbit_ref)
 
     download_dem(
@@ -273,9 +286,12 @@ def process_slc(
         bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
     )
 
+    orbit_direction = None
     for burst_id in burst_ids:
         swath = int(burst_id.split('_')[-1][-1])
         burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
+        if not orbit_direction:
+            orbit_direction = burst.orbit_direction
 
         if regenerate_static_files:
             has_static_layer = False
@@ -288,12 +304,15 @@ def process_slc(
             has_static_layer = False
             do_static_upload = False
 
+        if use_static_files:
+            assert has_static_layer
+
         write_yaml(
             safe=safe_ref,
             orbit_file=orbit_ref,
             burst_id=burst_id,
             is_ref=True,
-            use_static_layer=use_static_files and has_static_layer,
+            use_static_layer=use_static_files,
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
@@ -301,7 +320,7 @@ def process_slc(
             safe=safe_sec,
             orbit_file=orbit_sec,
             burst_id=burst_id,
-            use_static_layer=use_static_files and has_static_layer,
+            use_static_layer=use_static_files,
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
@@ -309,15 +328,64 @@ def process_slc(
             upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
             topo_correction_file.unlink()
 
-        if has_static_layer:
-            shutil.rmtree(STATIC_DIR / burst_id)
+    slc_shape = merge_bursts(
+        safe=safe_ref,
+        orbit=orbit_ref,
+        pol=pol,
+        burst_ids=burst_ids,
+        out_path='reference.tif',
+        swaths=swaths,
+        isce_path_prefix='product',
+        use_static_files=use_static_files,
+    )
 
-    slc_shape = merge_swaths(safe_ref, orbit_ref, swaths=swaths)
-    meta_r = loadMetadataSlc(safe_ref, orbit_ref, swaths=swaths, slc_shape=slc_shape)
-    meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=swaths)
-    meta_s = copy.copy(meta_r)
-    meta_s.sensingStart = meta_temp.sensingStart
-    meta_s.sensingStop = meta_temp.sensingStop
+    if use_static_files:
+        bursts = [get_burst_info(burst_id) for burst_id in burst_ids]
+        assert ref_burst
+        static_orbit_path = get_orbit_for_static(ref_burst, str(bursts[0].sensing_start))
+        meta_r = loadMetadataSlc(
+            safe_ref,
+            orbit_ref,
+            pol,
+            static_orbit_path=static_orbit_path,
+            swaths=swaths,
+            slc_shape=slc_shape,
+            bursts=bursts,
+        )
+        meta_s = loadMetadataSlc(
+            safe_sec, orbit_sec, pol, static_orbit_path=static_orbit_path, swaths=swaths, bursts=bursts
+        )
+    else:
+        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=swaths, slc_shape=slc_shape)
+        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, pol, swaths=swaths)
+        meta_s = copy.copy(meta_r)
+        meta_s.sensingStart = meta_temp.sensingStart
+        meta_s.sensingStop = meta_temp.sensingStop
+        meta_s.sensingDt = meta_temp.sensingDt
+
+    meta_r.sceneName = safe_ref
+    meta_s.sceneName = safe_sec
+    meta_r.orbitDirection = orbit_direction
+    meta_s.orbitDirection = orbit_direction
+    meta_r.platformID = str(safe_ref)[3]
+    meta_s.platformID = str(safe_sec)[3]
+
+    shutil.rmtree('product/')
+
+    _ = merge_bursts(
+        safe=safe_ref,
+        orbit=orbit_ref,
+        pol=pol,
+        burst_ids=burst_ids,
+        out_path='secondary.tif',
+        isce_path_prefix='product_sec',
+        swaths=swaths,
+        use_static_files=use_static_files,
+    )
+
+    if use_static_files:
+        shutil.rmtree('static_topo_corrections/')
+    shutil.rmtree('product_sec/')
 
     if chip_size is not None:
         log.info(f'Overriding chip size with user-defined value: {chip_size}')  # Add this log
@@ -340,11 +408,16 @@ def process_slc(
         # Nullify Reference Velocity for non-glacier applications
         parameter_info['autorift']['NullReferenceVelocity'] = True
 
+    ref_time = s1reader.load_bursts(safe_ref, orbit_ref, min(swaths), pol)[0].sensing_start
+    sec_time = s1reader.load_bursts(safe_sec, orbit_sec, min(swaths), pol)[0].sensing_start
+    repeat_time = (sec_time - ref_time).total_seconds()
+
     geogrid_info = runGeogrid(
         info=meta_r,
         info1=meta_s,
         optical_flag=0,
         epsg=parameter_info['epsg'],
+        dt=repeat_time,
         **parameter_info['geogrid'],
     )
 
@@ -360,6 +433,8 @@ def process_slc(
         geogrid_run_info=geogrid_info,
         **parameter_info['autorift'],
         parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
+        meta_r=meta_r,
+        meta_s=meta_s,
     )
 
     with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
@@ -368,6 +443,22 @@ def process_slc(
         var.setncattr('frame_img2', str(frame_id))
 
     return netcdf_file
+
+
+def get_orbit_for_static(scene: str, static_date: str):
+    stack = asf_search.stack_from_id(scene)
+    results = [res for res in stack if res.properties['startTime'][:10] == static_date[:10]]
+    assert len(results) == 1
+
+    group_id = results[0].properties['groupID']
+    slcs = asf_search.search(groupID=group_id, processingLevel=asf_search.PRODUCT_TYPE.SLC)
+    assert len(slcs) == 1
+
+    slc_name = slcs[0].properties['sceneName']
+    orbit_path = s1_orbits.fetch_for_scene(slc_name)
+    assert orbit_path
+
+    return str(orbit_path)
 
 
 def read_slc_gdal(slc_path: str):
@@ -390,250 +481,175 @@ def write_slc_gdal(data: np.ndarray, out_path: str):
     del out_raster
 
 
-def merge_swaths(safe_ref: str, orbit_ref: str, swaths=(1, 2, 3)) -> tuple[int, ...]:
-    """Merges the bursts within the provided swath(s) and then merges the swaths.
-       The secondary image is merged according to the reference image's metadata.
+class MockBurstInfo:
+    def __init__(
+        self,
+        burst_id,
+        azimuth_time_interval,
+        sensing_start,
+        sensing_start_delta,
+        reference_epoch,
+        starting_range,
+        range_pixel_spacing,
+        wavelength,
+        length,
+        width,
+        first_valid_sample,
+        last_valid_sample,
+        first_valid_line,
+        last_valid_line,
+    ):
+        self.burst_id = burst_id
+        self.azimuth_time_interval = azimuth_time_interval
+        self.sensing_start = sensing_start
+        self.sensing_start_delta = sensing_start_delta
+        self.reference_epoch = reference_epoch
+        self.starting_range = starting_range
+        self.range_pixel_spacing = range_pixel_spacing
+        self.wavelength = wavelength
+        self.length = length
+        self.width = width
+        self.shape = (length, width)
+        self.first_valid_sample = first_valid_sample
+        self.last_valid_sample = last_valid_sample
+        self.first_valid_line = first_valid_line
+        self.last_valid_line = last_valid_line
 
-    Args:
-        safe_ref: The filename of the reference safe. The secondary must be coregistered to this.
-        orbit_ref: The filename of the orbit file for the reference image.
-        swaths: Ascending sorted list containing the desired swath(s) to merge. Swaths must be adjacent.
-    """
-    safe_path_ref = os.path.abspath(safe_ref)
-    orbit_path_ref = os.path.abspath(orbit_ref)
 
-    burst_ids_ref = get_burst_ids(safe_path_ref, orbit_path_ref)
+def get_valid_bounds(slc):
+    ds = gdal.Open(slc)
+    band = ds.GetRasterBand(1)
+    arr = band.ReadAsArray()
 
-    product_path_ref = './product/*'
-    product_path_sec = './product_sec/*'
+    valid = arr != 0 + 0j
 
-    burst_files_ref = sorted(glob.glob(product_path_ref))
-    burst_files_sec = sorted(glob.glob(product_path_sec))
+    lines, samples = np.where(valid)
 
-    # Check against metadata
-    if len(burst_ids_ref) != len(burst_files_ref):
-        print('Warning : Not all the bursts were processed')
+    if len(lines) == 0:
+        return None
 
+    return {
+        'first_valid_line': int(lines.min()),
+        'last_valid_line': int(lines.max()),
+        'first_valid_sample': int(samples.min()),
+        'last_valid_sample': int(samples.max()),
+    }
+
+
+def get_burst_info(burst_id, isce_path_prefix='product'):
+    info_path = f'./static_topo_corrections/{burst_id}/{burst_id}_static_rdr.nc'
+    ds = gdal.Open(info_path)
+    metadata = ds.GetMetadata()
+    ds = None
+
+    ref_epoch = datetime.strptime(metadata['NC_GLOBAL#ref_epoch'][:-3], '%Y-%m-%dT%H:%M:%S.%f')
+    sensing_start_delta = timedelta(seconds=int(metadata['NC_GLOBAL#sensing_start']))
+    sensing_start = ref_epoch + sensing_start_delta
+
+    valid_data = get_valid_bounds(get_burst_path(str(Path(isce_path_prefix) / burst_id)))
+
+    return MockBurstInfo(
+        burst_id,
+        float(metadata['NC_GLOBAL#azimuth_time_interval']),
+        sensing_start,
+        float(sensing_start_delta.total_seconds()),
+        ref_epoch,
+        float(metadata['NC_GLOBAL#starting_range']),
+        float(metadata['NC_GLOBAL#range_pixel_spacing']),
+        float(metadata['NC_GLOBAL#wavelength']),
+        int(metadata['NC_GLOBAL#length']),
+        int(metadata['NC_GLOBAL#width']),
+        valid_data['first_valid_sample'],
+        valid_data['last_valid_sample'],
+        valid_data['first_valid_line'],
+        valid_data['last_valid_line'],
+    )
+
+
+def merge_bursts(
+    safe: str,
+    orbit: str,
+    pol: str,
+    burst_ids: list,
+    out_path: str,
+    isce_path_prefix='product',
+    swaths=(1, 2, 3),
+    use_static_files=False,
+):
     bursts = []
-    sensing_starts = []
-    rng_offsets = [0]
-    sensing_start = None
-    sensing_stop = None
-    az_time_interval = None
-    pol = getPol(safe_ref, orbit_ref)
-
-    for swath in swaths:
-        ref_bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
-        ref_burst_files = [b for b in burst_files_ref if f'iw{swath}' in b]
-        sec_burst_files = [b for b in burst_files_sec if f'iw{swath}' in b]
-
-        burst_az_samples, num_rng_samples = merge_bursts_in_swath(ref_bursts, ref_burst_files, sec_burst_files, swath)
-
-        az_time_interval = ref_bursts[0].azimuth_time_interval
-        burst_length = timedelta(seconds=az_time_interval * (burst_az_samples - 1))
-        burst_sensing_start = ref_bursts[0].sensing_start
-        burst_sensing_stop = ref_bursts[-1].sensing_start + burst_length
-        burst_start_rng = ref_bursts[0].starting_range
-
-        bursts.extend(ref_bursts)
-        sensing_starts.append(burst_sensing_start)
-
-        if swath == min(swaths):
-            sensing_start = burst_sensing_start
-            az_time_interval = bursts[-1].azimuth_time_interval
-            sensing_stop = burst_sensing_stop
-            last_rng_samples = num_rng_samples
-
-        if sensing_start > burst_sensing_start:
-            sensing_start = burst_sensing_start
-
-        if sensing_stop < burst_sensing_stop:
-            sensing_stop = burst_sensing_stop
-
-        if swath > min(swaths):
-            rng_offset = (burst_start_rng - bursts[0].starting_range) / bursts[0].range_pixel_spacing
-            rng_offsets.append(int(np.floor(rng_offset)))
-            last_rng_samples = num_rng_samples
-
-    first_start_rng = bursts[0].starting_range
-    last_start_rng = bursts[-1].starting_range
-    rng_pixel_spacing = bursts[0].range_pixel_spacing
-
-    assert sensing_start and sensing_stop and rng_pixel_spacing
-
-    num_rng_pixels = int(np.floor((last_start_rng - first_start_rng) / rng_pixel_spacing))
-    sensing_time = (sensing_stop - sensing_start).total_seconds()
-    total_rng_samples = last_rng_samples + num_rng_pixels
-    total_az_samples = 1 + int(np.round(sensing_time / az_time_interval))
-
-    for slc in ['ref', 'sec']:
-        swath_index = 0
-        merged_arr = np.zeros((total_az_samples, total_rng_samples), dtype=np.float32)
-
+    if use_static_files:
+        bursts = [get_burst_info(burst_id, isce_path_prefix=isce_path_prefix) for burst_id in burst_ids]
+    else:
         for swath in swaths:
-            print(f'Merging Swath {swath}')
+            bursts.extend(s1reader.load_bursts(safe, orbit, swath, pol))
 
-            slc_path = slc + '_swath_iw' + str(swath) + '.tif'
-            slc_array = read_slc_gdal(slc_path)
-            slc_rows = slc_array.shape[0]
+    sensing_starts = sorted([burst.sensing_start for burst in bursts])
+    sensing_start = min(sensing_starts)
+    sensing_end = max(sensing_starts) + timedelta(seconds=bursts[-1].azimuth_time_interval * bursts[-1].length)
+    sensing_time = sensing_end - sensing_start
+    az_interval = bursts[0].azimuth_time_interval
+    min_range = bursts[0].starting_range
+    last_swath_bursts = [burst for burst in bursts if f'iw{max(swaths)}' in str(burst.burst_id)]
+    max_range = (
+        last_swath_bursts[-1].starting_range + last_swath_bursts[-1].range_pixel_spacing * last_swath_bursts[-1].width
+    )
+    total_range = max_range - min_range
+    max_lines = int(np.round((sensing_time / az_interval).total_seconds()))
+    max_samples = int(np.round(total_range / bursts[0].range_pixel_spacing))
 
-            bursts = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol)
+    grid: np.ndarray = np.ndarray((max_lines, max_samples), dtype=np.float32)
 
-            first_rng_sample = bursts[0].first_valid_sample
-            last_rng_sample = bursts[0].last_valid_sample
-            az_offset = int(np.floor((sensing_starts[swath_index] - sensing_start).total_seconds() / az_time_interval))
-            rng_offset = rng_offsets[swath_index] + first_rng_sample
-            rng_end_index = rng_offset + (last_rng_sample - first_rng_sample)
-            invalid_pixel_buffer = 64 if swath != max(swaths) else 0
-            slc_az_start_index = bursts[0].first_valid_line
+    print(f'Sensing Start: {sensing_start}')
+    print(f'Sensing Stop: {sensing_end}')
+    print(f'Sensing Time: {sensing_time}')
+    print(f'Azimuth Time Interval: {az_interval}')
+    print(f'Start Range: {min_range}')
+    print(f'Stop Range: {max_range}')
+    print(f'Total Azimuth Pixels: {max_lines}')
+    print(f'Total Range Pixels: {max_samples}')
 
-            if len(bursts) > 1:
-                slc_az_end_index = -bursts[-1].last_valid_line
-                merged_az_end_index = az_offset + slc_rows + (slc_az_end_index - slc_az_start_index)
-            else:
-                slc_az_end_index = bursts[0].last_valid_line
-                merged_az_end_index = az_offset + (slc_az_end_index - slc_az_start_index)
+    for burst in bursts:
+        burst_id = str(burst.burst_id)
+        print(f'Merging {burst_id} from {isce_path_prefix} to {out_path}')
 
-            merged_az_slice = slice(az_offset, merged_az_end_index)
-            merged_rng_slice = slice(rng_offset, rng_end_index - invalid_pixel_buffer)
-            slc_az_slice = slice(slc_az_start_index, slc_az_end_index)
-            slc_rng_slice = slice(first_rng_sample, last_rng_sample - invalid_pixel_buffer)
+        file = get_burst_path(str(Path(isce_path_prefix) / burst_id))
+        ds = gdal.Open(file)
+        band = ds.GetRasterBand(1)
+        arr = np.abs(band.ReadAsArray()).astype(np.float32)
 
-            cond = np.logical_and(
-                merged_arr[merged_az_slice, merged_rng_slice] == 0, slc_array[slc_az_slice, slc_rng_slice] != 0
-            )
+        start_range = int((burst.starting_range - min_range) / burst.range_pixel_spacing)
+        end_range = int(start_range + burst.width)
+        start_az = int(np.floor(((burst.sensing_start - sensing_start) / burst.azimuth_time_interval).total_seconds()))
+        end_az = start_az + burst.length
 
-            merged_arr[merged_az_slice, merged_rng_slice][cond] = slc_array[slc_az_slice, slc_rng_slice][cond]
+        print(f'Azimuth: {start_az}, {end_az}')
+        print(f'Range: {start_range}, {end_range}')
 
-            swath_index += 1
+        valid_data = get_valid_bounds(file)
 
-        write_slc_gdal(merged_arr, 'reference.tif' if slc == 'ref' else 'secondary.tif')
+        buffer_lines = 8
 
-    subprocess.call('rm -rf ref_swath_*iw* sec_swath_*iw*', shell=True)
+        valid_az = slice(valid_data['first_valid_line'] + buffer_lines, valid_data['last_valid_line'] - buffer_lines)
+        valid_rng = slice(
+            valid_data['first_valid_sample'] + buffer_lines, valid_data['last_valid_sample'] - buffer_lines
+        )
 
-    return merged_arr.shape
+        print(f'Valid Azimuth: {valid_az}')
+        print(f'Valid Range: {valid_rng}')
 
+        grid[slice(start_az, end_az), slice(start_range, end_range)][valid_az, valid_rng] = arr[valid_az, valid_rng]
 
-def get_azimuth_reference_offsets(bursts: list):
-    """Calculate the azimuth offsets and valid burst indexes
+    write_slc_gdal(grid, out_path)
 
-    Args:
-        bursts: List of burst objects
-
-    Returns:
-        az_reference_offsets: The azimuth offsets
-        start_index: The starting index for merging
-    """
-    az_reference_offsets = []
-    sensing_start = bursts[0].sensing_start
-    az_time_interval = bursts[0].azimuth_time_interval
-
-    for index in range(len(bursts)):
-        burst = bursts[index]
-        az_offset = burst.sensing_start + timedelta(seconds=(burst.first_valid_line * az_time_interval))
-        burst_start_index = int(np.round((az_offset - sensing_start).total_seconds() / az_time_interval))
-        burst_end_index = burst_start_index + (burst.last_valid_line - burst.first_valid_line) + 1
-        az_reference_offsets.append([burst_start_index, burst_end_index])
-
-    return az_reference_offsets
+    return grid.shape
 
 
 def get_burst_path(burst_filename: str):
     return glob.glob(glob.glob(burst_filename + '/*')[0] + '/*.slc.tif')[0]
 
 
-def merge_bursts_in_swath(ref_bursts: list, ref_burst_files: list[str], sec_burst_files: list[str], swath: int):
-    """Merges the bursts within the provided swath.
-       The secondary bursts are merged according to the reference bursts' metadata.
-
-    Args:
-        ref_bursts: List of the reference burst objects
-        ref_burst_files: List of the filenames of the reference burst slcs
-        sec_burst_files: List of the filenames of the secondary burst slcs
-        swath: The swath containing the bursts to merge.
-
-    Returns:
-        num_az_samples: Merged image size in the azimuth direction
-        num_rng_samples: Merged image size in the range direction
-    """
-    print(f'Merging Bursts in Swath {swath}')
-
-    num_bursts = len(ref_bursts)
-    az_time_interval = ref_bursts[0].azimuth_time_interval
-    burst_arr = read_slc_gdal(get_burst_path(ref_burst_files[0]))
-    num_az_samples, num_rng_samples = burst_arr.shape
-
-    ref_output_path = 'ref_swath_iw' + str(swath) + '.tif'
-    sec_output_path = 'sec_swath_iw' + str(swath) + '.tif'
-
-    if num_bursts == 1:
-        write_slc_gdal(burst_arr, ref_output_path)
-        burst_arr = read_slc_gdal(get_burst_path(sec_burst_files[0]))
-        write_slc_gdal(burst_arr, sec_output_path)
-        return num_az_samples, num_rng_samples
-
-    last_burst_sensing_start = ref_bursts[-1].sensing_start
-    burst_length = timedelta(seconds=(num_az_samples - 1.0) * az_time_interval)
-    sensing_start = ref_bursts[0].sensing_start
-    sensing_end = last_burst_sensing_start + burst_length
-    num_az_lines = 1 + int(np.round((sensing_end - sensing_start).total_seconds() / az_time_interval))
-    az_reference_offsets = get_azimuth_reference_offsets(ref_bursts)
-
-    ref_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
-    sec_merged_arr = np.zeros((num_az_lines, num_rng_samples), dtype=np.float32)
-    for index in range(num_bursts):
-        burst = ref_bursts[index]
-        burst_limit = az_reference_offsets[index]
-        burst_arr_ref = read_slc_gdal(get_burst_path(ref_burst_files[index]))
-        burst_arr_sec = read_slc_gdal(get_burst_path(sec_burst_files[index]))
-
-        # Merge the bursts in the azimuth direction such that the beginning of 1 burst is halfway
-        # through the overlap with the previous burst. This avoids any invalid pixels from resampling in ISCE3.
-        if index == 0:
-            next_burst_limit = az_reference_offsets[index + 1]
-            burst_start_index = burst.first_valid_line
-            burst_end_index = 1 + burst.last_valid_line - (burst_limit[1] - next_burst_limit[0]) // 2
-            merge_start_index = burst_limit[0]
-            merge_end_index = burst_limit[1] - (burst_limit[1] - next_burst_limit[0]) // 2
-
-        elif index != num_bursts - 1:
-            prev_burst_limit = az_reference_offsets[index - 1]
-            next_burst_limit = az_reference_offsets[index + 1]
-            burst_start_index = burst.first_valid_line + (prev_burst_limit[1] - burst_limit[0]) // 2
-            burst_end_index = 1 + burst.last_valid_line - (burst_limit[1] - next_burst_limit[0]) // 2
-            merge_start_index = burst_limit[0] + (prev_burst_limit[1] - burst_limit[0]) // 2
-            merge_end_index = burst_limit[1] - (burst_limit[1] - next_burst_limit[0]) // 2
-
-        else:
-            prev_burst_limit = az_reference_offsets[index - 1]
-            burst_start_index = burst.first_valid_line + (prev_burst_limit[1] - burst_limit[0]) // 2
-            burst_end_index = 1 + burst.last_valid_line
-            merge_start_index = burst_limit[0] + (prev_burst_limit[1] - burst_limit[0]) // 2
-            merge_end_index = burst_limit[1]
-
-        rng_slice = slice(burst.first_valid_sample, burst.last_valid_sample)
-
-        merge_az_slice = slice(merge_start_index, merge_end_index)
-        burst_az_slice = slice(burst_start_index, burst_end_index)
-
-        print(
-            f'IW{swath}[{merge_start_index}:{merge_end_index}] = burst_{index}[{burst_start_index}:{burst_end_index}]'
-        )
-
-        burst_arr_ref = burst_arr_ref[burst_az_slice, rng_slice]
-        burst_arr_sec = burst_arr_sec[burst_az_slice, rng_slice]
-
-        ref_merged_arr[merge_az_slice, rng_slice] = burst_arr_ref
-        sec_merged_arr[merge_az_slice, rng_slice] = burst_arr_sec
-
-    write_slc_gdal(ref_merged_arr, ref_output_path)
-    write_slc_gdal(sec_merged_arr, sec_output_path)
-
-    return num_az_lines, num_rng_samples
-
-
 # FIXME: is_slc could be handled by swaths?
-def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
+def bounding_box(safe, orbit_file, is_slc, pol='HH', swaths=(1, 2, 3), epsg=4326):
     """Determine the geometric bounding box of a Sentinel-1 image
 
     Args:
@@ -653,7 +669,7 @@ def bounding_box(safe, orbit_file, is_slc, swaths=(1, 2, 3), epsg=4326):
     if not is_slc:
         info = loadMetadata(safe, orbit_file, swath=swaths[0])
     else:
-        info = loadMetadataSlc(safe, orbit_file, swaths=swaths)
+        info = loadMetadataSlc(safe, orbit_file, pol, swaths=swaths)
 
     obj = GeogridRadar()
 

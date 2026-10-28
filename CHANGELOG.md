@@ -13,6 +13,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * The memory usage in `convert_rslc_to_uint8_amplitude` has been significantly reduced.
 * The storage used by the NISAR workflow has been significantly reduced.
 
+### Fixed
+* Sentinel-1 misregistration issue caused by GeoGrid not using static file's radar grid and orbit information.
+
 ## [0.28.4]
 
 ### Fixed
