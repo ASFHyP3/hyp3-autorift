@@ -25,37 +25,38 @@ classifiers=[
 dependencies = [
     # NOTE: Duplicated in "[tool.pixi.dependencies]" to prefer conda-forge dependencies.
     #       see: https://pixi.sh/dev/python/pyproject_toml/#dependency-section
-    'boto3',
-    'botocore',
-    'burst2safe>=1.4.4',
-    'gdal>=3',
-    'h5netcdf',  # for increased performance of crop.py
-    'hyp3lib>=4,<5',
-    'matplotlib',
-    'netCDF4',
-    'numpy>=1.20',
-    'pandas>=1.4',
-    'pyarrow',
-    'pyproj>=3.3',
-    'python-dateutil',
-    'requests>=2.0',
-    'scipy>=1.0',
-    'tqdm',
-    'xarray',
+    "boto3",
+    "botocore",
+    "burst2safe>=1.4.4",
+    "gdal>=3",
+    "h5netcdf",  # for increased performance of crop.py
+    "hyp3lib>=4,<5",
+    "matplotlib",
+    "netCDF4",
+    "numpy>=1.20",
+    "pandas>=1.4",
+    "pyarrow",
+    "pyproj>=3.3",
+    "python-dateutil",
+    "requests>=2.0",
+    "scipy>=1.0",
+    "s1_orbits>=0.2",
+    "tqdm",
+    "xarray",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 develop = [
-    'setuptools_scm',
-    'pillow>=7.0',
-    'pytest',
-    'pytest-console-scripts',
-    'pytest-cov',
-    'responses',
-    'ruff==0.15.21',
-    'mypy==2.3.0',
-    'types-requests',
+    "setuptools_scm",
+    "pillow>=7.0",
+    "pytest",
+    "pytest-console-scripts",
+    "pytest-cov",
+    "responses",
+    "ruff==0.15.21",
+    "mypy==2.3.0",
+    "types-requests",
 ]
 
 [project.scripts]
@@ -135,7 +136,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
 
 [tool.pixi.pypi-options]
-no-build-isolation = ['isce3']
+no-build-isolation = ["isce3"]
 
 [tool.pixi.dependencies]
 pip = "*"
@@ -155,6 +156,7 @@ pandas = ">=1.4"
 pyproj = ">=3.3"
 python-dateutil = "*"
 requests = ">=2.0"
+s1_orbits = ">=0.2"
 scipy = ">=1.0"
 xarray = "*"
 # For building radar deps
