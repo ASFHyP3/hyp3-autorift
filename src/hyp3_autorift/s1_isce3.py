@@ -114,8 +114,9 @@ def process_burst(
     search_range: int | None = None,
     ref_burst: str | None = None,
 ):
+    pol = granule_ref.split('_')[4].lower()
     swath = int(granule_ref.split('_')[2][2])
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, swaths=[swath])
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, pol=pol, swaths=[swath])
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
 
@@ -169,7 +170,7 @@ def process_burst(
         meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=[swath], bursts=[burst])
     else:
         meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=[swath])
-        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, swaths=[swath])
+        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, pol, swaths=[swath])
         meta_s = copy.copy(meta_r)
         meta_s.sensingStart = meta_temp.sensingStart
         meta_s.sensingStop = meta_temp.sensingStop
@@ -275,11 +276,11 @@ def process_slc(
     search_range: int | None = None,
     ref_burst: str | None = None,
 ):
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, True, swaths=swaths)
+    pol = getPol(safe_ref, orbit_ref)
+    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, is_slc=True, pol=pol, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
     burst_ids = sorted(list(set(burst_ids_sec) & set(burst_ids_ref)))
-    pol = getPol(safe_ref, orbit_ref)
 
     download_dem(
         dem=parameter_info['geogrid']['dem'],
@@ -656,6 +657,7 @@ def bounding_box(safe, orbit_file, is_slc, pol='HH', swaths=(1, 2, 3), epsg=4326
         safe: Path to the Sentinel-1 SAFE zip archive
         orbit_file: Path to the Sentinel-1 orbit file
         is_slc: Whether the SAFE archive contains a full SLC product or not
+        pol: Polarizations to use for calculating the bounding box
         swaths: Swaths to include in the bounding box
         epsg: Projection EPSG code
 
@@ -666,10 +668,10 @@ def bounding_box(safe, orbit_file, is_slc, pol='HH', swaths=(1, 2, 3), epsg=4326
     """
     from geogrid import GeogridRadar
 
-    if not is_slc:
-        info = loadMetadata(safe, orbit_file, swath=swaths[0])
-    else:
+    if is_slc:
         info = loadMetadataSlc(safe, orbit_file, pol, swaths=swaths)
+    else:
+        info = loadMetadata(safe, orbit_file, swath=swaths[0])
 
     obj = GeogridRadar()
 
