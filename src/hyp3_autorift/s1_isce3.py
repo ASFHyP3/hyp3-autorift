@@ -598,8 +598,6 @@ def merge_bursts(
     max_lines = int(np.round((sensing_time / az_interval).total_seconds()))
     max_samples = int(np.round(total_range / bursts[0].range_pixel_spacing))
 
-    grid: np.ndarray = np.ndarray((max_lines, max_samples), dtype=np.float32)
-
     print(f'Sensing Start: {sensing_start}')
     print(f'Sensing Stop: {sensing_end}')
     print(f'Sensing Time: {sensing_time}')
@@ -608,6 +606,8 @@ def merge_bursts(
     print(f'Stop Range: {max_range}')
     print(f'Total Azimuth Pixels: {max_lines}')
     print(f'Total Range Pixels: {max_samples}')
+
+    grid: np.ndarray = np.ndarray((max_lines, max_samples), dtype=np.float32)
 
     for burst in bursts:
         burst_id = str(burst.burst_id)
