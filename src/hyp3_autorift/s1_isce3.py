@@ -27,6 +27,7 @@ from hyp3_autorift.s1_rdr_static_files import (
     S3_BUCKET,
     STATIC_DIR,
     create_static_layer,
+    get_static_file_date,
     get_static_layer,
     upload_static_nc_to_s3,
 )
@@ -37,7 +38,7 @@ from hyp3_autorift.vend.testautoRIFT import generateAutoriftProduct
 log = logging.getLogger(__name__)
 
 
-def process_sentinel1_burst_isce3(
+def process_sentinel1_bursts_isce3(
     reference,
     secondary,
     static_files_bucket,
@@ -47,183 +48,36 @@ def process_sentinel1_burst_isce3(
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
+    assert isinstance(reference, list)
+    assert isinstance(secondary, list)
+
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
 
     orbit_ref = retrieve_orbit_file(str(safe_ref), orbit_dir='.', concatenate=True)
     orbit_sec = retrieve_orbit_file(str(safe_sec), orbit_dir='.', concatenate=True)
 
-    if isinstance(reference, list) and len(reference) > 1:
-        burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
-        burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
+    burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
+    burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
 
-        swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
+    swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
 
-        return process_slc(
-            safe_ref,
-            safe_sec,
-            orbit_ref,
-            orbit_sec,
-            burst_ids_ref,
-            burst_ids_sec,
-            static_files_bucket,
-            use_static_files,
-            frame_id,
-            swaths,
-            regenerate_static_files,
-            chip_size,
-            search_range,
-            reference[0],
-        )
-
-    reference = reference[0]
-    secondary = secondary[0]
-
-    burst_id_ref = get_burst_id(safe_ref, reference, orbit_ref)
-    burst_id_sec = get_burst_id(safe_sec, secondary, orbit_sec)
-
-    return process_burst(
+    return process_slc(
         safe_ref,
         safe_sec,
         orbit_ref,
         orbit_sec,
-        reference,
-        burst_id_ref,
-        burst_id_sec,
+        burst_ids_ref,
+        burst_ids_sec,
         static_files_bucket,
         use_static_files,
+        frame_id,
+        swaths,
         regenerate_static_files,
         chip_size,
         search_range,
-        reference,
+        reference[0],
     )
-
-
-def process_burst(
-    safe_ref,
-    safe_sec,
-    orbit_ref,
-    orbit_sec,
-    granule_ref,
-    burst_id_ref,
-    burst_id_sec,
-    static_files_bucket,
-    use_static_files,
-    regenerate_static_files: bool = False,
-    chip_size: int | None = None,
-    search_range: int | None = None,
-    ref_burst: str | None = None,
-):
-    pol = granule_ref.split('_')[4].lower()
-    swath = int(granule_ref.split('_')[2][2])
-    lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, False, pol=pol, swaths=[swath])
-    scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
-    parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-
-    download_dem(
-        dem=parameter_info['geogrid']['dem'],
-        bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
-    )
-
-    if regenerate_static_files:
-        has_static_layer = False
-        do_static_upload = True
-    elif use_static_files:
-        retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
-        has_static_layer = get_static_layer(burst_id_ref, retrieval_bucket)
-        do_static_upload = not has_static_layer and static_files_bucket
-    else:
-        has_static_layer = False
-        do_static_upload = False
-
-    pol = getPol(safe_ref, orbit_ref)
-    burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id_ref])[0]
-
-    write_yaml(
-        safe=safe_ref,
-        orbit_file=orbit_ref,
-        burst_id=burst_id_ref,
-        is_ref=True,
-        use_static_layer=use_static_files and has_static_layer,
-    )
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    convert2isce(burst_id_ref)
-
-    if do_static_upload and (topo_correction_file := create_static_layer(burst_id_ref, burst=burst)):
-        upload_static_nc_to_s3(topo_correction_file, burst_id_ref, bucket=static_files_bucket)
-        topo_correction_file.unlink()
-
-    write_yaml(
-        safe=safe_sec,
-        orbit_file=orbit_sec,
-        burst_id=burst_id_sec,
-        use_static_layer=use_static_files and has_static_layer,
-    )
-    s1_cslc.run('s1_cslc.yaml', 'radar')
-    convert2isce(burst_id_sec, ref=False)
-
-    if use_static_files:
-        burst = get_burst_info(burst_id_ref)
-        assert ref_burst
-        static_orbit_path = get_orbit_for_static(ref_burst, str(burst.sensing_start))
-        meta_r = loadMetadataSlc(safe_ref, static_orbit_path, pol, swaths=[swath], bursts=[burst])
-        meta_s = loadMetadataSlc(safe_sec, static_orbit_path, pol, swaths=[swath], bursts=[burst])
-    else:
-        meta_r = loadMetadataSlc(safe_ref, orbit_ref, pol, swaths=[swath])
-        meta_temp = loadMetadataSlc(safe_sec, orbit_sec, pol, swaths=[swath])
-        meta_s = copy.copy(meta_r)
-        meta_s.sensingStart = meta_temp.sensingStart
-        meta_s.sensingStop = meta_temp.sensingStop
-
-    if chip_size is not None:
-        log.info(f'Overriding chip size with user-defined value: {chip_size}')  # Add this log
-
-        # Modify geogrid params (sends ChipSizeX to runGeogrid)
-        parameter_info['geogrid']['ChipSizeX'] = chip_size
-        parameter_info['geogrid']['ChipSizeY'] = chip_size
-
-        # Modify autorift params (sends ChipSizeX to generateAutoriftProduct/runAutorift)
-        parameter_info['autorift']['ChipSizeX'] = chip_size
-        parameter_info['autorift']['ChipSizeY'] = chip_size
-        parameter_info['autorift']['chip_size_min'] = None
-        parameter_info['autorift']['chip_size_max'] = None
-
-    if search_range is not None:
-        log.info(f'Overriding search range with user-defined value: {search_range}')
-        # Inject user-specified search_range into 'autorift' dictionary
-        parameter_info['autorift']['SearchLimitX'] = search_range
-        parameter_info['autorift']['SearchLimitY'] = search_range
-        # Nullify Reference Velocity for non-glacier applications
-        parameter_info['autorift']['NullReferenceVelocity'] = True
-
-    geogrid_info = runGeogrid(
-        info=meta_r,
-        info1=meta_s,
-        optical_flag=0,
-        epsg=parameter_info['epsg'],
-        **parameter_info['geogrid'],
-    )
-
-    # Geogrid seems to De-register Drivers
-    gdal.AllRegister()
-
-    netcdf_file = generateAutoriftProduct(
-        'reference.tif',
-        'secondary.tif',
-        nc_sensor='S1',
-        optical_flag=False,
-        ncname=None,
-        geogrid_run_info=geogrid_info,
-        **parameter_info['autorift'],
-        parameter_file=DEFAULT_PARAMETER_FILE.replace('/vsicurl/', ''),
-    )
-
-    with netCDF4.Dataset(netcdf_file, 'a', clobber=True, format='NETCDF4') as ds:
-        var = ds.variables['img_pair_info']
-        var.setncattr('frame_img1', burst_id_ref[1:])
-        var.setncattr('frame_img2', burst_id_sec[1:])
-
-    return netcdf_file
 
 
 def process_sentinel1_slc_isce3(
@@ -288,25 +142,40 @@ def process_slc(
     )
 
     orbit_direction = None
+    static_file_dates = set()
+    missing_static_files = []
     for burst_id in burst_ids:
         swath = int(burst_id.split('_')[-1][-1])
         burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
+
         if not orbit_direction:
             orbit_direction = burst.orbit_direction
 
-        if regenerate_static_files:
-            has_static_layer = False
+        if regenerate_static_files:  # TODO: This option is now redundant.
             do_static_upload = True
+            assert static_files_bucket
         elif use_static_files:
             retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
             has_static_layer = get_static_layer(burst_id, retrieval_bucket)
-            do_static_upload = not has_static_layer and static_files_bucket
-        else:
-            has_static_layer = False
             do_static_upload = False
+        else:
+            do_static_upload = static_files_bucket is not None
+
+        if use_static_files and not has_static_layer:
+            missing_static_files.append(burst_id)
 
         if use_static_files:
-            assert has_static_layer
+            static_file_dates.add(datetime.strftime(get_static_file_date(burst_id), '%Y-%m-%d'))
+
+    if len(static_file_dates) > 1:
+        raise ValueError(f'Got static files from multiple dates, which can cause invalid results: {static_file_dates}')
+
+    if missing_static_files:
+        raise ValueError(f'Missing static files for the following bursts: {missing_static_files}')
+
+    for burst_id in burst_ids:
+        swath = int(burst_id.split('_')[-1][-1])
+        burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
 
         write_yaml(
             safe=safe_ref,
