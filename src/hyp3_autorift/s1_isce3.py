@@ -42,14 +42,16 @@ def process_sentinel1_bursts_isce3(
     reference,
     secondary,
     static_files_bucket,
-    use_static_files,
     frame_id,
-    regenerate_static_files: bool = False,
+    static_files: str | None = None,
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
     assert isinstance(reference, list)
     assert isinstance(secondary, list)
+
+    if static_files == 'create':
+        assert static_files_bucket
 
     safe_ref = download_burst(reference)
     safe_sec = download_burst(secondary)
@@ -70,10 +72,9 @@ def process_sentinel1_bursts_isce3(
         burst_ids_ref,
         burst_ids_sec,
         static_files_bucket,
-        use_static_files,
         frame_id,
         swaths,
-        regenerate_static_files,
+        static_files,
         chip_size,
         search_range,
         reference[0],
@@ -84,11 +85,13 @@ def process_sentinel1_slc_isce3(
     slc_ref,
     slc_sec,
     static_files_bucket,
-    use_static_files,
-    regenerate_static_files: bool = False,
+    static_files: str | None = None,
     chip_size: int | None = None,
     search_range: int | None = None,
 ):
+    if static_files == 'create':
+        assert static_files_bucket
+
     safe_ref = download_file(get_download_url(slc_ref), chunk_size=5242880)
     safe_sec = download_file(get_download_url(slc_sec), chunk_size=5242880)
 
@@ -106,11 +109,10 @@ def process_sentinel1_slc_isce3(
         burst_ids_ref,
         burst_ids_sec,
         static_files_bucket,
-        use_static_files,
+        static_files=static_files,
         frame_id='N/A',
         chip_size=chip_size,
         search_range=search_range,
-        regenerate_static_files=regenerate_static_files,
     )
 
 
@@ -122,10 +124,9 @@ def process_slc(
     burst_ids_ref,
     burst_ids_sec,
     static_files_bucket,
-    use_static_files,
     frame_id,
     swaths=(1, 2, 3),
-    regenerate_static_files: bool = False,
+    static_files: str | None = None,
     chip_size: int | None = None,
     search_range: int | None = None,
     ref_burst: str | None = None,
@@ -141,9 +142,12 @@ def process_slc(
         bounds=[lon_limits[0], lat_limits[0], lon_limits[1], lat_limits[1]],
     )
 
+    use_static_files = static_files == 'use'
+    create_static_files = static_files == 'create'
     orbit_direction = None
     static_file_dates = set()
     missing_static_files = []
+
     for burst_id in burst_ids:
         swath = int(burst_id.split('_')[-1][-1])
         burst = s1reader.load_bursts(safe_ref, orbit_ref, swath, pol, burst_ids=[burst_id])[0]
@@ -151,15 +155,9 @@ def process_slc(
         if not orbit_direction:
             orbit_direction = burst.orbit_direction
 
-        if regenerate_static_files:  # TODO: This option is now redundant.
-            do_static_upload = True
-            assert static_files_bucket
-        elif use_static_files:
+        if use_static_files:
             retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
             has_static_layer = get_static_layer(burst_id, retrieval_bucket)
-            do_static_upload = False
-        else:
-            do_static_upload = static_files_bucket is not None
 
         if use_static_files and not has_static_layer:
             missing_static_files.append(burst_id)
@@ -194,7 +192,7 @@ def process_slc(
         )
         s1_cslc.run('s1_cslc.yaml', 'radar')
 
-        if do_static_upload and (topo_correction_file := create_static_layer(burst_id, burst=burst)):
+        if create_static_files and (topo_correction_file := create_static_layer(burst_id, burst=burst)):
             upload_static_nc_to_s3(topo_correction_file, burst_id, static_files_bucket)
             topo_correction_file.unlink()
 
