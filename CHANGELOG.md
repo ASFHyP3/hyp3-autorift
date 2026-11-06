@@ -12,9 +12,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * The block size for NISAR processing in ISCE3 has been reduced to 2500.
 * The memory usage in `convert_rslc_to_uint8_amplitude` has been significantly reduced.
 * The storage used by the NISAR workflow has been significantly reduced.
+* There is now only one CLI option for static files usage, `--static-files`, that can take in `use` or `create`. If it is left as None, static files will not be used or created.
 
 ### Fixed
 * Sentinel-1 misregistration issue caused by GeoGrid not using static file's radar grid and orbit information.
+* If static files are to be used, but some don't exist, the program will now fail instead of generating invalid results.
+* If the static files to be used are from different dates, the program will now fail instead of generating invalid results.
+
 
 ## [0.28.4]
 
