@@ -19,7 +19,6 @@ import numpy as np
 import requests
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.image import create_thumbnail
-from hyp3lib.util import string_is_true
 from netCDF4 import Dataset
 from osgeo import gdal
 
@@ -345,9 +344,8 @@ def process(
     chip_size: int | None = None,
     search_range: int | None = None,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
-    publish_bucket: str = '',
-    use_static_files: bool = True,
-    regenerate_static_files: bool = False,
+    publish_bucket: str | None = None,
+    static_files: Literal['use', 'create'] | None = None,
     frame_id: str | None = None,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -359,9 +357,8 @@ def process(
         chip_size: (Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach and uses a static chip size value.
         search_range: (Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.
         naming_scheme: Naming scheme to use for product files
-        publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
-        use_static_files: Use pre-generated static topographic correction files if available (Sentinel-1 only).
-        regenerate_static_files: Force the creation of, and upload of, new static files (Sentinel-1 only).
+        publish_bucket: S3 bucket to additionally publish ITS_LIVE products to and upload Sentinel-1 static topographic correction files to
+        static_files: Whether to use published static topographic correction files for ISCE3 processing, create and publish new ones, or not use them at all (Sentinel-1 only).
         frame_id: OPERA frame ID to record in the img_pair_info variable in the autoRIFT product file
 
     Returns:
@@ -377,15 +374,14 @@ def process(
     platform = get_platform(reference[0])
 
     if platform == 'S1-BURST':
-        from hyp3_autorift.s1_isce3 import process_sentinel1_burst_isce3
+        from hyp3_autorift.s1_isce3 import process_sentinel1_bursts_isce3
 
-        netcdf_file = process_sentinel1_burst_isce3(
+        netcdf_file = process_sentinel1_bursts_isce3(
             reference,
             secondary,
             publish_bucket,
-            use_static_files,
             frame_id,
-            regenerate_static_files=regenerate_static_files,
+            static_files=static_files,
             chip_size=chip_size,
             search_range=search_range,
         )
@@ -397,8 +393,7 @@ def process(
             reference[0],
             secondary[0],
             publish_bucket,
-            use_static_files,
-            regenerate_static_files=regenerate_static_files,
+            static_files=static_files,
             chip_size=chip_size,
             search_range=search_range,
         )
@@ -634,16 +629,12 @@ def main():
         'to process. Cannot be used with the `granules` arguments.',
     )
     parser.add_argument(
-        '--use-static-files',
-        type=string_is_true,
-        default=True,
-        help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
-    )
-    parser.add_argument(
-        '--regenerate-static-files',
-        type=string_is_true,
-        default=False,
-        help='Force the creation of, and upload of, new static files (Sentinel-1 only).',
+        '--static-files',
+        type=utils.nullable_string,
+        default=None,
+        choices=['use', 'create', None],
+        required=False,
+        help='Whether to use published static topographic correction files for ISCE3 processing, create and publish new ones, or not use them at all (Sentinel-1 only)',
     )
     parser.add_argument(
         '--frame-id',
@@ -716,8 +707,7 @@ def main():
         search_range=args.search_range,
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
-        use_static_files=args.use_static_files,
-        regenerate_static_files=args.regenerate_static_files,
+        static_files=args.static_files,
         frame_id=args.frame_id,
     )
 
