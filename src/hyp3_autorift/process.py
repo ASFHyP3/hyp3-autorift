@@ -19,7 +19,6 @@ import numpy as np
 import requests
 from hyp3lib.aws import upload_file_to_s3
 from hyp3lib.image import create_thumbnail
-from hyp3lib.util import string_is_true
 from netCDF4 import Dataset
 from osgeo import gdal
 
@@ -346,8 +345,7 @@ def process(
     search_range: int | None = None,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
     publish_bucket: str = '',
-    use_static_files: bool = True,
-    regenerate_static_files: bool = False,
+    static_files: str | None = None,
     frame_id: str | None = None,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -383,9 +381,8 @@ def process(
             reference,
             secondary,
             publish_bucket,
-            use_static_files,
             frame_id,
-            regenerate_static_files=regenerate_static_files,
+            static_files=static_files,
             chip_size=chip_size,
             search_range=search_range,
         )
@@ -397,8 +394,7 @@ def process(
             reference[0],
             secondary[0],
             publish_bucket,
-            use_static_files,
-            regenerate_static_files=regenerate_static_files,
+            static_files=static_files,
             chip_size=chip_size,
             search_range=search_range,
         )
@@ -634,16 +630,12 @@ def main():
         'to process. Cannot be used with the `granules` arguments.',
     )
     parser.add_argument(
-        '--use-static-files',
-        type=string_is_true,
-        default=True,
-        help='Use static topographic correction files for ISCE3 processing if available (Sentinel-1 only).',
-    )
-    parser.add_argument(
-        '--regenerate-static-files',
-        type=string_is_true,
-        default=False,
-        help='Force the creation of, and upload of, new static files (Sentinel-1 only).',
+        '--static-files',
+        type=str,
+        default=None,
+        choices=['create', 'use'],
+        required=False,
+        help='Whether or not to use or create static files (Sentinel-1 only).',
     )
     parser.add_argument(
         '--frame-id',
@@ -716,8 +708,7 @@ def main():
         search_range=args.search_range,
         naming_scheme=args.naming_scheme,
         publish_bucket=args.publish_bucket,
-        use_static_files=args.use_static_files,
-        regenerate_static_files=args.regenerate_static_files,
+        static_files=args.static_files,
         frame_id=args.frame_id,
     )
 
