@@ -84,7 +84,7 @@ def process_sentinel1_bursts_isce3(
 def process_sentinel1_slc_isce3(
     slc_ref,
     slc_sec,
-    static_files_bucket,
+    static_files_bucket: str | None,
     static_files: str | None = None,
     chip_size: int | None = None,
     search_range: int | None = None,
@@ -159,11 +159,10 @@ def process_slc(
             retrieval_bucket = static_files_bucket if static_files_bucket else S3_BUCKET
             has_static_layer = get_static_layer(burst_id, retrieval_bucket)
 
-        if use_static_files and not has_static_layer:
-            missing_static_files.append(burst_id)
-
-        if use_static_files:
-            static_file_dates.add(datetime.strftime(get_static_file_date(burst_id), '%Y-%m-%d'))
+            if has_static_layer:
+                static_file_dates.add(datetime.strftime(get_static_file_date(burst_id), '%Y-%m-%d'))
+            else:
+                missing_static_files.append(burst_id)
 
     if len(static_file_dates) > 1:
         raise ValueError(f'Got static files from multiple dates, which can cause invalid results: {static_file_dates}')

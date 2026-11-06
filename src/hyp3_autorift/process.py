@@ -344,8 +344,8 @@ def process(
     chip_size: int | None = None,
     search_range: int | None = None,
     naming_scheme: Literal['ITS_LIVE_OD', 'ITS_LIVE_PROD'] = 'ITS_LIVE_OD',
-    publish_bucket: str = '',
-    static_files: str | None = None,
+    publish_bucket: str | None = None,
+    static_files: Literal['use', 'create'] | None = None,
     frame_id: str | None = None,
 ) -> Tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
@@ -357,9 +357,8 @@ def process(
         chip_size: (Optional) Specify a single chip size (e.g., 64). Overrides parameter-file approach and uses a static chip size value.
         search_range: (Optional) Specify a search range in pixels (e.g., 32 or 64). Overrides parameter-file defaults.
         naming_scheme: Naming scheme to use for product files
-        publish_bucket: S3 bucket to upload Sentinel-1 static topographic correction files to
-        use_static_files: Use pre-generated static topographic correction files if available (Sentinel-1 only).
-        regenerate_static_files: Force the creation of, and upload of, new static files (Sentinel-1 only).
+        publish_bucket: S3 bucket to additionally publish ITS_LIVE products to and upload Sentinel-1 static topographic correction files to
+        static_files: Whether to use published static topographic correction files for ISCE3 processing, create and publish new ones, or not use them at all (Sentinel-1 only).
         frame_id: OPERA frame ID to record in the img_pair_info variable in the autoRIFT product file
 
     Returns:
@@ -631,11 +630,11 @@ def main():
     )
     parser.add_argument(
         '--static-files',
-        type=str,
+        type=utils.nullable_string,
         default=None,
-        choices=['create', 'use'],
+        choices=['use', 'create', None],
         required=False,
-        help='Whether or not to use or create static files (Sentinel-1 only).',
+        help='Whether to use published static topographic correction files for ISCE3 processing, create and publish new ones, or not use them at all (Sentinel-1 only)',
     )
     parser.add_argument(
         '--frame-id',

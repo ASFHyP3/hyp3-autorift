@@ -16,9 +16,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 * Sentinel-1 misregistration issue caused by GeoGrid not using static file's radar grid and orbit information.
-* If static files are to be used, but some don't exist, the program will now fail instead of generating invalid results.
-* If the static files to be used are from different dates, the program will now fail instead of generating invalid results.
-
+* Sentinel-1 processing will fail when using static files if some don't exist or if the static files were generated using more than one refence date.
 
 ## [0.28.4]
 
