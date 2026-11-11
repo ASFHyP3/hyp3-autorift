@@ -1,4 +1,5 @@
 import glob
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import boto3
@@ -223,3 +224,19 @@ def create_static_layer(burst_id: str, burst: Sentinel1BurstSlc, isce_product_pa
     out_ds.FlushCache()
 
     return Path(burst_topo_nc)
+
+
+def get_static_file_date(burst_id):
+    """Retrieve the sensing start date from a static file
+
+    Args:
+        burst_id: The burst id for the desired static file.
+
+    Returns:
+        Datetime object containing the sensing start for the given static file.
+    """
+    info_path = f'./static_topo_corrections/{burst_id}/{burst_id}_static_rdr.nc'
+    ds = gdal.Open(info_path)
+    metadata = ds.GetMetadata()
+    ref_epoch = datetime.strptime(metadata['NC_GLOBAL#ref_epoch'][:-3], '%Y-%m-%dT%H:%M:%S.%f')
+    return ref_epoch + timedelta(seconds=int(metadata['NC_GLOBAL#sensing_start']))
