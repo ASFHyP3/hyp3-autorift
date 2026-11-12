@@ -1016,8 +1016,8 @@ def generateAutoriftProduct(
                     # TODO: Pull this information from meta_r, meta_s
                     master_filename = Path(meta_r.sceneName).stem
                     slave_filename = Path(meta_s.sceneName).stem
-                    d0 = meta_r.sensingDt
-                    d1 = meta_s.sensingDt
+                    d0 = meta_r.sensingStart
+                    d1 = meta_s.sensingStart
                     master_split = str.split(master_filename, '_')
                     slave_split = str.split(slave_filename, '_')
 

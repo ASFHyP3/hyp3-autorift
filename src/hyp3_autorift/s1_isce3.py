@@ -234,8 +234,8 @@ def process_slc(
     meta_s.sceneName = safe_sec
     meta_r.orbitDirection = orbit_direction
     meta_s.orbitDirection = orbit_direction
-    meta_r.platformID = str(safe_ref)[3]
-    meta_s.platformID = str(safe_sec)[3]
+    meta_r.platformID = str(safe_ref)[2]
+    meta_s.platformID = str(safe_sec)[2]
 
     shutil.rmtree('product/')
 
