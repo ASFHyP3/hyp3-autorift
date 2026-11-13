@@ -160,8 +160,7 @@ def get_static_layer(burst_id: str, bucket: str) -> bool:
         metadata = ds.GetMetadata()
 
     with open(burst_static_dir / 'radar_grid.txt', 'w') as rdr_grid_file:
-        for param in RADAR_GRID_PARAMS:
-            rdr_grid_file.write(metadata[param] + '\n')
+        rdr_grid_file.writelines(metadata[param] + '\n' for param in RADAR_GRID_PARAMS)
 
     return True
 
@@ -186,7 +185,7 @@ def create_static_layer(burst_id: str, burst: Sentinel1BurstSlc, isce_product_pa
     topo_files = [burst_dir + '/' + file for file in TOPO_CORRECTION_FILES]
 
     with open(burst_rdr_grid_txt, 'r') as rdr_grid_file:
-        metadata = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file.readlines()]))
+        metadata = dict(zip(RADAR_GRID_PARAMS, [line.strip('\n') for line in rdr_grid_file]))
 
     additional_metadata_vals = [
         burst.first_valid_line,

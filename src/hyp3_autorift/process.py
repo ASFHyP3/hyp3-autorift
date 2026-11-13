@@ -9,9 +9,10 @@ import os
 import shutil
 import warnings
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Literal, Optional, Tuple
+from typing import Literal
 
 import boto3
 import botocore.exceptions
@@ -255,13 +256,13 @@ def create_filtered_filepath(path: str) -> str:
     return str(parent / Path(path).name)
 
 
-def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
+def prepare_array_for_filtering(array: np.ndarray, nodata: int) -> tuple[np.ndarray, np.ndarray]:
     valid_domain = array != nodata
     array[~valid_domain] = 0
     return array.astype(np.float32), valid_domain
 
 
-def apply_fft_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
+def apply_fft_filter(array: np.ndarray, nodata: int) -> tuple[np.ndarray, None]:
     from autoRIFT.autoRIFT import _fft_filter, _wallis_filter
 
     array, valid_domain = prepare_array_for_filtering(array, nodata)
@@ -274,7 +275,7 @@ def apply_fft_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, None]:
     return filtered, None
 
 
-def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.ndarray, np.ndarray]:
+def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> tuple[np.ndarray, np.ndarray]:
     """
     Wallis filter with nodata infill for L7 SLC Off preprocessing
     """
@@ -287,7 +288,7 @@ def apply_wallis_nodata_fill_filter(array: np.ndarray, nodata: int) -> Tuple[np.
     return filtered, zero_mask
 
 
-def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[str, Optional[str]]:
+def _apply_filter_function(image_path: str, filter_function: Callable) -> tuple[str, str | None]:
     image_array, image_transform, image_projection, _, image_nodata = utils.load_geospatial(image_path)
     image_array = image_array.astype(np.float32)
 
@@ -308,7 +309,7 @@ def _apply_filter_function(image_path: str, filter_function: Callable) -> Tuple[
     return image_new_path, zero_path
 
 
-def apply_landsat_filtering(reference_path: str, secondary_path: str) -> Tuple[str, Optional[str], str, Optional[str]]:
+def apply_landsat_filtering(reference_path: str, secondary_path: str) -> tuple[str, str | None, str, str | None]:
     reference_platform = get_platform(Path(reference_path).name)
     secondary_platform = get_platform(Path(secondary_path).name)
     if reference_platform > 'L7' and secondary_platform > 'L7':
@@ -347,7 +348,7 @@ def process(
     publish_bucket: str | None = None,
     static_files: Literal['use', 'create'] | None = None,
     frame_id: str | None = None,
-) -> Tuple[Path, Path, Path]:
+) -> tuple[Path, Path, Path]:
     """Process a Sentinel-1, Sentinel-2, or Landsat-8 image pair
 
     Args:

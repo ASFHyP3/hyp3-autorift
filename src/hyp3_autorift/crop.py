@@ -31,9 +31,9 @@ https://github.com/nasa-jpl/its_live_production/blob/957e9aba627be2abafcc9601712
 """
 
 import argparse
+from collections.abc import Hashable
 from datetime import timedelta
 from pathlib import Path
-from typing import Hashable
 from urllib.parse import urlparse
 
 import boto3
