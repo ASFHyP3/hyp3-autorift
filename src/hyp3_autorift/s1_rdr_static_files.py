@@ -98,7 +98,7 @@ def upload_static_nc_to_s3(filename: Path, burst_id: str, bucket: str) -> None:
 
     try:
         upload_file_to_s3_with_publish_access_keys(filename, bucket, bucket_prefix)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f'Unable to upload {filename} to S3 due to {e}.')
 
 

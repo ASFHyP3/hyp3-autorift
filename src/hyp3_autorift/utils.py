@@ -42,7 +42,7 @@ def upload_file_to_s3_with_publish_access_keys(
 
     extra_args = {'ContentType': get_content_type(key)}
 
-    logging.info(f'Uploading s3://{bucket}/{key}')
+    log.info(f'Uploading s3://{bucket}/{key}')
     s3_client.upload_file(str(path_to_file), bucket, key, extra_args)
 
     tag_set = get_tag_set(path_to_file.name)

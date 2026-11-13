@@ -538,7 +538,7 @@ def process(
         )
 
     if netcdf_file is None:
-        raise Exception('Processing failed! Output netCDF file not found')
+        raise RuntimeError('Processing failed! Output netCDF file not found')
 
     netcdf_file = Path(netcdf_file)
     if naming_scheme == 'ITS_LIVE_OD':

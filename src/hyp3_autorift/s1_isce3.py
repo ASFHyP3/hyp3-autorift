@@ -603,7 +603,7 @@ def get_burst_id(safe, burst_granule, orbit_file):
             str_burst_id = 't' + str(int(x.burst_id.track_number)).zfill(3) + '_' + burst_id_x
 
     if str_burst_id is None:
-        raise Exception('The burst id from ' + burst_granule + ' was not found in ' + safe)
+        raise ValueError('The burst id from ' + burst_granule + ' was not found in ' + safe)
 
     return str_burst_id
 
