@@ -304,8 +304,8 @@ def get_platform(scene: str) -> str:
 
 
 def get_burst_rid_and_info(scene: str) -> tuple[str, BurstInfo]:
-    platform, burst_id, swath, acquisition, polarization, _ = scene.split('_')
-    rid = '_'.join([platform, burst_id, swath, polarization])
+    platform, burst_id, swath, _, polarization, _ = scene.split('_')
+    rid = f'{platform}_{burst_id}_{swath}_{polarization}'
 
     # FIXME: do an asf_search.search here? Only thing missing is absolute orbit... This is obnoxious because we'll call
     #        burst2safe way later so will do multiple lookups

@@ -123,7 +123,7 @@ def get_s2_path(scene_name: str) -> str:
     else:
         # pre-2016-12-06 scene; choose the requested tile
         tile_token = scene_name.split('_')[5]
-        file_path = [href for href in hrefs if href.endswith(f'_{tile_token}_B08.jp2')][0]
+        file_path = next(href for href in hrefs if href.endswith(f'_{tile_token}_B08.jp2'))
     safe_url = get_s2_safe_url(scene_name)
     return f'/vsicurl/{safe_url}/{file_path}'
 
@@ -242,9 +242,9 @@ def s3_object_is_accessible(bucket, key):
 
 
 def least_precise_orbit_of(orbits):
-    if any([orb is None for orb in orbits]):
+    if any(orb is None for orb in orbits):
         return 'O'
-    if any(['RESORB' in orb for orb in orbits]):
+    if any('RESORB' in orb for orb in orbits):
         return 'R'
     return 'P'
 

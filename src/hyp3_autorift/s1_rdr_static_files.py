@@ -178,7 +178,7 @@ def create_static_layer(burst_id: str, burst: Sentinel1BurstSlc, isce_product_pa
     """
 
     burst_paths = sorted(glob.glob(isce_product_path))
-    burst_path = [p for p in burst_paths if p.split('/')[-1] == burst_id][0]
+    burst_path = next(p for p in burst_paths if p.split('/')[-1] == burst_id)
     burst_dir = glob.glob(burst_path + '/*')[0]
     burst_rdr_grid_txt = glob.glob(glob.glob(burst_path + '/*')[0] + '/*.txt')[0]
     burst_topo_nc = f'{burst_id}_static_rdr.nc'

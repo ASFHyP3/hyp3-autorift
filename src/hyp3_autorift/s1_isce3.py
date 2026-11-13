@@ -62,7 +62,7 @@ def process_sentinel1_bursts_isce3(
     burst_ids_ref = [get_burst_id(safe_ref, g, orbit_ref) for g in reference]
     burst_ids_sec = [get_burst_id(safe_sec, g, orbit_sec) for g in secondary]
 
-    swaths = sorted(list(set([int(g.split('_')[2][2]) for g in reference])))
+    swaths = sorted({int(g.split('_')[2][2]) for g in reference})
 
     return process_slc(
         safe_ref,
@@ -135,7 +135,7 @@ def process_slc(
     lat_limits, lon_limits = bounding_box(safe_ref, orbit_ref, is_slc=True, pol=pol, swaths=swaths)
     scene_poly = geometry.polygon_from_bbox(x_limits=lat_limits, y_limits=lon_limits)
     parameter_info = utils.find_jpl_parameter_info(scene_poly, parameter_file=DEFAULT_PARAMETER_FILE)
-    burst_ids = sorted(list(set(burst_ids_sec) & set(burst_ids_ref)))
+    burst_ids = sorted(set(burst_ids_sec) & set(burst_ids_ref))
 
     download_dem(
         dem=parameter_info['geogrid']['dem'],
@@ -612,7 +612,7 @@ def get_isce3_burst_id(burst):
     track_number = 't' + str(int(burst.burst_id.track_number)).zfill(3)
     esa_burst_id = str(burst.burst_id.esa_burst_id).zfill(6)
     subswath = burst.burst_id.subswath.lower()
-    return '_'.join([track_number, esa_burst_id, subswath])
+    return f'{track_number}_{esa_burst_id}_{subswath}'
 
 
 def get_burst_ids(safe, orbit_file):
