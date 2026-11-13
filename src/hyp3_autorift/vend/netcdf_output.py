@@ -1340,7 +1340,7 @@ def cal_swath_offset_bias(
 
     swath_shapes = meta_r.swathShapes
     starting_ranges = meta_r.startingRanges
-    range_pixel_spacing = meta_r.rangePixelSpacing
+    range_pixel_spacing = meta_r.rangePixelSize
 
     IW1_shape = swath_shapes[0]
     IW1_far_range = starting_ranges[0] + (IW1_shape[1] - 1.0) * range_pixel_spacing
