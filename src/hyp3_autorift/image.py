@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,7 +39,7 @@ COLOR_MAP = np.array(
 
 
 def make_browse(
-    out_file: Path, data: np.ndarray, min_value: Optional[float] = None, max_value: Optional[float] = 625.0
+    out_file: Path, data: np.ndarray, min_value: float | None = None, max_value: float | None = 625.0
 ) -> Path:
     data = np.squeeze(data)
 

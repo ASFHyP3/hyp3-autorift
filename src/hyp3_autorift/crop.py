@@ -31,9 +31,9 @@ https://github.com/nasa-jpl/its_live_production/blob/957e9aba627be2abafcc9601712
 """
 
 import argparse
+from collections.abc import Hashable
 from datetime import timedelta
 from pathlib import Path
-from typing import Hashable
 from urllib.parse import urlparse
 
 import boto3
@@ -251,13 +251,13 @@ def crop_netcdf_product(netcdf_file: Path) -> Path:
         dim_chunks_settings = (1, CHUNK_SIZE, CHUNK_SIZE)
 
         encoding = {}
-        for variable in ds.data_vars.keys():
+        for variable in ds.data_vars:
             if variable in ['img_pair_info', 'mapping']:
                 continue
             attributes = {attr: ds[variable].encoding[attr] for attr in ENCODING_ATTRS if attr in ds[variable].encoding}
             encoding[variable] = attributes
 
-        for _, attributes in encoding.items():
+        for attributes in encoding.values():
             if attributes['_FillValue'] is not None:
                 attributes['chunksizes'] = dim_chunks_settings
 
