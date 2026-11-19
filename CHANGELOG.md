@@ -18,6 +18,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Sentinel-1 misregistration issue caused by GeoGrid not using static file's radar grid and orbit information.
 * Sentinel-1 processing will fail when using static files if some don't exist or if the static files were generated using more than one refence date.
 
+### Fixed
+* Nodata pixels are now set to 0 after the 8-bit conversion for Sentinel-1, Sentinel-2, and Landsat 4/5/8/9 pairs, as they already were for Landsat 7. NISAR is unchanged.
+
 ## [0.28.4]
 
 ### Fixed
